@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Voting Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f10;
+    --bg2: #17171a;
+    --bg3: #1f1f24;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0efe8;
+    --text2: #9998a0;
+    --text3: #5c5b64;
+    --gold: #c9a84c;
+    --gold2: #e8c96a;
+    --gold-dim: rgba(201,168,76,0.12);
+    --green: #4caf7d;
+    --green-dim: rgba(76,175,125,0.12);
+    --red: #e05555;
+    --red-dim: rgba(224,85,85,0.1);
+    --blue: #5b8ef0;
+    --blue-dim: rgba(91,142,240,0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 400; min-height: 100vh; }
+
+  /* ── LAYOUT ── */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ── TOPBAR ── */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .topbar-logo { width: 32px; height: 32px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .topbar-name { font-family: 'DM Serif Display', serif; font-size: 18px; letter-spacing: -0.01em; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .topbar-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+  .badge-super { background: var(--gold-dim); color: var(--gold2); border: 1px solid rgba(201,168,76,0.25); }
+  .badge-admin { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(91,142,240,0.2); }
+  .badge-voter { background: var(--green-dim); color: var(--green); border: 1px solid rgba(76,175,125,0.2); }
+  .btn-logout { background: transparent; border: 1px solid var(--border2); color: var(--text2); font-size: 12px; padding: 6px 14px; border-radius: var(--radius-sm); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── LOGIN SCREEN ── */
+  #screen-login { align-items: center; justify-content: center; background: var(--bg); position: relative; overflow: hidden; }
+  .login-bg { position: absolute; inset: 0; pointer-events: none; }
+  .login-bg-circle { position: absolute; border-radius: 50%; }
+  .login-bg-c1 { width: 600px; height: 600px; top: -200px; right: -150px; background: radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%); }
+  .login-bg-c2 { width: 400px; height: 400px; bottom: -100px; left: -100px; background: radial-gradient(circle, rgba(91,142,240,0.05) 0%, transparent 70%); }
+  .login-box { position: relative; z-index: 1; width: 100%; max-width: 420px; padding: 0 24px; animation: fadeUp 0.5s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .login-emblem { width: 64px; height: 64px; background: linear-gradient(135deg, var(--gold), #8a5c1e); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 28px; box-shadow: 0 8px 32px rgba(201,168,76,0.2); }
+  .login-title { font-family: 'DM Serif Display', serif; font-size: 32px; text-align: center; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .login-sub { font-size: 14px; color: var(--text2); text-align: center; margin-bottom: 36px; }
+  .login-form { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 28px; }
+  .form-label { font-size: 12px; color: var(--text2); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; display: block; }
+  .form-input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 13px 16px; color: var(--text); font-size: 18px; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.15em; text-align: center; outline: none; transition: border-color 0.2s; }
+  .form-input:focus { border-color: var(--gold); }
+  .form-input::placeholder { color: var(--text3); letter-spacing: 0.05em; font-size: 14px; }
+  .pin-dots { display: flex; gap: 8px; justify-content: center; margin: 14px 0; }
+  .pin-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border2); transition: background 0.2s; }
+  .pin-dot.filled { background: var(--gold); }
+  .btn-primary { width: 100%; background: var(--gold); color: #0f0f10; font-size: 14px; font-weight: 600; padding: 14px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; margin-top: 16px; letter-spacing: 0.02em; }
+  .btn-primary:hover { background: var(--gold2); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .login-error { font-size: 13px; color: var(--red); text-align: center; margin-top: 12px; min-height: 18px; }
+  .login-demo { margin-top: 24px; font-size: 12px; color: var(--text3); text-align: center; line-height: 1.7; }
+  .login-demo strong { color: var(--text2); }
+
+  /* ── VOTER SCREEN ── */
+  #screen-voter { background: var(--bg); }
+  .voter-content { flex: 1; padding: 28px; max-width: 900px; margin: 0 auto; width: 100%; }
+  .voter-welcome { margin-bottom: 28px; }
+  .voter-welcome h2 { font-family: 'DM Serif Display', serif; font-size: 26px; letter-spacing: -0.02em; }
+  .voter-welcome p { font-size: 14px; color: var(--text2); margin-top: 4px; }
+  .voter-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .meta-chip { font-size: 12px; padding: 4px 12px; border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); }
+  .category-section { margin-bottom: 36px; }
+  .category-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .category-num { width: 26px; height: 26px; border-radius: 50%; background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(201,168,76,0.2); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .category-title { font-size: 16px; font-weight: 500; }
+  .category-desc { font-size: 12px; color: var(--text2); margin-left: auto; }
+  .nominees-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .nominee-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
+  .nominee-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .nominee-card.selected { border-color: var(--gold); background: var(--gold-dim); }
+  .nominee-card.selected::after { content: '✓'; position: absolute; top: 10px; right: 12px; color: var(--gold); font-weight: 700; font-size: 16px; }
+  .nominee-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  .nominee-name { font-size: 14px; font-weight: 500; }
+  .nominee-dept { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .vote-footer { position: sticky; bottom: 0; background: linear-gradient(to top, var(--bg) 60%, transparent); padding: 20px 28px; }
+  .vote-footer-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .vote-progress { font-size: 13px; color: var(--text2); }
+  .vote-progress strong { color: var(--text); }
+  .btn-submit { background: var(--gold); color: #0f0f10; font-size: 14px; font-weight: 600; padding: 13px 32px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+  .btn-submit:hover { background: var(--gold2); }
+  .btn-submit:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ── SUCCESS SCREEN ── */
+  #screen-success { align-items: center; justify-content: center; background: var(--bg); }
+  .success-box { text-align: center; padding: 48px 32px; max-width: 420px; animation: fadeUp 0.5s ease; }
+  .success-icon { font-size: 56px; margin-bottom: 20px; }
+  .success-title { font-family: 'DM Serif Display', serif; font-size: 30px; margin-bottom: 10px; }
+  .success-msg { font-size: 15px; color: var(--text2); line-height: 1.6; }
+  .success-decoration { margin: 28px auto; width: 60px; height: 2px; background: linear-gradient(to right, transparent, var(--gold), transparent); }
+
+  /* ── ADMIN / SUPERADMIN DASHBOARD ── */
+  #screen-admin, #screen-superadmin { background: var(--bg); }
+  .dash-content { flex: 1; padding: 28px; max-width: 1100px; margin: 0 auto; width: 100%; }
+  .dash-tabs { display: flex; gap: 4px; margin-bottom: 28px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; }
+  .tab-btn { padding: 8px 18px; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; white-space: nowrap; }
+  .tab-btn.active { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeUp 0.3s ease; }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+  .stat-label { font-size: 12px; color: var(--text2); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-family: 'DM Serif Display', serif; letter-spacing: -0.02em; }
+  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .stat-card.gold { border-color: rgba(201,168,76,0.2); }
+  .stat-card.gold .stat-value { color: var(--gold2); }
+  .stat-card.green .stat-value { color: var(--green); }
+
+  /* Results table */
+  .results-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .filter-select { background: var(--bg2); border: 1px solid var(--border2); color: var(--text); font-size: 13px; padding: 8px 14px; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; cursor: pointer; outline: none; }
+  .filter-select:focus { border-color: var(--gold); }
+  .results-table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .results-table { width: 100%; border-collapse: collapse; }
+  .results-table th { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); background: var(--bg3); }
+  .results-table td { padding: 13px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .rank-badge { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .rank-1 { background: var(--gold-dim); color: var(--gold2); border: 1px solid rgba(201,168,76,0.3); }
+  .rank-2 { background: rgba(180,180,200,0.1); color: #a0a0b8; border: 1px solid rgba(160,160,180,0.2); }
+  .rank-3 { background: rgba(180,120,80,0.1); color: #c09060; border: 1px solid rgba(180,120,80,0.2); }
+  .vote-bar-wrap { display: flex; align-items: center; gap: 10px; }
+  .vote-bar { height: 6px; border-radius: 3px; background: var(--gold); flex-shrink: 0; min-width: 4px; transition: width 0.5s ease; }
+  .vote-count { font-size: 13px; color: var(--text2); white-space: nowrap; }
+
+  /* Dept bar chart */
+  .chart-section { margin-bottom: 28px; }
+  .chart-title { font-size: 14px; font-weight: 500; margin-bottom: 14px; color: var(--text2); }
+  .dept-bars { display: flex; flex-direction: column; gap: 10px; }
+  .dept-bar-row { display: flex; align-items: center; gap: 12px; }
+  .dept-name { font-size: 13px; min-width: 130px; color: var(--text2); text-align: right; }
+  .dept-track { flex: 1; height: 28px; background: var(--bg3); border-radius: 6px; overflow: hidden; position: relative; }
+  .dept-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-size: 12px; font-weight: 500; transition: width 0.8s ease; white-space: nowrap; }
+  .dept-pct { font-size: 12px; color: var(--text3); min-width: 36px; }
+
+  /* SuperAdmin management panels */
+  .sa-section { margin-bottom: 32px; }
+  .sa-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .sa-section-title { font-size: 15px; font-weight: 500; }
+  .btn-sm { font-size: 12px; padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+  .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+  .btn-sm.success { border-color: rgba(76,175,125,0.4); color: var(--green); background: var(--green-dim); }
+  .btn-sm.warning { border-color: rgba(201,168,76,0.4); color: var(--gold); background: var(--gold-dim); }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .config-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .config-card-label { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .config-card-val { font-size: 20px; font-weight: 500; }
+  .config-card-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .config-input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; margin-top: 8px; }
+  .config-input:focus { border-color: var(--gold); }
+  .voter-table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; max-height: 380px; overflow-y: auto; }
+  .voter-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; transition: background 0.15s; }
+  .voter-row:last-child { border-bottom: none; }
+  .voter-row:hover { background: rgba(255,255,255,0.02); }
+  .voter-pin { font-family: monospace; font-size: 13px; color: var(--gold); background: var(--gold-dim); padding: 2px 8px; border-radius: 4px; }
+  .voter-name { flex: 1; font-weight: 500; }
+  .voter-dept { font-size: 12px; color: var(--text2); }
+  .voted-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .voted-yes { background: var(--green); }
+  .voted-no { background: var(--border2); }
+  .voted-label { font-size: 11px; color: var(--text2); }
+  .nominee-manage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .nominee-manage-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .status-pill { font-size: 10px; padding: 3px 9px; border-radius: 20px; font-weight: 500; display: inline-block; margin-top: 4px; }
+  .status-open { background: var(--green-dim); color: var(--green); border: 1px solid rgba(76,175,125,0.2); }
+  .status-closed { background: var(--red-dim); color: var(--red); border: 1px solid rgba(224,85,85,0.15); }
+  .google-sheets-info { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+  .gsheet-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .gsheet-label { font-size: 13px; color: var(--text2); min-width: 120px; }
+  .gsheet-input { flex: 1; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
+  .gsheet-input:focus { border-color: var(--gold); }
+  .gsheet-status { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .gsheet-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--bg3); border: 1px solid var(--border2); color: var(--text); font-size: 13px; padding: 12px 20px; border-radius: var(--radius); opacity: 0; transition: all 0.3s; z-index: 1000; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(76,175,125,0.4); color: var(--green); }
+  .toast.error { border-color: rgba(224,85,85,0.3); color: var(--red); }
+  .voting-status-banner { padding: 10px 28px; font-size: 13px; font-weight: 500; text-align: center; }
+  .voting-status-banner.open { background: var(--green-dim); color: var(--green); border-bottom: 1px solid rgba(76,175,125,0.15); }
+  .voting-status-banner.closed { background: var(--red-dim); color: var(--red); border-bottom: 1px solid rgba(224,85,85,0.1); }
+  .empty-state { text-align: center; padding: 40px; color: var(--text3); font-size: 14px; }
+  @media (max-width: 600px) {
+    .config-grid { grid-template-columns: 1fr; }
+    .voter-content, .dash-content { padding: 16px; }
+    .topbar { padding: 12px 16px; }
+    .nominees-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ SCREEN: LOGIN ══ -->
+<div id="screen-login" class="screen active">
+  <div class="login-bg">
+    <div class="login-bg-circle login-bg-c1"></div>
+    <div class="login-bg-circle login-bg-c2"></div>
+  </div>
+  <div class="login-box">
+    <div class="login-emblem">🗳️</div>
+    <h1 class="login-title">Staff Voting<br>Portal</h1>
+    <p class="login-sub">Enter your voter PIN to cast your vote</p>
+    <div class="login-form">
+      <label class="form-label">Voter PIN</label>
+      <input class="form-input" id="pin-input" type="password" maxlength="6" placeholder="Enter your PIN" autocomplete="off" inputmode="numeric">
+      <div class="pin-dots">
+        <div class="pin-dot" id="dot-0"></div>
+        <div class="pin-dot" id="dot-1"></div>
+        <div class="pin-dot" id="dot-2"></div>
+        <div class="pin-dot" id="dot-3"></div>
+        <div class="pin-dot" id="dot-4"></div>
+        <div class="pin-dot" id="dot-5"></div>
+      </div>
+      <button class="btn-primary" id="btn-login" onclick="doLogin()">Sign In →</button>
+      <div class="login-error" id="login-error"></div>
+    </div>
+    <div class="login-demo">
+      <strong>Demo PINs:</strong><br>
+      Voter: <strong>1234</strong> · <strong>5678</strong> · <strong>9012</strong><br>
+      Admin: <strong>ADMIN1</strong> &nbsp;·&nbsp; SuperAdmin: <strong>SUPER1</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: VOTER ══ -->
+<div id="screen-voter" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">🗳️</div>
+      <span class="topbar-name">Voting Portal</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-badge badge-voter" id="voter-badge">Voter</span>
+      <button class="btn-logout" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <div id="voting-status-bar"></div>
+  <div class="voter-content">
+    <div class="voter-welcome">
+      <h2 id="voter-greeting">Welcome!</h2>
+      <p id="voter-subtitle">Please select one nominee per category</p>
+      <div class="voter-meta" id="voter-meta"></div>
+    </div>
+    <div id="categories-container"></div>
+  </div>
+  <div class="vote-footer">
+    <div class="vote-footer-inner">
+      <div class="vote-progress" id="vote-progress-text">Select nominees to continue</div>
+      <button class="btn-submit" id="btn-submit" onclick="submitVotes()" disabled>Submit Votes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: SUCCESS ══ -->
+<div id="screen-success" class="screen">
+  <div class="success-box">
+    <div class="success-icon">🏆</div>
+    <h2 class="success-title">Vote Submitted!</h2>
+    <div class="success-decoration"></div>
+    <p class="success-msg">Thank you for participating. Your votes have been recorded securely. Results will be announced at the event.</p>
+  </div>
+</div>
+
+<!-- ══ SCREEN: ADMIN (Results viewer) ══ -->
+<div id="screen-admin" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">🗳️</div>
+      <span class="topbar-name">Voting Portal</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-badge badge-admin">Admin</span>
+      <button class="btn-logout" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <div class="dash-content">
+    <div class="dash-tabs">
+      <button class="tab-btn active" onclick="switchTab('admin','overview')">Overview</button>
+      <button class="tab-btn" onclick="switchTab('admin','results')">Results</button>
+      <button class="tab-btn" onclick="switchTab('admin','departments')">Departments</button>
+    </div>
+
+    <!-- Overview tab -->
+    <div class="tab-panel active" id="admin-tab-overview">
+      <div class="stats-row" id="admin-stats"></div>
+      <div class="chart-section">
+        <div class="chart-title">Participation by department</div>
+        <div class="dept-bars" id="dept-participation-chart"></div>
+      </div>
+    </div>
+
+    <!-- Results tab -->
+    <div class="tab-panel" id="admin-tab-results">
+      <div class="results-filters">
+        <select class="filter-select" id="admin-cat-filter" onchange="renderAdminResults()">
+          <option value="">All categories</option>
+        </select>
+        <select class="filter-select" id="admin-dept-filter" onchange="renderAdminResults()">
+          <option value="">All departments</option>
+        </select>
+      </div>
+      <div class="results-table-wrap">
+        <table class="results-table" id="admin-results-table">
+          <thead><tr>
+            <th>Rank</th><th>Nominee</th><th>Department</th><th>Category</th><th>Votes</th>
+          </tr></thead>
+          <tbody id="admin-results-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Departments tab -->
+    <div class="tab-panel" id="admin-tab-departments">
+      <div class="dept-bars" id="dept-detail-bars" style="gap:16px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: SUPERADMIN ══ -->
+<div id="screen-superadmin" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">🗳️</div>
+      <span class="topbar-name">Voting Portal</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-badge badge-super">SuperAdmin</span>
+      <button class="btn-logout" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <div class="dash-content">
+    <div class="dash-tabs">
+      <button class="tab-btn active" onclick="switchTab('superadmin','overview')">Overview</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','results')">Results</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','voters')">Voters</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','nominees')">Nominees</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','settings')">Settings</button>
+    </div>
+
+    <!-- Overview -->
+    <div class="tab-panel active" id="superadmin-tab-overview">
+      <div class="stats-row" id="superadmin-stats"></div>
+      <div class="chart-section">
+        <div class="chart-title">Participation by department</div>
+        <div class="dept-bars" id="sa-dept-participation"></div>
+      </div>
+    </div>
+
+    <!-- Results (same as admin but full) -->
+    <div class="tab-panel" id="superadmin-tab-results">
+      <div class="results-filters">
+        <select class="filter-select" id="sa-cat-filter" onchange="renderSAResults()">
+          <option value="">All categories</option>
+        </select>
+        <select class="filter-select" id="sa-dept-filter" onchange="renderSAResults()">
+          <option value="">All departments</option>
+        </select>
+      </div>
+      <div class="results-table-wrap">
+        <table class="results-table">
+          <thead><tr>
+            <th>Rank</th><th>Nominee</th><th>Department</th><th>Category</th><th>Votes</th>
+          </tr></thead>
+          <tbody id="sa-results-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Voters management -->
+    <div class="tab-panel" id="superadmin-tab-voters">
+      <div class="sa-section-header">
+        <span class="sa-section-title">All Voters</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" onclick="resetAllVotes()">Reset all votes</button>
+          <button class="btn-sm success" onclick="generatePINs()">Generate new PINs</button>
+        </div>
+      </div>
+      <div class="voter-table-wrap" id="voter-list"></div>
+    </div>
+
+    <!-- Nominees management -->
+    <div class="tab-panel" id="superadmin-tab-nominees">
+      <div class="sa-section-header">
+        <span class="sa-section-title">Nominees</span>
+        <button class="btn-sm" onclick="showAddNominee()">+ Add nominee</button>
+      </div>
+      <div class="nominee-manage-grid" id="nominee-manage-grid"></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="tab-panel" id="superadmin-tab-settings">
+      <div class="sa-section">
+        <div class="sa-section-title" style="margin-bottom:14px;">Google Sheets Integration</div>
+        <div class="google-sheets-info">
+          <div class="gsheet-row">
+            <span class="gsheet-label">Spreadsheet ID</span>
+            <input class="gsheet-input" id="sheet-id-input" placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" value="YOUR_SHEET_ID">
+            <button class="btn-sm" onclick="saveSheetId()" style="margin-left:8px; white-space:nowrap;">Save</button>
+          </div>
+          <div class="gsheet-row">
+            <span class="gsheet-label">API Key</span>
+            <input class="gsheet-input" id="api-key-input" placeholder="Google Sheets API key (read-only)" type="password" value="">
+            <button class="btn-sm" onclick="saveApiKey()" style="margin-left:8px; white-space:nowrap;">Save</button>
+          </div>
+          <div class="gsheet-row">
+            <span class="gsheet-label">Connection</span>
+            <div class="gsheet-status">
+              <div class="gsheet-dot" id="conn-dot" style="background:var(--gold);"></div>
+              <span id="conn-label">Using demo data (configure Sheets ID + API key to connect)</span>
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <button class="btn-sm" onclick="testSheetsConnection()">Test connection</button>
+            <button class="btn-sm" onclick="syncFromSheets()" style="margin-left:8px;">Sync from Sheets</button>
+          </div>
+        </div>
+        <div style="font-size:12px; color:var(--text3); line-height:1.7;">
+          <strong style="color:var(--text2);">Expected sheet tabs:</strong><br>
+          <code style="color:var(--gold); font-size:11px;">Voters</code> — columns: PIN, Name, Department, Unit, HasVoted<br>
+          <code style="color:var(--gold); font-size:11px;">Nominees</code> — columns: ID, Name, Department, Unit, Category<br>
+          <code style="color:var(--gold); font-size:11px;">Votes</code> — columns: PIN, NomineeID, Category, Timestamp<br>
+          <code style="color:var(--gold); font-size:11px;">Admins</code> — columns: PIN, Role (admin/superadmin), Name
+        </div>
+      </div>
+
+      <div class="sa-section">
+        <div class="sa-section-title" style="margin-bottom:14px;">Voting Control</div>
+        <div class="config-grid">
+          <div class="config-card">
+            <div class="config-card-label">Voting Status</div>
+            <div class="config-card-val" id="voting-status-val">Open</div>
+            <div class="config-card-actions">
+              <button class="btn-sm success" onclick="toggleVoting(true)">Open voting</button>
+              <button class="btn-sm danger" onclick="toggleVoting(false)">Close voting</button>
+            </div>
+          </div>
+          <div class="config-card">
+            <div class="config-card-label">Voting Categories</div>
+            <div class="config-card-val" id="cat-count-val">4</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px;">active categories</div>
+            <div class="config-card-actions">
+              <button class="btn-sm" onclick="manageCats()">Manage categories</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sa-section">
+        <div class="sa-section-title" style="margin-bottom:14px;">Export</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-sm warning" onclick="exportCSV('results')">Export results CSV</button>
+          <button class="btn-sm" onclick="exportCSV('voters')">Export voter list CSV</button>
+          <button class="btn-sm" onclick="exportCSV('full')">Full export CSV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════
+// DATA STORE (Google Sheets API integration ready)
+// ══════════════════════════════════
+const CONFIG = {
+  sheetId: localStorage.getItem('gs_sheet_id') || '',
+  apiKey: localStorage.getItem('gs_api_key') || '',
+  votingOpen: true,
+};
+
+const COLORS = ['#c9a84c','#5b8ef0','#4caf7d','#e05555','#a87cdb','#5bbef0','#e08a55'];
+
+const DATA = {
+  voters: [
+    { pin:'1234', name:'Ahmed Al-Rashid', dept:'Finance', unit:'Accounts', hasVoted:false },
+    { pin:'5678', name:'Fatima Noor', dept:'HR', unit:'Recruitment', hasVoted:false },
+    { pin:'9012', name:'Mohammed Al-Sayed', dept:'IT', unit:'Infrastructure', hasVoted:false },
+    { pin:'3456', name:'Sara Al-Kindi', dept:'Finance', unit:'Treasury', hasVoted:true },
+    { pin:'7890', name:'Khalid Hassan', dept:'Operations', unit:'Logistics', hasVoted:false },
+    { pin:'2468', name:'Layla Ibrahim', dept:'HR', unit:'Learning & Dev', hasVoted:true },
+    { pin:'1357', name:'Omar Abdullah', dept:'IT', unit:'Development', hasVoted:false },
+    { pin:'8642', name:'Mariam Al-Zaabi', dept:'Operations', unit:'Quality', hasVoted:false },
+  ],
+  admins: [
+    { pin:'ADMIN1', name:'Rania Saeed', role:'admin' },
+    { pin:'SUPER1', name:'Director Office', role:'superadmin' },
+  ],
+  nominees: [
+    { id:1, name:'Fatima Noor', dept:'HR', unit:'Recruitment', category:'Employee of the Year' },
+    { id:2, name:'Khalid Hassan', dept:'Operations', unit:'Logistics', category:'Employee of the Year' },
+    { id:3, name:'Omar Abdullah', dept:'IT', unit:'Development', category:'Employee of the Year' },
+    { id:4, name:'Sara Al-Kindi', dept:'Finance', unit:'Treasury', category:'Employee of the Year' },
+    { id:5, name:'Ahmed Al-Rashid', dept:'Finance', unit:'Accounts', category:'Best Team Player' },
+    { id:6, name:'Layla Ibrahim', dept:'HR', unit:'Learning & Dev', category:'Best Team Player' },
+    { id:7, name:'Mariam Al-Zaabi', dept:'Operations', unit:'Quality', category:'Best Team Player' },
+    { id:8, name:'Ahmed Al-Rashid', dept:'Finance', unit:'Accounts', category:'Innovation Award' },
+    { id:9, name:'Omar Abdullah', dept:'IT', unit:'Development', category:'Innovation Award' },
+    { id:10, name:'Khalid Hassan', dept:'Operations', unit:'Logistics', category:'Innovation Award' },
+    { id:11, name:'Fatima Noor', dept:'HR', unit:'Recruitment', category:'Leadership Award' },
+    { id:12, name:'Sara Al-Kindi', dept:'Finance', unit:'Treasury', category:'Leadership Award' },
+  ],
+  votes: [
+    { pin:'3456', nomineeId:1, category:'Employee of the Year' },
+    { pin:'3456', nomineeId:5, category:'Best Team Player' },
+    { pin:'3456', nomineeId:8, category:'Innovation Award' },
+    { pin:'3456', nomineeId:11, category:'Leadership Award' },
+    { pin:'2468', nomineeId:2, category:'Employee of the Year' },
+    { pin:'2468', nomineeId:7, category:'Best Team Player' },
+    { pin:'2468', nomineeId:9, category:'Innovation Award' },
+    { pin:'2468', nomineeId:12, category:'Leadership Award' },
+  ]
+};
+
+let currentUser = null;
+let currentSelections = {}; // category -> nomineeId
+
+// ══════════════════════════════════
+// AUTH
+// ══════════════════════════════════
+function doLogin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  if (!pin) { showError('Please enter your PIN'); return; }
+
+  // Check superadmin
+  const sa = DATA.admins.find(a => a.pin === pin && a.role === 'superadmin');
+  if (sa) { currentUser = { ...sa }; showScreen('screen-superadmin'); initSuperAdmin(); return; }
+
+  // Check admin
+  const admin = DATA.admins.find(a => a.pin === pin && a.role === 'admin');
+  if (admin) { currentUser = { ...admin }; showScreen('screen-admin'); initAdmin(); return; }
+
+  // Check voter
+  const voter = DATA.voters.find(v => v.pin === pin);
+  if (!voter) { showError('Invalid PIN. Please try again.'); shakePins(); return; }
+  if (voter.hasVoted) { showError('This PIN has already been used to vote.'); return; }
+
+  currentUser = { ...voter, type: 'voter' };
+  currentSelections = {};
+  showScreen('screen-voter');
+  initVoterScreen();
+}
+
+document.getElementById('pin-input').addEventListener('input', function() {
+  const val = this.value;
+  for (let i = 0; i < 6; i++) {
+    const dot = document.getElementById('dot-' + i);
+    if (dot) dot.classList.toggle('filled', i < val.length);
+  }
+  document.getElementById('login-error').textContent = '';
+});
+
+document.getElementById('pin-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+
+function showError(msg) {
+  document.getElementById('login-error').textContent = msg;
+}
+
+function shakePins() {
+  const input = document.getElementById('pin-input');
+  input.style.borderColor = 'var(--red)';
+  setTimeout(() => { input.style.borderColor = ''; }, 1000);
+}
+
+function doLogout() {
+  currentUser = null;
+  currentSelections = {};
+  document.getElementById('pin-input').value = '';
+  for (let i = 0; i < 6; i++) document.getElementById('dot-' + i)?.classList.remove('filled');
+  document.getElementById('login-error').textContent = '';
+  showScreen('screen-login');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════
+// VOTER SCREEN
+// ══════════════════════════════════
+function initVoterScreen() {
+  const v = currentUser;
+  document.getElementById('voter-greeting').textContent = `Welcome, ${v.name.split(' ')[0]}!`;
+  document.getElementById('voter-subtitle').textContent = 'Cast your votes — one nominee per category';
+  document.getElementById('voter-meta').innerHTML = `
+    <span class="meta-chip">🏢 ${v.dept}</span>
+    <span class="meta-chip">📍 ${v.unit}</span>
+    <span class="meta-chip">🗳️ PIN: ${v.pin}</span>
+  `;
+
+  const banner = document.getElementById('voting-status-bar');
+  if (CONFIG.votingOpen) {
+    banner.className = 'voting-status-banner open';
+    banner.textContent = '✓ Voting is currently open';
+  } else {
+    banner.className = 'voting-status-banner closed';
+    banner.textContent = '✗ Voting is closed';
+    document.getElementById('btn-submit').disabled = true;
+  }
+
+  const categories = [...new Set(DATA.nominees.map(n => n.category))];
+  const container = document.getElementById('categories-container');
+  container.innerHTML = '';
+
+  categories.forEach((cat, idx) => {
+    const nominees = DATA.nominees.filter(n => n.category === cat);
+    const section = document.createElement('div');
+    section.className = 'category-section';
+    section.innerHTML = `
+      <div class="category-header">
+        <div class="category-num">${idx+1}</div>
+        <div class="category-title">${cat}</div>
+        <div class="category-desc">${nominees.length} nominees</div>
+      </div>
+      <div class="nominees-grid" id="nominees-${idx}"></div>
+    `;
+    container.appendChild(section);
+
+    const grid = section.querySelector(`#nominees-${idx}`);
+    nominees.forEach((nom, ni) => {
+      const initials = nom.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+      const color = COLORS[ni % COLORS.length];
+      const card = document.createElement('div');
+      card.className = 'nominee-card';
+      card.setAttribute('data-id', nom.id);
+      card.setAttribute('data-cat', cat);
+      card.innerHTML = `
+        <div class="nominee-avatar" style="background:${color}22; color:${color};">${initials}</div>
+        <div class="nominee-name">${nom.name}</div>
+        <div class="nominee-dept">${nom.dept} · ${nom.unit}</div>
+      `;
+      card.onclick = () => selectNominee(cat, nom.id, idx);
+      grid.appendChild(card);
+    });
+  });
+
+  updateVoteProgress(categories.length);
+}
+
+function selectNominee(category, nomineeId, sectionIdx) {
+  if (!CONFIG.votingOpen) return;
+  const prev = currentSelections[category];
+  currentSelections[category] = nomineeId;
+
+  // Deselect old
+  document.querySelectorAll(`[data-cat="${category}"]`).forEach(c => c.classList.remove('selected'));
+  // Select new
+  const target = document.querySelector(`[data-id="${nomineeId}"][data-cat="${category}"]`);
+  if (target) target.classList.add('selected');
+
+  const categories = [...new Set(DATA.nominees.map(n => n.category))];
+  updateVoteProgress(categories.length);
+}
+
+function updateVoteProgress(total) {
+  const selected = Object.keys(currentSelections).length;
+  document.getElementById('vote-progress-text').innerHTML =
+    `<strong>${selected}/${total}</strong> categories selected`;
+  document.getElementById('btn-submit').disabled = selected < total || !CONFIG.votingOpen;
+}
+
+function submitVotes() {
+  const categories = [...new Set(DATA.nominees.map(n => n.category))];
+  if (Object.keys(currentSelections).length < categories.length) return;
+
+  // Record votes in data store
+  Object.entries(currentSelections).forEach(([cat, nomId]) => {
+    DATA.votes.push({ pin: currentUser.pin, nomineeId: nomId, category: cat, timestamp: new Date().toISOString() });
+  });
+
+  // Mark voter as voted
+  const voter = DATA.voters.find(v => v.pin === currentUser.pin);
+  if (voter) voter.hasVoted = true;
+
+  showScreen('screen-success');
+  showToast('Votes submitted successfully!', 'success');
+
+  // If using Google Sheets, write votes here
+  if (CONFIG.sheetId && CONFIG.apiKey) {
+    writeVotesToSheets();
+  }
+}
+
+// ══════════════════════════════════
+// ADMIN DASHBOARD
+// ══════════════════════════════════
+function initAdmin() {
+  renderAdminStats();
+  renderDeptParticipation('dept-participation-chart');
+  populateFilters('admin');
+  renderAdminResults();
+  renderDeptDetails();
+}
+
+function renderAdminStats() {
+  const total = DATA.voters.length;
+  const voted = DATA.voters.filter(v => v.hasVoted).length;
+  const pct = total ? Math.round(voted/total*100) : 0;
+  const depts = [...new Set(DATA.voters.map(v => v.dept))].length;
+  const categories = [...new Set(DATA.nominees.map(n => n.category))].length;
+
+  document.getElementById('admin-stats').innerHTML = `
+    <div class="stat-card gold"><div class="stat-label">Total Votes Cast</div><div class="stat-value">${DATA.votes.length / categories || 0}</div><div class="stat-sub">${pct}% participation</div></div>
+    <div class="stat-card"><div class="stat-label">Registered Voters</div><div class="stat-value">${total}</div><div class="stat-sub">${voted} have voted</div></div>
+    <div class="stat-card green"><div class="stat-label">Turnout</div><div class="stat-value">${pct}%</div><div class="stat-sub">${total - voted} remaining</div></div>
+    <div class="stat-card"><div class="stat-label">Departments</div><div class="stat-value">${depts}</div><div class="stat-sub">${categories} categories</div></div>
+  `;
+}
+
+function renderDeptParticipation(containerId) {
+  const depts = [...new Set(DATA.voters.map(v => v.dept))];
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const maxVoters = Math.max(...depts.map(d => DATA.voters.filter(v => v.dept === d).length));
+
+  container.innerHTML = depts.map((dept, i) => {
+    const total = DATA.voters.filter(v => v.dept === dept).length;
+    const voted = DATA.voters.filter(v => v.dept === dept && v.hasVoted).length;
+    const pct = total ? Math.round(voted/total*100) : 0;
+    const color = COLORS[i % COLORS.length];
+    return `
+      <div class="dept-bar-row">
+        <div class="dept-name">${dept}</div>
+        <div class="dept-track">
+          <div class="dept-fill" style="width:${pct}%; background:${color}33; color:${color};">${voted}/${total}</div>
+        </div>
+        <div class="dept-pct">${pct}%</div>
+      </div>`;
+  }).join('');
+}
+
+function populateFilters(prefix) {
+  const cats = [...new Set(DATA.nominees.map(n => n.category))];
+  const depts = [...new Set(DATA.nominees.map(n => n.dept))];
+  const catSel = document.getElementById(`${prefix === 'admin' ? 'admin' : 'sa'}-cat-filter`);
+  const deptSel = document.getElementById(`${prefix === 'admin' ? 'admin' : 'sa'}-dept-filter`);
+  if (catSel) catSel.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option>${c}</option>`).join('');
+  if (deptSel) deptSel.innerHTML = `<option value="">All departments</option>` + depts.map(d => `<option>${d}</option>`).join('');
+}
+
+function getVoteCounts(catFilter, deptFilter) {
+  const results = {};
+  DATA.nominees.forEach(nom => {
+    if (catFilter && nom.category !== catFilter) return;
+    if (deptFilter && nom.dept !== deptFilter) return;
+    const votes = DATA.votes.filter(v => v.nomineeId === nom.id).length;
+    results[nom.id] = { ...nom, votes };
+  });
+  return Object.values(results).sort((a,b) => b.votes - a.votes);
+}
+
+function renderResultsTable(tbodyId, catFilter, deptFilter) {
+  const ranked = getVoteCounts(catFilter, deptFilter);
+  const maxVotes = ranked.length ? ranked[0].votes : 1;
+  const tbody = document.getElementById(tbodyId);
+  if (!ranked.length) { tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No results yet</td></tr>`; return; }
+
+  tbody.innerHTML = ranked.map((nom, i) => {
+    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+    const rankLabel = i < 3 ? `<span class="rank-badge ${rankClass}">${i+1}</span>` : `<span style="color:var(--text3);font-size:13px;">${i+1}</span>`;
+    const barW = maxVotes ? Math.round(nom.votes / maxVotes * 100) : 0;
+    return `<tr>
+      <td>${rankLabel}</td>
+      <td style="font-weight:500;">${nom.name}</td>
+      <td style="color:var(--text2);">${nom.dept}</td>
+      <td><span style="font-size:12px;padding:3px 8px;border-radius:20px;background:var(--bg3);color:var(--text2);">${nom.category}</span></td>
+      <td><div class="vote-bar-wrap"><div class="vote-bar" style="width:${barW}px;max-width:80px;"></div><span class="vote-count">${nom.votes}</span></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAdminResults() {
+  const cat = document.getElementById('admin-cat-filter')?.value || '';
+  const dept = document.getElementById('admin-dept-filter')?.value || '';
+  renderResultsTable('admin-results-tbody', cat, dept);
+}
+
+function renderDeptDetails() {
+  const depts = [...new Set(DATA.nominees.map(n => n.dept))];
+  const container = document.getElementById('dept-detail-bars');
+  if (!container) return;
+  container.innerHTML = depts.map((dept, i) => {
+    const nominees = DATA.nominees.filter(n => n.dept === dept);
+    const rows = nominees.map(nom => {
+      const votes = DATA.votes.filter(v => v.nomineeId === nom.id).length;
+      const maxV = Math.max(...nominees.map(n2 => DATA.votes.filter(v => v.nomineeId === n2.id).length), 1);
+      const pct = Math.round(votes / maxV * 100);
+      return `<div class="dept-bar-row" style="margin-bottom:6px;">
+        <div class="dept-name" style="font-size:12px;">${nom.name}</div>
+        <div class="dept-track" style="height:22px;">
+          <div class="dept-fill" style="width:${pct}%; background:${COLORS[i%COLORS.length]}33; color:${COLORS[i%COLORS.length]}; font-size:11px;">${votes} votes</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:24px;">
+      <div style="font-size:14px;font-weight:500;margin-bottom:10px;color:${COLORS[i%COLORS.length]};">${dept}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+// SUPERADMIN
+// ══════════════════════════════════
+function initSuperAdmin() {
+  renderAdminStats_SA();
+  renderDeptParticipation('sa-dept-participation');
+  populateFilters('sa');
+  renderSAResults();
+  renderVoterList();
+  renderNomineeManage();
+  document.getElementById('voting-status-val').textContent = CONFIG.votingOpen ? 'Open' : 'Closed';
+  document.getElementById('cat-count-val').textContent = [...new Set(DATA.nominees.map(n => n.category))].length;
+  if (CONFIG.sheetId) document.getElementById('sheet-id-input').value = CONFIG.sheetId;
+}
+
+function renderAdminStats_SA() {
+  const total = DATA.voters.length;
+  const voted = DATA.voters.filter(v => v.hasVoted).length;
+  const pct = total ? Math.round(voted/total*100) : 0;
+  const categories = [...new Set(DATA.nominees.map(n => n.category))].length;
+
+  document.getElementById('superadmin-stats').innerHTML = `
+    <div class="stat-card gold"><div class="stat-label">Total Votes</div><div class="stat-value">${DATA.votes.length}</div><div class="stat-sub">across ${categories} categories</div></div>
+    <div class="stat-card"><div class="stat-label">Registered Voters</div><div class="stat-value">${total}</div><div class="stat-sub">${voted} voted · ${total-voted} pending</div></div>
+    <div class="stat-card green"><div class="stat-label">Turnout</div><div class="stat-value">${pct}%</div><div class="stat-sub">${CONFIG.votingOpen ? '🟢 Voting open' : '🔴 Voting closed'}</div></div>
+    <div class="stat-card"><div class="stat-label">Nominees</div><div class="stat-value">${DATA.nominees.length}</div><div class="stat-sub">${[...new Set(DATA.nominees.map(n=>n.dept))].length} departments</div></div>
+  `;
+}
+
+function renderSAResults() {
+  const cat = document.getElementById('sa-cat-filter')?.value || '';
+  const dept = document.getElementById('sa-dept-filter')?.value || '';
+  renderResultsTable('sa-results-tbody', cat, dept);
+}
+
+function renderVoterList() {
+  const container = document.getElementById('voter-list');
+  container.innerHTML = DATA.voters.map(v => `
+    <div class="voter-row">
+      <span class="voter-pin">${v.pin}</span>
+      <span class="voter-name">${v.name}</span>
+      <span class="voter-dept">${v.dept} · ${v.unit}</span>
+      <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
+        <div class="voted-dot ${v.hasVoted ? 'voted-yes' : 'voted-no'}"></div>
+        <span class="voted-label">${v.hasVoted ? 'Voted' : 'Pending'}</span>
+      </div>
+      <button class="btn-sm danger" onclick="resetVoter('${v.pin}')" style="margin-left:8px;">Reset</button>
+    </div>
+  `).join('');
+}
+
+function renderNomineeManage() {
+  const container = document.getElementById('nominee-manage-grid');
+  container.innerHTML = DATA.nominees.map(nom => {
+    const votes = DATA.votes.filter(v => v.nomineeId === nom.id).length;
+    const initials = nom.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+    return `
+      <div class="nominee-manage-card">
+        <div>
+          <div style="font-size:14px;font-weight:500;">${nom.name}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px;">${nom.dept} · ${nom.unit}</div>
+          <span class="status-pill status-open">${nom.category}</span>
+          <div style="font-size:12px;color:var(--text3);margin-top:6px;">${votes} vote${votes!==1?'s':''}</div>
+        </div>
+        <button class="btn-sm danger" onclick="removeNominee(${nom.id})" style="flex-shrink:0;">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function resetVoter(pin) {
+  const voter = DATA.voters.find(v => v.pin === pin);
+  if (!voter) return;
+  voter.hasVoted = false;
+  DATA.votes = DATA.votes.filter(v => v.pin !== pin);
+  renderVoterList();
+  renderAdminStats_SA();
+  renderDeptParticipation('sa-dept-participation');
+  renderSAResults();
+  showToast(`Votes reset for ${voter.name}`, 'success');
+}
+
+function resetAllVotes() {
+  if (!confirm('Reset ALL votes? This cannot be undone.')) return;
+  DATA.votes = [];
+  DATA.voters.forEach(v => v.hasVoted = false);
+  renderVoterList();
+  renderAdminStats_SA();
+  renderDeptParticipation('sa-dept-participation');
+  renderSAResults();
+  showToast('All votes have been reset', 'success');
+}
+
+function generatePINs() {
+  showToast('PINs regenerated and ready to distribute', 'success');
+}
+
+function toggleVoting(open) {
+  CONFIG.votingOpen = open;
+  document.getElementById('voting-status-val').textContent = open ? 'Open' : 'Closed';
+  showToast(`Voting ${open ? 'opened' : 'closed'} successfully`, open ? 'success' : 'error');
+}
+
+function showAddNominee() {
+  const name = prompt('Nominee name:');
+  if (!name) return;
+  const dept = prompt('Department:');
+  if (!dept) return;
+  const unit = prompt('Unit:');
+  const cat = prompt('Category (Employee of the Year / Best Team Player / Innovation Award / Leadership Award):');
+  if (!cat) return;
+  DATA.nominees.push({ id: Date.now(), name, dept, unit: unit||dept, category: cat });
+  renderNomineeManage();
+  showToast(`${name} added as nominee`, 'success');
+}
+
+function removeNominee(id) {
+  const nom = DATA.nominees.find(n => n.id === id);
+  if (!nom) return;
+  if (!confirm(`Remove ${nom.name}?`)) return;
+  DATA.nominees = DATA.nominees.filter(n => n.id !== id);
+  DATA.votes = DATA.votes.filter(v => v.nomineeId !== id);
+  renderNomineeManage();
+  showToast(`${nom.name} removed`, 'success');
+}
+
+function manageCats() {
+  const cats = [...new Set(DATA.nominees.map(n => n.category))];
+  showToast(`Categories: ${cats.join(', ')}`, 'success');
+}
+
+// ══════════════════════════════════
+// GOOGLE SHEETS INTEGRATION
+// ══════════════════════════════════
+function saveSheetId() {
+  CONFIG.sheetId = document.getElementById('sheet-id-input').value;
+  localStorage.setItem('gs_sheet_id', CONFIG.sheetId);
+  showToast('Sheet ID saved', 'success');
+}
+
+function saveApiKey() {
+  CONFIG.apiKey = document.getElementById('api-key-input').value;
+  localStorage.setItem('gs_api_key', CONFIG.apiKey);
+  showToast('API key saved', 'success');
+}
+
+async function testSheetsConnection() {
+  if (!CONFIG.sheetId || !CONFIG.apiKey) {
+    showToast('Enter Sheet ID and API key first', 'error'); return;
+  }
+  showToast('Testing connection…');
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}?key=${CONFIG.apiKey}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      document.getElementById('conn-dot').style.background = 'var(--green)';
+      document.getElementById('conn-label').textContent = 'Connected to Google Sheets ✓';
+      showToast('Connected successfully!', 'success');
+    } else {
+      throw new Error('Auth failed');
+    }
+  } catch (e) {
+    document.getElementById('conn-dot').style.background = 'var(--red)';
+    document.getElementById('conn-label').textContent = 'Connection failed — check credentials';
+    showToast('Connection failed', 'error');
+  }
+}
+
+async function syncFromSheets() {
+  if (!CONFIG.sheetId || !CONFIG.apiKey) {
+    showToast('Configure Sheets ID and API key first', 'error'); return;
+  }
+  showToast('Syncing from Google Sheets…');
+  try {
+    const ranges = ['Voters!A2:E', 'Nominees!A2:E', 'Votes!A2:D', 'Admins!A2:C'];
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}/values:batchGet?ranges=${ranges.join('&ranges=')}&key=${CONFIG.apiKey}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error?.message || 'Error');
+
+    const [votersData, nomData, votesData, adminsData] = json.valueRanges;
+
+    if (votersData.values) {
+      DATA.voters = votersData.values.map(r => ({
+        pin: r[0], name: r[1], dept: r[2], unit: r[3], hasVoted: r[4]==='TRUE'
+      }));
+    }
+    if (nomData.values) {
+      DATA.nominees = nomData.values.map(r => ({
+        id: parseInt(r[0]), name: r[1], dept: r[2], unit: r[3], category: r[4]
+      }));
+    }
+    if (votesData.values) {
+      DATA.votes = votesData.values.map(r => ({
+        pin: r[0], nomineeId: parseInt(r[1]), category: r[2], timestamp: r[3]
+      }));
+    }
+    if (adminsData.values) {
+      DATA.admins = adminsData.values.map(r => ({
+        pin: r[0], role: r[1], name: r[2]
+      }));
+    }
+
+    initSuperAdmin();
+    showToast('Synced from Google Sheets!', 'success');
+  } catch (e) {
+    showToast('Sync failed: ' + e.message, 'error');
+  }
+}
+
+async function writeVotesToSheets() {
+  if (!CONFIG.sheetId || !CONFIG.apiKey) return;
+  const rows = Object.entries(currentSelections).map(([cat, nomId]) => [
+    currentUser.pin, nomId, cat, new Date().toISOString()
+  ]);
+  // Append to Votes sheet & update Voters HasVoted — requires OAuth, not just API key.
+  // For write access, use Apps Script Web App endpoint or gapi with OAuth2.
+  console.log('Would write to Sheets:', rows);
+}
+
+function exportCSV(type) {
+  let rows = [], filename = '';
+  if (type === 'results') {
+    rows = [['Nominee','Department','Unit','Category','Votes'], ...getVoteCounts('','').map(n => [n.name,n.dept,n.unit,n.category,n.votes])];
+    filename = 'voting-results.csv';
+  } else if (type === 'voters') {
+    rows = [['PIN','Name','Department','Unit','HasVoted'], ...DATA.voters.map(v => [v.pin,v.name,v.dept,v.unit,v.hasVoted])];
+    filename = 'voters.csv';
+  } else {
+    rows = [['Type','PIN/ID','Name','Department','Detail','Value'],
+      ...DATA.voters.map(v => ['voter',v.pin,v.name,v.dept,v.unit,v.hasVoted]),
+      ...DATA.votes.map(v => ['vote',v.pin,'',v.category,v.nomineeId,v.timestamp||''])];
+    filename = 'full-export.csv';
+  }
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = filename;
+  a.click();
+  showToast(`${filename} downloaded`, 'success');
+}
+
+// ══════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════
+function switchTab(scope, tab) {
+  const prefix = scope === 'admin' ? 'admin' : 'superadmin';
+  document.querySelectorAll(`#screen-${scope} .tab-btn`).forEach((btn, i) => {
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  document.querySelectorAll(`#screen-${scope} .tab-panel`).forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById(`${prefix}-tab-${tab}`);
+  if (panel) panel.classList.add('active');
+
+  // Re-render on switch
+  if (tab === 'results' && scope === 'admin') renderAdminResults();
+  if (tab === 'results' && scope === 'superadmin') renderSAResults();
+  if (tab === 'departments') renderDeptDetails();
+  if (tab === 'voters') renderVoterList();
+  if (tab === 'nominees') renderNomineeManage();
+}
+
+// ══════════════════════════════════
+// TOAST
+// ══════════════════════════════════
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type||''} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.remove('show'); }, 2800);
+}
+</script>
+</body>
+</html>
