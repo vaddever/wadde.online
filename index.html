@@ -215,6 +215,19 @@
 </head>
 <body>
 
+<!-- ══ LOADER ══ -->
+<div id="loader-screen" style="display:none; position:fixed; inset:0; background:#0f0f10; z-index:9999; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
+  <div style="width:52px;height:52px;background:linear-gradient(135deg,#c9a84c,#8a5c1e);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 8px 32px rgba(201,168,76,0.2);">🗳️</div>
+  <div style="font-family:'DM Serif Display',serif;font-size:22px;color:#f0efe8;letter-spacing:-0.01em;">Staff Voting Portal</div>
+  <div style="display:flex;gap:6px;align-items:center;">
+    <div style="width:8px;height:8px;border-radius:50%;background:#c9a84c;animation:pulse 1.2s ease-in-out infinite;"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#c9a84c;animation:pulse 1.2s ease-in-out 0.2s infinite;"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#c9a84c;animation:pulse 1.2s ease-in-out 0.4s infinite;"></div>
+  </div>
+  <div id="loader-status" style="font-size:13px;color:#9998a0;font-family:'DM Sans',sans-serif;">Syncing from Google Sheets…</div>
+  <style>@keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.1)}}</style>
+</div>
+
 <!-- ══ SCREEN: LOGIN ══ -->
 <div id="screen-login" class="screen active">
   <div class="login-bg">
@@ -491,7 +504,7 @@
 const CONFIG = {
   sheetId: localStorage.getItem('gs_sheet_id') || '',
   apiKey: localStorage.getItem('gs_api_key') || '',
-  votingOpen: true,
+  votingOpen: JSON.parse(localStorage.getItem('gs_voting_open') ?? 'true'),
 };
 
 const COLORS = ['#c9a84c','#5b8ef0','#4caf7d','#e05555','#a87cdb','#5bbef0','#e08a55'];
@@ -839,7 +852,15 @@ function initSuperAdmin() {
   renderNomineeManage();
   document.getElementById('voting-status-val').textContent = CONFIG.votingOpen ? 'Open' : 'Closed';
   document.getElementById('cat-count-val').textContent = [...new Set(DATA.nominees.map(n => n.category))].length;
-  if (CONFIG.sheetId) document.getElementById('sheet-id-input').value = CONFIG.sheetId;
+  // Always restore saved credentials into inputs
+  const sidEl = document.getElementById('sheet-id-input');
+  const keyEl = document.getElementById('api-key-input');
+  if (sidEl) sidEl.value = CONFIG.sheetId || '';
+  if (keyEl) keyEl.value = CONFIG.apiKey  || '';
+  if (CONFIG.sheetId && CONFIG.apiKey) {
+    document.getElementById('conn-dot').style.background = 'var(--green)';
+    document.getElementById('conn-label').textContent = 'Connected — credentials loaded from memory ✓';
+  }
 }
 
 function renderAdminStats_SA() {
@@ -926,6 +947,7 @@ function generatePINs() {
 
 function toggleVoting(open) {
   CONFIG.votingOpen = open;
+  localStorage.setItem('gs_voting_open', JSON.stringify(open));
   document.getElementById('voting-status-val').textContent = open ? 'Open' : 'Closed';
   showToast(`Voting ${open ? 'opened' : 'closed'} successfully`, open ? 'success' : 'error');
 }
@@ -962,15 +984,15 @@ function manageCats() {
 // GOOGLE SHEETS INTEGRATION
 // ══════════════════════════════════
 function saveSheetId() {
-  CONFIG.sheetId = document.getElementById('sheet-id-input').value;
+  CONFIG.sheetId = document.getElementById('sheet-id-input').value.trim();
   localStorage.setItem('gs_sheet_id', CONFIG.sheetId);
-  showToast('Sheet ID saved', 'success');
+  showToast('Sheet ID saved ✓', 'success');
 }
 
 function saveApiKey() {
-  CONFIG.apiKey = document.getElementById('api-key-input').value;
+  CONFIG.apiKey = document.getElementById('api-key-input').value.trim();
   localStorage.setItem('gs_api_key', CONFIG.apiKey);
-  showToast('API key saved', 'success');
+  showToast('API key saved ✓', 'success');
 }
 
 async function testSheetsConnection() {
@@ -1046,6 +1068,59 @@ async function writeVotesToSheets() {
   // For write access, use Apps Script Web App endpoint or gapi with OAuth2.
   console.log('Would write to Sheets:', rows);
 }
+
+// ══════════════════════════════════
+// AUTO-SYNC ON PAGE LOAD
+// ══════════════════════════════════
+async function autoSyncOnLoad() {
+  // Always restore credentials into input fields if they exist
+  const sidEl = document.getElementById('sheet-id-input');
+  const keyEl = document.getElementById('api-key-input');
+  if (sidEl && CONFIG.sheetId) sidEl.value = CONFIG.sheetId;
+  if (keyEl && CONFIG.apiKey)  keyEl.value  = CONFIG.apiKey;
+
+  if (!CONFIG.sheetId || !CONFIG.apiKey) {
+    // No credentials saved — hide loader and show login normally
+    document.getElementById('loader-screen').style.display = 'none';
+    document.getElementById('screen-login').classList.add('active');
+    return;
+  }
+
+  // Show loading screen while syncing
+  document.getElementById('loader-screen').style.display = 'flex';
+
+  try {
+    const ranges = ['Voters!A2:E', 'Nominees!A2:E', 'Votes!A2:D', 'Admins!A2:C'];
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}/values:batchGet?ranges=${ranges.join('&ranges=')}&key=${CONFIG.apiKey}`;
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (!res.ok) throw new Error(json.error?.message || 'Sync failed');
+
+    const [votersData, nomData, votesData, adminsData] = json.valueRanges;
+    if (votersData.values) DATA.voters  = votersData.values.map(r => ({ pin:r[0], name:r[1], dept:r[2], unit:r[3], hasVoted:r[4]==='TRUE' }));
+    if (nomData.values)    DATA.nominees = nomData.values.map(r => ({ id:parseInt(r[0]), name:r[1], dept:r[2], unit:r[3], category:r[4] }));
+    if (votesData.values)  DATA.votes    = votesData.values.map(r => ({ pin:r[0], nomineeId:parseInt(r[1]), category:r[2], timestamp:r[3] }));
+    if (adminsData.values) DATA.admins   = adminsData.values.map(r => ({ pin:r[0], role:r[1], name:r[2] }));
+
+    document.getElementById('loader-status').textContent = '✓ Data loaded from Google Sheets';
+    setTimeout(() => {
+      document.getElementById('loader-screen').style.display = 'none';
+      document.getElementById('screen-login').classList.add('active');
+    }, 700);
+
+  } catch (e) {
+    // Sync failed — still show login with cached/demo data
+    document.getElementById('loader-status').textContent = '⚠ Could not reach Sheets — using cached data';
+    document.getElementById('loader-status').style.color = '#e8c96a';
+    setTimeout(() => {
+      document.getElementById('loader-screen').style.display = 'none';
+      document.getElementById('screen-login').classList.add('active');
+    }, 1400);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', autoSyncOnLoad);
 
 function exportCSV(type) {
   let rows = [], filename = '';
