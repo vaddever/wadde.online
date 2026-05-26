@@ -6,1175 +6,1530 @@
 <title>Staff Voting Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0f0f10;
-    --bg2: #17171a;
-    --bg3: #1f1f24;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(255,255,255,0.13);
-    --text: #f0efe8;
-    --text2: #9998a0;
-    --text3: #5c5b64;
-    --gold: #c9a84c;
-    --gold2: #e8c96a;
-    --gold-dim: rgba(201,168,76,0.12);
-    --green: #4caf7d;
-    --green-dim: rgba(76,175,125,0.12);
-    --red: #e05555;
-    --red-dim: rgba(224,85,85,0.1);
-    --blue: #5b8ef0;
-    --blue-dim: rgba(91,142,240,0.1);
-    --radius: 12px;
-    --radius-sm: 8px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 400; min-height: 100vh; }
+:root{
+  --bg:#0f0f10;--bg2:#17171a;--bg3:#1f1f24;--bg4:#252529;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0efe8;--text2:#9998a0;--text3:#5c5b64;
+  --gold:#c9a84c;--gold2:#e8c96a;--gold-dim:rgba(201,168,76,0.12);
+  --green:#4caf7d;--green-dim:rgba(76,175,125,0.12);
+  --red:#e05555;--red-dim:rgba(224,85,85,0.1);
+  --blue:#5b8ef0;--blue-dim:rgba(91,142,240,0.1);
+  --r:12px;--rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
 
-  /* ── LAYOUT ── */
-  .screen { display: none; min-height: 100vh; }
-  .screen.active { display: flex; flex-direction: column; }
+/* LOADER */
+#loader{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
+.ld-logo{width:56px;height:56px;background:linear-gradient(135deg,var(--gold),#8a5c1e);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 8px 32px rgba(201,168,76,.2);}
+.ld-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--text);}
+.ld-dots{display:flex;gap:6px;}
+.ld-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:ldpulse 1.2s ease-in-out infinite;}
+.ld-dot:nth-child(2){animation-delay:.2s;}
+.ld-dot:nth-child(3){animation-delay:.4s;}
+@keyframes ldpulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
+#ld-status{font-size:12px;color:var(--text3);}
 
-  /* ── TOPBAR ── */
-  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
-  .topbar-brand { display: flex; align-items: center; gap: 10px; }
-  .topbar-logo { width: 32px; height: 32px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-  .topbar-name { font-family: 'DM Serif Display', serif; font-size: 18px; letter-spacing: -0.01em; }
-  .topbar-right { display: flex; align-items: center; gap: 10px; }
-  .topbar-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
-  .badge-super { background: var(--gold-dim); color: var(--gold2); border: 1px solid rgba(201,168,76,0.25); }
-  .badge-admin { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(91,142,240,0.2); }
-  .badge-voter { background: var(--green-dim); color: var(--green); border: 1px solid rgba(76,175,125,0.2); }
-  .btn-logout { background: transparent; border: 1px solid var(--border2); color: var(--text2); font-size: 12px; padding: 6px 14px; border-radius: var(--radius-sm); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
-  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:200;}
+.tb-brand{display:flex;align-items:center;gap:10px;}
+.tb-logo{width:30px;height:30px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.tb-name{font-family:'DM Serif Display',serif;font-size:17px;}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.tbadge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;}
+.tbadge-super{background:var(--gold-dim);color:var(--gold2);border:1px solid rgba(201,168,76,.25);}
+.tbadge-admin{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(91,142,240,.2);}
+.tbadge-voter{background:var(--green-dim);color:var(--green);border:1px solid rgba(76,175,125,.2);}
+.btn-logout{background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:12px;padding:5px 12px;border-radius:var(--rs);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.btn-logout:hover{border-color:var(--red);color:var(--red);}
 
-  /* ── LOGIN SCREEN ── */
-  #screen-login { align-items: center; justify-content: center; background: var(--bg); position: relative; overflow: hidden; }
-  .login-bg { position: absolute; inset: 0; pointer-events: none; }
-  .login-bg-circle { position: absolute; border-radius: 50%; }
-  .login-bg-c1 { width: 600px; height: 600px; top: -200px; right: -150px; background: radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%); }
-  .login-bg-c2 { width: 400px; height: 400px; bottom: -100px; left: -100px; background: radial-gradient(circle, rgba(91,142,240,0.05) 0%, transparent 70%); }
-  .login-box { position: relative; z-index: 1; width: 100%; max-width: 420px; padding: 0 24px; animation: fadeUp 0.5s ease; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  .login-emblem { width: 64px; height: 64px; background: linear-gradient(135deg, var(--gold), #8a5c1e); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 28px; box-shadow: 0 8px 32px rgba(201,168,76,0.2); }
-  .login-title { font-family: 'DM Serif Display', serif; font-size: 32px; text-align: center; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 8px; }
-  .login-sub { font-size: 14px; color: var(--text2); text-align: center; margin-bottom: 36px; }
-  .login-form { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 28px; }
-  .form-label { font-size: 12px; color: var(--text2); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; display: block; }
-  .form-input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 13px 16px; color: var(--text); font-size: 18px; font-family: 'DM Sans', sans-serif; font-weight: 500; letter-spacing: 0.15em; text-align: center; outline: none; transition: border-color 0.2s; }
-  .form-input:focus { border-color: var(--gold); }
-  .form-input::placeholder { color: var(--text3); letter-spacing: 0.05em; font-size: 14px; }
-  .pin-dots { display: flex; gap: 8px; justify-content: center; margin: 14px 0; }
-  .pin-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border2); transition: background 0.2s; }
-  .pin-dot.filled { background: var(--gold); }
-  .btn-primary { width: 100%; background: var(--gold); color: #0f0f10; font-size: 14px; font-weight: 600; padding: 14px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; margin-top: 16px; letter-spacing: 0.02em; }
-  .btn-primary:hover { background: var(--gold2); transform: translateY(-1px); }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .login-error { font-size: 13px; color: var(--red); text-align: center; margin-top: 12px; min-height: 18px; }
-  .login-demo { margin-top: 24px; font-size: 12px; color: var(--text3); text-align: center; line-height: 1.7; }
-  .login-demo strong { color: var(--text2); }
+/* SETUP WIZARD */
+#screen-setup{align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden;}
+.setup-glow{position:absolute;inset:0;pointer-events:none;}
+.setup-glow-c1{position:absolute;width:500px;height:500px;top:-150px;right:-100px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.07) 0%,transparent 70%);}
+.setup-glow-c2{position:absolute;width:350px;height:350px;bottom:-80px;left:-80px;border-radius:50%;background:radial-gradient(circle,rgba(91,142,240,.05) 0%,transparent 70%);}
+.setup-box{position:relative;z-index:1;width:100%;max-width:480px;padding:0 20px;animation:fadeUp .5s ease;}
+.setup-emblem{width:60px;height:60px;background:linear-gradient(135deg,var(--gold),#8a5c1e);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 20px;box-shadow:0 8px 32px rgba(201,168,76,.2);}
+.setup-title{font-family:'DM Serif Display',serif;font-size:26px;text-align:center;line-height:1.2;margin-bottom:6px;}
+.setup-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:24px;line-height:1.5;}
+.setup-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:22px;}
+.setup-step-indicator{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:20px;}
+.setup-step-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:all .3s;}
+.setup-step-dot.active{background:var(--gold);width:24px;border-radius:4px;}
+.setup-step-dot.done{background:var(--green);}
+.setup-lbl{font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;display:block;}
+.setup-inp{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;margin-bottom:10px;}
+.setup-inp:focus{border-color:var(--gold);}
+.setup-inp::placeholder{color:var(--text3);}
+.setup-btn{width:100%;background:var(--gold);color:#0f0f10;font-size:13px;font-weight:600;padding:12px;border-radius:var(--rs);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;margin-top:6px;}
+.setup-btn:hover{background:var(--gold2);}
+.setup-btn:disabled{opacity:.4;cursor:not-allowed;}
+.setup-btn-sec{width:100%;background:transparent;color:var(--text2);font-size:12px;padding:9px;border-radius:var(--rs);border:1px solid var(--border2);cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px;transition:all .2s;}
+.setup-btn-sec:hover{border-color:var(--border2);color:var(--text);}
+.setup-err{font-size:12px;color:var(--red);text-align:center;margin-top:8px;min-height:16px;}
+.setup-note{font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6;text-align:center;}
+.setup-note a{color:var(--gold);text-decoration:none;}
 
-  /* ── VOTER SCREEN ── */
-  #screen-voter { background: var(--bg); }
-  .voter-content { flex: 1; padding: 28px; max-width: 900px; margin: 0 auto; width: 100%; }
-  .voter-welcome { margin-bottom: 28px; }
-  .voter-welcome h2 { font-family: 'DM Serif Display', serif; font-size: 26px; letter-spacing: -0.02em; }
-  .voter-welcome p { font-size: 14px; color: var(--text2); margin-top: 4px; }
-  .voter-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-  .meta-chip { font-size: 12px; padding: 4px 12px; border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); }
-  .category-section { margin-bottom: 36px; }
-  .category-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-  .category-num { width: 26px; height: 26px; border-radius: 50%; background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(201,168,76,0.2); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .category-title { font-size: 16px; font-weight: 500; }
-  .category-desc { font-size: 12px; color: var(--text2); margin-left: auto; }
-  .nominees-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
-  .nominee-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
-  .nominee-card:hover { border-color: var(--border2); transform: translateY(-2px); }
-  .nominee-card.selected { border-color: var(--gold); background: var(--gold-dim); }
-  .nominee-card.selected::after { content: '✓'; position: absolute; top: 10px; right: 12px; color: var(--gold); font-weight: 700; font-size: 16px; }
-  .nominee-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; margin-bottom: 10px; }
-  .nominee-name { font-size: 14px; font-weight: 500; }
-  .nominee-dept { font-size: 12px; color: var(--text2); margin-top: 2px; }
-  .vote-footer { position: sticky; bottom: 0; background: linear-gradient(to top, var(--bg) 60%, transparent); padding: 20px 28px; }
-  .vote-footer-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .vote-progress { font-size: 13px; color: var(--text2); }
-  .vote-progress strong { color: var(--text); }
-  .btn-submit { background: var(--gold); color: #0f0f10; font-size: 14px; font-weight: 600; padding: 13px 32px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
-  .btn-submit:hover { background: var(--gold2); }
-  .btn-submit:disabled { opacity: 0.35; cursor: not-allowed; }
+/* LOGIN */
+#screen-login{align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden;}
+.login-glow-c1{position:absolute;width:500px;height:500px;top:-150px;right:-100px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.07) 0%,transparent 70%);}
+.login-glow-c2{position:absolute;width:350px;height:350px;bottom:-80px;left:-80px;border-radius:50%;background:radial-gradient(circle,rgba(91,142,240,.05) 0%,transparent 70%);}
+.login-box{position:relative;z-index:1;width:100%;max-width:400px;padding:0 20px;animation:fadeUp .5s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.login-emblem{width:58px;height:58px;background:linear-gradient(135deg,var(--gold),#8a5c1e);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 20px;box-shadow:0 8px 32px rgba(201,168,76,.2);}
+.login-org{font-size:12px;color:var(--text2);text-align:center;margin-bottom:4px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;}
+.login-title{font-family:'DM Serif Display',serif;font-size:28px;text-align:center;line-height:1.15;margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:28px;}
+.login-form{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:24px;}
+.form-lbl{font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:7px;display:block;}
+.form-inp{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:12px 16px;color:var(--text);font-size:18px;font-family:'DM Sans',sans-serif;font-weight:500;letter-spacing:.15em;text-align:center;outline:none;transition:border-color .2s;}
+.form-inp:focus{border-color:var(--gold);}
+.form-inp::placeholder{color:var(--text3);letter-spacing:.05em;font-size:13px;}
+.pin-dots{display:flex;gap:7px;justify-content:center;margin:11px 0;}
+.pin-dot{width:9px;height:9px;border-radius:50%;background:var(--border2);transition:background .2s;}
+.pin-dot.on{background:var(--gold);}
+.btn-login{width:100%;background:var(--gold);color:#0f0f10;font-size:13px;font-weight:600;padding:12px;border-radius:var(--rs);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;margin-top:14px;}
+.btn-login:hover{background:var(--gold2);}
+.btn-login:disabled{opacity:.4;cursor:not-allowed;}
+.login-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;min-height:16px;}
+.login-configure{margin-top:16px;text-align:center;font-size:11px;color:var(--text3);}
+.login-configure a{color:var(--text2);cursor:pointer;text-decoration:underline;}
 
-  /* ── SUCCESS SCREEN ── */
-  #screen-success { align-items: center; justify-content: center; background: var(--bg); }
-  .success-box { text-align: center; padding: 48px 32px; max-width: 420px; animation: fadeUp 0.5s ease; }
-  .success-icon { font-size: 56px; margin-bottom: 20px; }
-  .success-title { font-family: 'DM Serif Display', serif; font-size: 30px; margin-bottom: 10px; }
-  .success-msg { font-size: 15px; color: var(--text2); line-height: 1.6; }
-  .success-decoration { margin: 28px auto; width: 60px; height: 2px; background: linear-gradient(to right, transparent, var(--gold), transparent); }
+/* STATUS BAR */
+.status-bar{padding:8px 24px;font-size:12px;font-weight:500;text-align:center;}
+.status-open{background:var(--green-dim);color:var(--green);border-bottom:1px solid rgba(76,175,125,.15);}
+.status-closed{background:var(--red-dim);color:var(--red);border-bottom:1px solid rgba(224,85,85,.1);}
 
-  /* ── ADMIN / SUPERADMIN DASHBOARD ── */
-  #screen-admin, #screen-superadmin { background: var(--bg); }
-  .dash-content { flex: 1; padding: 28px; max-width: 1100px; margin: 0 auto; width: 100%; }
-  .dash-tabs { display: flex; gap: 4px; margin-bottom: 28px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; }
-  .tab-btn { padding: 8px 18px; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; white-space: nowrap; }
-  .tab-btn.active { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; animation: fadeUp 0.3s ease; }
+/* VOTER */
+#screen-voter{background:var(--bg);}
+.v-content{flex:1;padding:24px;max-width:920px;margin:0 auto;width:100%;}
+.v-welcome{margin-bottom:24px;}
+.v-welcome h2{font-family:'DM Serif Display',serif;font-size:24px;letter-spacing:-.02em;}
+.v-welcome p{font-size:13px;color:var(--text2);margin-top:4px;}
+.v-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.meta-chip{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);}
+.cat-section{margin-bottom:32px;}
+.cat-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border);}
+.cat-num{width:24px;height:24px;border-radius:50%;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.2);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cat-title{font-size:15px;font-weight:500;}
+.cat-count{font-size:11px;color:var(--text3);margin-left:auto;}
+.noms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:9px;}
+.nom-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .2s;position:relative;}
+.nom-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.nom-card.sel{border-color:var(--gold);background:var(--gold-dim);}
+.nom-card.sel::after{content:'✓';position:absolute;top:9px;right:11px;color:var(--gold);font-weight:700;font-size:15px;}
+.nom-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-bottom:9px;}
+.nom-name{font-size:13px;font-weight:500;}
+.nom-info{font-size:11px;color:var(--text2);margin-top:2px;}
+.vote-footer{position:sticky;bottom:0;background:linear-gradient(to top,var(--bg) 55%,transparent);padding:16px 24px;}
+.vf-inner{max-width:920px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.vprog{font-size:13px;color:var(--text2);}
+.vprog b{color:var(--text);}
+.btn-submit{background:var(--gold);color:#0f0f10;font-size:13px;font-weight:600;padding:12px 28px;border-radius:var(--rs);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.btn-submit:hover{background:var(--gold2);}
+.btn-submit:disabled{opacity:.35;cursor:not-allowed;}
 
-  /* Stats row */
-  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
-  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
-  .stat-label { font-size: 12px; color: var(--text2); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
-  .stat-value { font-size: 28px; font-family: 'DM Serif Display', serif; letter-spacing: -0.02em; }
-  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
-  .stat-card.gold { border-color: rgba(201,168,76,0.2); }
-  .stat-card.gold .stat-value { color: var(--gold2); }
-  .stat-card.green .stat-value { color: var(--green); }
+/* SUCCESS */
+#screen-success{align-items:center;justify-content:center;background:var(--bg);}
+.suc-box{text-align:center;padding:48px 32px;max-width:380px;animation:fadeUp .5s ease;margin:auto;}
+.suc-icon{font-size:52px;margin-bottom:16px;}
+.suc-title{font-family:'DM Serif Display',serif;font-size:28px;margin-bottom:8px;}
+.suc-line{margin:22px auto;width:50px;height:2px;background:linear-gradient(to right,transparent,var(--gold),transparent);}
+.suc-msg{font-size:13px;color:var(--text2);line-height:1.65;}
 
-  /* Results table */
-  .results-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-  .filter-select { background: var(--bg2); border: 1px solid var(--border2); color: var(--text); font-size: 13px; padding: 8px 14px; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; cursor: pointer; outline: none; }
-  .filter-select:focus { border-color: var(--gold); }
-  .results-table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .results-table { width: 100%; border-collapse: collapse; }
-  .results-table th { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); background: var(--bg3); }
-  .results-table td { padding: 13px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
-  .results-table tr:last-child td { border-bottom: none; }
-  .results-table tr:hover td { background: rgba(255,255,255,0.02); }
-  .rank-badge { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-  .rank-1 { background: var(--gold-dim); color: var(--gold2); border: 1px solid rgba(201,168,76,0.3); }
-  .rank-2 { background: rgba(180,180,200,0.1); color: #a0a0b8; border: 1px solid rgba(160,160,180,0.2); }
-  .rank-3 { background: rgba(180,120,80,0.1); color: #c09060; border: 1px solid rgba(180,120,80,0.2); }
-  .vote-bar-wrap { display: flex; align-items: center; gap: 10px; }
-  .vote-bar { height: 6px; border-radius: 3px; background: var(--gold); flex-shrink: 0; min-width: 4px; transition: width 0.5s ease; }
-  .vote-count { font-size: 13px; color: var(--text2); white-space: nowrap; }
+/* DASHBOARDS */
+#screen-admin,#screen-superadmin{background:var(--bg);}
+.dash-wrap{flex:1;padding:24px;max-width:1100px;margin:0 auto;width:100%;}
+.dash-tabs{display:flex;gap:3px;margin-bottom:22px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:4px;width:fit-content;flex-wrap:wrap;}
+.tab-btn{padding:7px 15px;border-radius:var(--rs);border:none;background:transparent;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;white-space:nowrap;}
+.tab-btn.on{background:var(--bg3);color:var(--text);border:1px solid var(--border2);}
+.tab-panel{display:none;}
+.tab-panel.on{display:block;animation:fadeUp .3s ease;}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:22px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;}
+.stat-lbl{font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:7px;}
+.stat-val{font-size:26px;font-family:'DM Serif Display',serif;letter-spacing:-.02em;}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.stat-card.gold{border-color:rgba(201,168,76,.2);} .stat-card.gold .stat-val{color:var(--gold2);}
+.stat-card.green .stat-val{color:var(--green);}
+.sect-title{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;}
+.db-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.db-name{font-size:12px;min-width:120px;text-align:right;color:var(--text2);}
+.db-track{flex:1;height:26px;background:var(--bg3);border-radius:6px;overflow:hidden;}
+.db-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:500;transition:width .8s ease;}
+.db-pct{font-size:11px;color:var(--text3);min-width:32px;}
+.tbl-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.rtbl{width:100%;border-collapse:collapse;}
+.rtbl th{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg3);}
+.rtbl td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);}
+.rtbl tr:last-child td{border-bottom:none;}
+.rtbl tr:hover td{background:rgba(255,255,255,.015);}
+.rnk{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+.r1{background:var(--gold-dim);color:var(--gold2);border:1px solid rgba(201,168,76,.3);}
+.r2{background:rgba(180,180,200,.1);color:#a0a0b8;border:1px solid rgba(160,160,180,.2);}
+.r3{background:rgba(180,120,80,.1);color:#c09060;border:1px solid rgba(180,120,80,.2);}
+.vbar-wrap{display:flex;align-items:center;gap:8px;}
+.vbar{height:5px;border-radius:3px;background:var(--gold);min-width:3px;}
+.vcnt{font-size:12px;color:var(--text2);}
+.rf{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.fsel{background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-size:12px;padding:7px 12px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;}
+.fsel:focus{border-color:var(--gold);}
 
-  /* Dept bar chart */
-  .chart-section { margin-bottom: 28px; }
-  .chart-title { font-size: 14px; font-weight: 500; margin-bottom: 14px; color: var(--text2); }
-  .dept-bars { display: flex; flex-direction: column; gap: 10px; }
-  .dept-bar-row { display: flex; align-items: center; gap: 12px; }
-  .dept-name { font-size: 13px; min-width: 130px; color: var(--text2); text-align: right; }
-  .dept-track { flex: 1; height: 28px; background: var(--bg3); border-radius: 6px; overflow: hidden; position: relative; }
-  .dept-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-size: 12px; font-weight: 500; transition: width 0.8s ease; white-space: nowrap; }
-  .dept-pct { font-size: 12px; color: var(--text3); min-width: 36px; }
+/* VOTER TABLE */
+.voter-tbl{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;max-height:440px;overflow-y:auto;}
+.vrow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;}
+.vrow:last-child{border-bottom:none;}
+.vrow:hover{background:rgba(255,255,255,.015);}
+.vpin{font-family:monospace;color:var(--gold);background:var(--gold-dim);padding:2px 7px;border-radius:4px;font-size:12px;}
+.vname{flex:1;font-weight:500;font-size:13px;}
+.vdept{font-size:11px;color:var(--text2);}
+.vdot{width:7px;height:7px;border-radius:50%;}
+.vdot.yes{background:var(--green);} .vdot.no{background:var(--border2);}
+.vlbl{font-size:10px;color:var(--text2);}
 
-  /* SuperAdmin management panels */
-  .sa-section { margin-bottom: 32px; }
-  .sa-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .sa-section-title { font-size: 15px; font-weight: 500; }
-  .btn-sm { font-size: 12px; padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
-  .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
-  .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
-  .btn-sm.success { border-color: rgba(76,175,125,0.4); color: var(--green); background: var(--green-dim); }
-  .btn-sm.warning { border-color: rgba(201,168,76,0.4); color: var(--gold); background: var(--gold-dim); }
-  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .config-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
-  .config-card-label { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-  .config-card-val { font-size: 20px; font-weight: 500; }
-  .config-card-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  .config-input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; margin-top: 8px; }
-  .config-input:focus { border-color: var(--gold); }
-  .voter-table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; max-height: 380px; overflow-y: auto; }
-  .voter-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; transition: background 0.15s; }
-  .voter-row:last-child { border-bottom: none; }
-  .voter-row:hover { background: rgba(255,255,255,0.02); }
-  .voter-pin { font-family: monospace; font-size: 13px; color: var(--gold); background: var(--gold-dim); padding: 2px 8px; border-radius: 4px; }
-  .voter-name { flex: 1; font-weight: 500; }
-  .voter-dept { font-size: 12px; color: var(--text2); }
-  .voted-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .voted-yes { background: var(--green); }
-  .voted-no { background: var(--border2); }
-  .voted-label { font-size: 11px; color: var(--text2); }
-  .nominee-manage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-  .nominee-manage-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-  .status-pill { font-size: 10px; padding: 3px 9px; border-radius: 20px; font-weight: 500; display: inline-block; margin-top: 4px; }
-  .status-open { background: var(--green-dim); color: var(--green); border: 1px solid rgba(76,175,125,0.2); }
-  .status-closed { background: var(--red-dim); color: var(--red); border: 1px solid rgba(224,85,85,0.15); }
-  .google-sheets-info { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
-  .gsheet-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .gsheet-label { font-size: 13px; color: var(--text2); min-width: 120px; }
-  .gsheet-input { flex: 1; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
-  .gsheet-input:focus { border-color: var(--gold); }
-  .gsheet-status { font-size: 12px; display: flex; align-items: center; gap: 6px; }
-  .gsheet-dot { width: 7px; height: 7px; border-radius: 50%; }
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--bg3); border: 1px solid var(--border2); color: var(--text); font-size: 13px; padding: 12px 20px; border-radius: var(--radius); opacity: 0; transition: all 0.3s; z-index: 1000; white-space: nowrap; }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.success { border-color: rgba(76,175,125,0.4); color: var(--green); }
-  .toast.error { border-color: rgba(224,85,85,0.3); color: var(--red); }
-  .voting-status-banner { padding: 10px 28px; font-size: 13px; font-weight: 500; text-align: center; }
-  .voting-status-banner.open { background: var(--green-dim); color: var(--green); border-bottom: 1px solid rgba(76,175,125,0.15); }
-  .voting-status-banner.closed { background: var(--red-dim); color: var(--red); border-bottom: 1px solid rgba(224,85,85,0.1); }
-  .empty-state { text-align: center; padding: 40px; color: var(--text3); font-size: 14px; }
-  @media (max-width: 600px) {
-    .config-grid { grid-template-columns: 1fr; }
-    .voter-content, .dash-content { padding: 16px; }
-    .topbar { padding: 12px 16px; }
-    .nominees-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-  }
+/* NOMINEES MANAGE */
+.nom-mgr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px;}
+.nom-mgr-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px;display:flex;align-items:flex-start;gap:8px;}
+.nm-info{flex:1;}
+.nm-name{font-size:13px;font-weight:500;}
+.nm-meta{font-size:11px;color:var(--text2);margin-top:2px;}
+.nm-votes{font-size:11px;color:var(--text3);margin-top:5px;}
+
+/* SETTINGS */
+.ss-section{margin-bottom:26px;}
+.ss-title{font-size:14px;font-weight:500;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.gs-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;}
+.gs-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.gs-lbl{font-size:12px;color:var(--text2);min-width:110px;flex-shrink:0;}
+.gs-inp{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 12px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;}
+.gs-inp:focus{border-color:var(--gold);}
+.gs-conn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);}
+.gs-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cfg-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.cfg-lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.cfg-val{font-size:20px;font-weight:500;}
+.cfg-actions{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap;}
+
+/* SYNC INDICATOR */
+.sync-badge{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px;z-index:900;opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;}
+.sync-badge.show{opacity:1;transform:translateY(0);}
+.sync-badge.syncing{border-color:rgba(201,168,76,.3);color:var(--gold);}
+.sync-badge.ok{border-color:rgba(76,175,125,.3);color:var(--green);}
+.sync-badge.err{border-color:rgba(224,85,85,.3);color:var(--red);}
+.sync-spin{width:10px;height:10px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* BTN UTILITIES */
+.btn-sm{font-size:11px;padding:6px 12px;border-radius:var(--rs);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;white-space:nowrap;}
+.btn-sm:hover{border-color:var(--gold);color:var(--gold);}
+.btn-sm.red:hover{border-color:var(--red);color:var(--red);}
+.btn-sm.green{border-color:rgba(76,175,125,.4);color:var(--green);background:var(--green-dim);}
+.btn-sm.gold{border-color:rgba(201,168,76,.4);color:var(--gold);background:var(--gold-dim);}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;animation:fadeIn .2s;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:22px;width:100%;max-width:420px;margin:16px;animation:fadeUp .25s ease;}
+.modal-title{font-size:15px;font-weight:500;margin-bottom:14px;}
+.modal-field{margin-bottom:11px;}
+.modal-lbl{font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px;display:block;}
+.modal-inp{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:9px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
+.modal-inp:focus{border-color:var(--gold);}
+.modal-sel{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:9px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.btn-cancel{background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:12px;padding:8px 16px;border-radius:var(--rs);cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-confirm{background:var(--gold);color:#0f0f10;font-size:12px;font-weight:600;padding:8px 18px;border-radius:var(--rs);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-confirm:hover{background:var(--gold2);}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:40px;color:var(--text3);font-size:13px;}
+.empty-state-icon{font-size:32px;margin-bottom:10px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:12px;padding:10px 18px;border-radius:var(--r);opacity:0;transition:all .3s;z-index:1000;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:rgba(76,175,125,.4);color:var(--green);}
+.toast.err{border-color:rgba(224,85,85,.3);color:var(--red);}
+
+@media(max-width:640px){
+  .cfg-grid{grid-template-columns:1fr;}
+  .dash-wrap,.v-content{padding:14px;}
+  .topbar{padding:11px 14px;}
+  .noms-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
+}
 </style>
 </head>
 <body>
 
-<!-- ══ LOADER ══ -->
-<div id="loader-screen" style="display:none; position:fixed; inset:0; background:#0f0f10; z-index:9999; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
-  <div style="width:52px;height:52px;background:linear-gradient(135deg,#c9a84c,#8a5c1e);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 8px 32px rgba(201,168,76,0.2);">🗳️</div>
-  <div style="font-family:'DM Serif Display',serif;font-size:22px;color:#f0efe8;letter-spacing:-0.01em;">Staff Voting Portal</div>
-  <div style="display:flex;gap:6px;align-items:center;">
-    <div style="width:8px;height:8px;border-radius:50%;background:#c9a84c;animation:pulse 1.2s ease-in-out infinite;"></div>
-    <div style="width:8px;height:8px;border-radius:50%;background:#c9a84c;animation:pulse 1.2s ease-in-out 0.2s infinite;"></div>
-    <div style="width:8px;height:8px;border-radius:50%;background:#c9a84c;animation:pulse 1.2s ease-in-out 0.4s infinite;"></div>
-  </div>
-  <div id="loader-status" style="font-size:13px;color:#9998a0;font-family:'DM Sans',sans-serif;">Syncing from Google Sheets…</div>
-  <style>@keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.1)}}</style>
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-logo">🗳️</div>
+  <div class="ld-title">Staff Voting Portal</div>
+  <div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div>
+  <div id="ld-status">Loading…</div>
 </div>
 
-<!-- ══ SCREEN: LOGIN ══ -->
-<div id="screen-login" class="screen active">
-  <div class="login-bg">
-    <div class="login-bg-circle login-bg-c1"></div>
-    <div class="login-bg-circle login-bg-c2"></div>
+<!-- ══ SETUP WIZARD ══ -->
+<div id="screen-setup" class="screen">
+  <div class="setup-glow"><div class="setup-glow-c1"></div><div class="setup-glow-c2"></div></div>
+  <div class="setup-box">
+    <div class="setup-emblem">🗳️</div>
+    <h1 class="setup-title">Welcome to the<br>Voting Portal</h1>
+    <p class="setup-sub">First-time setup — connect your Google Sheet<br>to get started</p>
+    <div class="setup-card">
+      <div class="setup-step-indicator">
+        <div class="setup-step-dot active" id="sw-dot-0"></div>
+        <div class="setup-step-dot" id="sw-dot-1"></div>
+        <div class="setup-step-dot" id="sw-dot-2"></div>
+      </div>
+      <div id="sw-step-0">
+        <label class="setup-lbl">Google Spreadsheet ID</label>
+        <input class="setup-inp" id="sw-sheet-id" placeholder="Paste your Sheet ID here">
+        <label class="setup-lbl">Google Sheets API Key (read)</label>
+        <input class="setup-inp" id="sw-api-key" placeholder="Paste your API key here" type="password">
+        <label class="setup-lbl">Apps Script Web App URL (write)</label>
+        <input class="setup-inp" id="sw-script-url" placeholder="https://script.google.com/macros/s/…/exec">
+        <button class="setup-btn" onclick="setupStep0()">Test &amp; Connect →</button>
+        <div class="setup-err" id="sw-err-0"></div>
+        <p class="setup-note">Need help? <a onclick="showScriptHelp()">Click here to get the Apps Script code</a> that enables write-back.</p>
+      </div>
+      <div id="sw-step-1" style="display:none;">
+        <label class="setup-lbl">SuperAdmin PIN</label>
+        <input class="setup-inp" id="sw-sa-pin" placeholder="Create a secure PIN (e.g. SA2024)" autocomplete="off">
+        <label class="setup-lbl">SuperAdmin Name</label>
+        <input class="setup-inp" id="sw-sa-name" placeholder="e.g. Director Office">
+        <label class="setup-lbl">Admin PIN (results viewer)</label>
+        <input class="setup-inp" id="sw-admin-pin" placeholder="Create a PIN for admin">
+        <label class="setup-lbl">Admin Name</label>
+        <input class="setup-inp" id="sw-admin-name" placeholder="e.g. HR Manager">
+        <button class="setup-btn" onclick="setupStep1()">Continue →</button>
+        <div class="setup-err" id="sw-err-1"></div>
+      </div>
+      <div id="sw-step-2" style="display:none;">
+        <label class="setup-lbl">Organisation / Event Name</label>
+        <input class="setup-inp" id="sw-org-name" placeholder="e.g. Annual Staff Awards 2025">
+        <button class="setup-btn" onclick="setupStep2()">Finish Setup &amp; Go Live 🚀</button>
+        <div class="setup-err" id="sw-err-2"></div>
+      </div>
+    </div>
   </div>
+</div>
+
+<!-- ══ LOGIN ══ -->
+<div id="screen-login" class="screen">
+  <div class="login-glow-c1" style="position:absolute;pointer-events:none;"></div>
+  <div class="login-glow-c2" style="position:absolute;pointer-events:none;"></div>
   <div class="login-box">
     <div class="login-emblem">🗳️</div>
-    <h1 class="login-title">Staff Voting<br>Portal</h1>
-    <p class="login-sub">Enter your voter PIN to cast your vote</p>
+    <div class="login-org" id="login-org-name"></div>
+    <h1 class="login-title">Staff Voting Portal</h1>
+    <p class="login-sub">Enter your voter PIN to participate</p>
     <div class="login-form">
-      <label class="form-label">Voter PIN</label>
-      <input class="form-input" id="pin-input" type="password" maxlength="6" placeholder="Enter your PIN" autocomplete="off" inputmode="numeric">
-      <div class="pin-dots">
-        <div class="pin-dot" id="dot-0"></div>
-        <div class="pin-dot" id="dot-1"></div>
-        <div class="pin-dot" id="dot-2"></div>
-        <div class="pin-dot" id="dot-3"></div>
-        <div class="pin-dot" id="dot-4"></div>
-        <div class="pin-dot" id="dot-5"></div>
-      </div>
-      <button class="btn-primary" id="btn-login" onclick="doLogin()">Sign In →</button>
-      <div class="login-error" id="login-error"></div>
+      <label class="form-lbl">Voter PIN</label>
+      <input class="form-inp" id="pin-inp" type="password" maxlength="10" placeholder="Enter your PIN" autocomplete="off">
+      <div class="pin-dots" id="pin-dots"></div>
+      <button class="btn-login" onclick="doLogin()">Sign In →</button>
+      <div class="login-err" id="login-err"></div>
     </div>
-    <div class="login-demo">
-      <strong>Demo PINs:</strong><br>
-      Voter: <strong>1234</strong> · <strong>5678</strong> · <strong>9012</strong><br>
-      Admin: <strong>ADMIN1</strong> &nbsp;·&nbsp; SuperAdmin: <strong>SUPER1</strong>
-    </div>
+    <div class="login-configure"><a onclick="goToSettings()">⚙ Admin / Settings</a></div>
   </div>
 </div>
 
-<!-- ══ SCREEN: VOTER ══ -->
+<!-- ══ VOTER ══ -->
 <div id="screen-voter" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">
-      <div class="topbar-logo">🗳️</div>
-      <span class="topbar-name">Voting Portal</span>
-    </div>
-    <div class="topbar-right">
-      <span class="topbar-badge badge-voter" id="voter-badge">Voter</span>
-      <button class="btn-logout" onclick="doLogout()">Sign out</button>
-    </div>
+    <div class="tb-brand"><div class="tb-logo">🗳️</div><span class="tb-name" id="voter-org-name">Voting Portal</span></div>
+    <div class="tb-right"><span class="tbadge tbadge-voter">Voter</span><button class="btn-logout" onclick="doLogout()">Sign out</button></div>
   </div>
-  <div id="voting-status-bar"></div>
-  <div class="voter-content">
-    <div class="voter-welcome">
-      <h2 id="voter-greeting">Welcome!</h2>
-      <p id="voter-subtitle">Please select one nominee per category</p>
-      <div class="voter-meta" id="voter-meta"></div>
+  <div id="voter-status-bar"></div>
+  <div class="v-content">
+    <div class="v-welcome">
+      <h2 id="v-greet">Welcome!</h2>
+      <p id="v-sub">Select one nominee per category</p>
+      <div class="v-meta" id="v-meta"></div>
     </div>
-    <div id="categories-container"></div>
+    <div id="cats-container"></div>
   </div>
   <div class="vote-footer">
-    <div class="vote-footer-inner">
-      <div class="vote-progress" id="vote-progress-text">Select nominees to continue</div>
+    <div class="vf-inner">
+      <div class="vprog" id="vprog">Select nominees to continue</div>
       <button class="btn-submit" id="btn-submit" onclick="submitVotes()" disabled>Submit Votes</button>
     </div>
   </div>
 </div>
 
-<!-- ══ SCREEN: SUCCESS ══ -->
+<!-- ══ SUCCESS ══ -->
 <div id="screen-success" class="screen">
-  <div class="success-box">
-    <div class="success-icon">🏆</div>
-    <h2 class="success-title">Vote Submitted!</h2>
-    <div class="success-decoration"></div>
-    <p class="success-msg">Thank you for participating. Your votes have been recorded securely. Results will be announced at the event.</p>
+  <div class="suc-box">
+    <div class="suc-icon">🏆</div>
+    <h2 class="suc-title">Vote Submitted!</h2>
+    <div class="suc-line"></div>
+    <p class="suc-msg">Thank you — your votes have been recorded. Results will be announced at the event.</p>
   </div>
 </div>
 
-<!-- ══ SCREEN: ADMIN (Results viewer) ══ -->
+<!-- ══ ADMIN ══ -->
 <div id="screen-admin" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">
-      <div class="topbar-logo">🗳️</div>
-      <span class="topbar-name">Voting Portal</span>
-    </div>
-    <div class="topbar-right">
-      <span class="topbar-badge badge-admin">Admin</span>
-      <button class="btn-logout" onclick="doLogout()">Sign out</button>
-    </div>
+    <div class="tb-brand"><div class="tb-logo">🗳️</div><span class="tb-name" id="admin-org-name">Voting Portal</span></div>
+    <div class="tb-right"><span class="tbadge tbadge-admin">Admin</span><button class="btn-logout" onclick="doLogout()">Sign out</button></div>
   </div>
-  <div class="dash-content">
+  <div class="dash-wrap">
     <div class="dash-tabs">
-      <button class="tab-btn active" onclick="switchTab('admin','overview')">Overview</button>
-      <button class="tab-btn" onclick="switchTab('admin','results')">Results</button>
-      <button class="tab-btn" onclick="switchTab('admin','departments')">Departments</button>
+      <button class="tab-btn on" onclick="switchTab('admin','overview',this)">Overview</button>
+      <button class="tab-btn" onclick="switchTab('admin','results',this)">Results</button>
+      <button class="tab-btn" onclick="switchTab('admin','departments',this)">By Department</button>
     </div>
-
-    <!-- Overview tab -->
-    <div class="tab-panel active" id="admin-tab-overview">
+    <div class="tab-panel on" id="admin-overview">
       <div class="stats-row" id="admin-stats"></div>
-      <div class="chart-section">
-        <div class="chart-title">Participation by department</div>
-        <div class="dept-bars" id="dept-participation-chart"></div>
-      </div>
+      <div class="sect-title">Participation by department</div>
+      <div id="admin-dept-bars"></div>
     </div>
-
-    <!-- Results tab -->
-    <div class="tab-panel" id="admin-tab-results">
-      <div class="results-filters">
-        <select class="filter-select" id="admin-cat-filter" onchange="renderAdminResults()">
-          <option value="">All categories</option>
-        </select>
-        <select class="filter-select" id="admin-dept-filter" onchange="renderAdminResults()">
-          <option value="">All departments</option>
-        </select>
+    <div class="tab-panel" id="admin-results">
+      <div class="rf">
+        <select class="fsel" id="a-fcat" onchange="renderResults('admin')"><option value="">All categories</option></select>
+        <select class="fsel" id="a-fdept" onchange="renderResults('admin')"><option value="">All departments</option></select>
       </div>
-      <div class="results-table-wrap">
-        <table class="results-table" id="admin-results-table">
-          <thead><tr>
-            <th>Rank</th><th>Nominee</th><th>Department</th><th>Category</th><th>Votes</th>
-          </tr></thead>
-          <tbody id="admin-results-tbody"></tbody>
-        </table>
-      </div>
+      <div class="tbl-wrap"><table class="rtbl"><thead><tr><th>Rank</th><th>Nominee</th><th>Department</th><th>Unit</th><th>Category</th><th>Votes</th></tr></thead><tbody id="admin-res-body"></tbody></table></div>
     </div>
-
-    <!-- Departments tab -->
-    <div class="tab-panel" id="admin-tab-departments">
-      <div class="dept-bars" id="dept-detail-bars" style="gap:16px;"></div>
-    </div>
+    <div class="tab-panel" id="admin-departments"><div id="admin-dept-detail"></div></div>
   </div>
 </div>
 
-<!-- ══ SCREEN: SUPERADMIN ══ -->
+<!-- ══ SUPERADMIN ══ -->
 <div id="screen-superadmin" class="screen">
   <div class="topbar">
-    <div class="topbar-brand">
-      <div class="topbar-logo">🗳️</div>
-      <span class="topbar-name">Voting Portal</span>
-    </div>
-    <div class="topbar-right">
-      <span class="topbar-badge badge-super">SuperAdmin</span>
-      <button class="btn-logout" onclick="doLogout()">Sign out</button>
-    </div>
+    <div class="tb-brand"><div class="tb-logo">🗳️</div><span class="tb-name" id="sa-org-name">Voting Portal</span></div>
+    <div class="tb-right"><span class="tbadge tbadge-super">SuperAdmin</span><button class="btn-logout" onclick="doLogout()">Sign out</button></div>
   </div>
-  <div class="dash-content">
+  <div class="dash-wrap">
     <div class="dash-tabs">
-      <button class="tab-btn active" onclick="switchTab('superadmin','overview')">Overview</button>
-      <button class="tab-btn" onclick="switchTab('superadmin','results')">Results</button>
-      <button class="tab-btn" onclick="switchTab('superadmin','voters')">Voters</button>
-      <button class="tab-btn" onclick="switchTab('superadmin','nominees')">Nominees</button>
-      <button class="tab-btn" onclick="switchTab('superadmin','settings')">Settings</button>
+      <button class="tab-btn on" onclick="switchTab('superadmin','overview',this)">Overview</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','results',this)">Results</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','voters',this)">Voters</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','nominees',this)">Nominees</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','categories',this)">Categories</button>
+      <button class="tab-btn" onclick="switchTab('superadmin','settings',this)">Settings</button>
     </div>
 
-    <!-- Overview -->
-    <div class="tab-panel active" id="superadmin-tab-overview">
-      <div class="stats-row" id="superadmin-stats"></div>
-      <div class="chart-section">
-        <div class="chart-title">Participation by department</div>
-        <div class="dept-bars" id="sa-dept-participation"></div>
-      </div>
+    <div class="tab-panel on" id="superadmin-overview">
+      <div class="stats-row" id="sa-stats"></div>
+      <div class="sect-title">Participation by department</div>
+      <div id="sa-dept-bars"></div>
     </div>
 
-    <!-- Results (same as admin but full) -->
-    <div class="tab-panel" id="superadmin-tab-results">
-      <div class="results-filters">
-        <select class="filter-select" id="sa-cat-filter" onchange="renderSAResults()">
-          <option value="">All categories</option>
-        </select>
-        <select class="filter-select" id="sa-dept-filter" onchange="renderSAResults()">
-          <option value="">All departments</option>
-        </select>
+    <div class="tab-panel" id="superadmin-results">
+      <div class="rf">
+        <select class="fsel" id="sa-fcat" onchange="renderResults('sa')"><option value="">All categories</option></select>
+        <select class="fsel" id="sa-fdept" onchange="renderResults('sa')"><option value="">All departments</option></select>
       </div>
-      <div class="results-table-wrap">
-        <table class="results-table">
-          <thead><tr>
-            <th>Rank</th><th>Nominee</th><th>Department</th><th>Category</th><th>Votes</th>
-          </tr></thead>
-          <tbody id="sa-results-tbody"></tbody>
-        </table>
-      </div>
+      <div class="tbl-wrap"><table class="rtbl"><thead><tr><th>Rank</th><th>Nominee</th><th>Department</th><th>Unit</th><th>Category</th><th>Votes</th></tr></thead><tbody id="sa-res-body"></tbody></table></div>
     </div>
 
-    <!-- Voters management -->
-    <div class="tab-panel" id="superadmin-tab-voters">
-      <div class="sa-section-header">
-        <span class="sa-section-title">All Voters</span>
+    <div class="tab-panel" id="superadmin-voters">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:500;">Voters</div>
+        <div style="display:flex;gap:7px;">
+          <button class="btn-sm green" onclick="openAddVoterModal()">+ Add voter</button>
+          <button class="btn-sm red" onclick="resetAllVotes()">Reset all votes</button>
+        </div>
+      </div>
+      <div class="voter-tbl" id="voter-list"></div>
+    </div>
+
+    <div class="tab-panel" id="superadmin-nominees">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:500;">Nominees</div>
+        <button class="btn-sm green" onclick="openAddNomModal()">+ Add nominee</button>
+      </div>
+      <div class="rf">
+        <select class="fsel" id="nom-fcat" onchange="renderNominees()"><option value="">All categories</option></select>
+        <select class="fsel" id="nom-fdept" onchange="renderNominees()"><option value="">All departments</option></select>
+      </div>
+      <div class="nom-mgr-grid" id="nom-mgr-grid"></div>
+    </div>
+
+    <div class="tab-panel" id="superadmin-categories">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:500;">Voting Categories</div>
+        <button class="btn-sm green" onclick="openAddCatModal()">+ Add category</button>
+      </div>
+      <div id="cat-list-container"></div>
+    </div>
+
+    <div class="tab-panel" id="superadmin-settings">
+      <div class="ss-section">
+        <div class="ss-title">Google Sheets Connection</div>
+        <div class="gs-card">
+          <div class="gs-row"><span class="gs-lbl">Sheet ID</span><input class="gs-inp" id="gs-id-inp" placeholder="Spreadsheet ID"><button class="btn-sm" onclick="saveGS('id')" style="margin-left:6px;">Save</button></div>
+          <div class="gs-row"><span class="gs-lbl">API Key</span><input class="gs-inp" id="gs-key-inp" type="password" placeholder="Google Sheets API key (read)"><button class="btn-sm" onclick="saveGS('key')" style="margin-left:6px;">Save</button></div>
+          <div class="gs-row"><span class="gs-lbl">Script URL</span><input class="gs-inp" id="gs-script-inp" placeholder="Apps Script Web App URL (write)"><button class="btn-sm" onclick="saveGS('script')" style="margin-left:6px;">Save</button></div>
+          <div class="gs-row"><span class="gs-lbl">Status</span><div class="gs-conn"><div class="gs-dot" id="gs-dot"></div><span id="gs-status-lbl">Not connected</span></div></div>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            <button class="btn-sm" onclick="testConnection()">Test connection</button>
+            <button class="btn-sm" onclick="manualSync()">Sync now</button>
+            <button class="btn-sm" onclick="showScriptHelp()">Get Apps Script code</button>
+          </div>
+        </div>
+      </div>
+      <div class="ss-section">
+        <div class="ss-title">Organisation Name</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn-sm" onclick="resetAllVotes()">Reset all votes</button>
-          <button class="btn-sm success" onclick="generatePINs()">Generate new PINs</button>
+          <input class="gs-inp" id="org-name-inp" placeholder="e.g. Annual Staff Awards 2025" style="flex:1;">
+          <button class="btn-sm" onclick="saveOrgName()">Save</button>
         </div>
       </div>
-      <div class="voter-table-wrap" id="voter-list"></div>
-    </div>
-
-    <!-- Nominees management -->
-    <div class="tab-panel" id="superadmin-tab-nominees">
-      <div class="sa-section-header">
-        <span class="sa-section-title">Nominees</span>
-        <button class="btn-sm" onclick="showAddNominee()">+ Add nominee</button>
-      </div>
-      <div class="nominee-manage-grid" id="nominee-manage-grid"></div>
-    </div>
-
-    <!-- Settings -->
-    <div class="tab-panel" id="superadmin-tab-settings">
-      <div class="sa-section">
-        <div class="sa-section-title" style="margin-bottom:14px;">Google Sheets Integration</div>
-        <div class="google-sheets-info">
-          <div class="gsheet-row">
-            <span class="gsheet-label">Spreadsheet ID</span>
-            <input class="gsheet-input" id="sheet-id-input" placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" value="YOUR_SHEET_ID">
-            <button class="btn-sm" onclick="saveSheetId()" style="margin-left:8px; white-space:nowrap;">Save</button>
-          </div>
-          <div class="gsheet-row">
-            <span class="gsheet-label">API Key</span>
-            <input class="gsheet-input" id="api-key-input" placeholder="Google Sheets API key (read-only)" type="password" value="">
-            <button class="btn-sm" onclick="saveApiKey()" style="margin-left:8px; white-space:nowrap;">Save</button>
-          </div>
-          <div class="gsheet-row">
-            <span class="gsheet-label">Connection</span>
-            <div class="gsheet-status">
-              <div class="gsheet-dot" id="conn-dot" style="background:var(--gold);"></div>
-              <span id="conn-label">Using demo data (configure Sheets ID + API key to connect)</span>
+      <div class="ss-section">
+        <div class="ss-title">Voting Control</div>
+        <div class="cfg-grid">
+          <div class="cfg-card">
+            <div class="cfg-lbl">Voting Status</div>
+            <div class="cfg-val" id="sa-voting-val">Open</div>
+            <div class="cfg-actions">
+              <button class="btn-sm green" onclick="setVoting(true)">Open voting</button>
+              <button class="btn-sm red" onclick="setVoting(false)">Close voting</button>
             </div>
           </div>
-          <div style="margin-top:8px;">
-            <button class="btn-sm" onclick="testSheetsConnection()">Test connection</button>
-            <button class="btn-sm" onclick="syncFromSheets()" style="margin-left:8px;">Sync from Sheets</button>
-          </div>
-        </div>
-        <div style="font-size:12px; color:var(--text3); line-height:1.7;">
-          <strong style="color:var(--text2);">Expected sheet tabs:</strong><br>
-          <code style="color:var(--gold); font-size:11px;">Voters</code> — columns: PIN, Name, Department, Unit, HasVoted<br>
-          <code style="color:var(--gold); font-size:11px;">Nominees</code> — columns: ID, Name, Department, Unit, Category<br>
-          <code style="color:var(--gold); font-size:11px;">Votes</code> — columns: PIN, NomineeID, Category, Timestamp<br>
-          <code style="color:var(--gold); font-size:11px;">Admins</code> — columns: PIN, Role (admin/superadmin), Name
-        </div>
-      </div>
-
-      <div class="sa-section">
-        <div class="sa-section-title" style="margin-bottom:14px;">Voting Control</div>
-        <div class="config-grid">
-          <div class="config-card">
-            <div class="config-card-label">Voting Status</div>
-            <div class="config-card-val" id="voting-status-val">Open</div>
-            <div class="config-card-actions">
-              <button class="btn-sm success" onclick="toggleVoting(true)">Open voting</button>
-              <button class="btn-sm danger" onclick="toggleVoting(false)">Close voting</button>
-            </div>
-          </div>
-          <div class="config-card">
-            <div class="config-card-label">Voting Categories</div>
-            <div class="config-card-val" id="cat-count-val">4</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px;">active categories</div>
-            <div class="config-card-actions">
-              <button class="btn-sm" onclick="manageCats()">Manage categories</button>
+          <div class="cfg-card">
+            <div class="cfg-lbl">Departments</div>
+            <div class="cfg-val" id="sa-dept-count">0</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;">configured departments</div>
+            <div class="cfg-actions">
+              <button class="btn-sm green" onclick="openAddDeptModal()">+ Add dept</button>
             </div>
           </div>
         </div>
       </div>
-
-      <div class="sa-section">
-        <div class="sa-section-title" style="margin-bottom:14px;">Export</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn-sm warning" onclick="exportCSV('results')">Export results CSV</button>
-          <button class="btn-sm" onclick="exportCSV('voters')">Export voter list CSV</button>
-          <button class="btn-sm" onclick="exportCSV('full')">Full export CSV</button>
+      <div class="ss-section">
+        <div class="ss-title">Departments &amp; Units</div>
+        <div id="dept-unit-manager"></div>
+      </div>
+      <div class="ss-section">
+        <div class="ss-title">Export</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-sm gold" onclick="exportCSV('results')">Export results CSV</button>
+          <button class="btn-sm" onclick="exportCSV('voters')">Export voter list</button>
+          <button class="btn-sm" onclick="exportCSV('full')">Full export</button>
         </div>
+      </div>
+      <div class="ss-section">
+        <div class="ss-title">Danger Zone</div>
+        <button class="btn-sm red" onclick="resetSetup()" style="font-size:12px;padding:8px 16px;">Reset portal &amp; reconfigure</button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- SYNC BADGE -->
+<div class="sync-badge" id="sync-badge"><div class="sync-spin" id="sync-spin"></div><span id="sync-msg">Syncing…</span></div>
 <div class="toast" id="toast"></div>
 
 <script>
-// ══════════════════════════════════
-// DATA STORE (Google Sheets API integration ready)
-// ══════════════════════════════════
-const CONFIG = {
-  sheetId: localStorage.getItem('gs_sheet_id') || '',
-  apiKey: localStorage.getItem('gs_api_key') || '',
-  votingOpen: JSON.parse(localStorage.getItem('gs_voting_open') ?? 'true'),
+// ═══════════════════════════════════════════════════════════
+// CONFIG — all persisted in localStorage
+// ═══════════════════════════════════════════════════════════
+const LS = {
+  get: k => { try { const v=localStorage.getItem(k); return v!==null?JSON.parse(v):null; } catch{ return null; } },
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: k => localStorage.removeItem(k)
 };
 
-const COLORS = ['#c9a84c','#5b8ef0','#4caf7d','#e05555','#a87cdb','#5bbef0','#e08a55'];
-
-const DATA = {
-  voters: [
-    { pin:'1234', name:'Ahmed Al-Rashid', dept:'Finance', unit:'Accounts', hasVoted:false },
-    { pin:'5678', name:'Fatima Noor', dept:'HR', unit:'Recruitment', hasVoted:false },
-    { pin:'9012', name:'Mohammed Al-Sayed', dept:'IT', unit:'Infrastructure', hasVoted:false },
-    { pin:'3456', name:'Sara Al-Kindi', dept:'Finance', unit:'Treasury', hasVoted:true },
-    { pin:'7890', name:'Khalid Hassan', dept:'Operations', unit:'Logistics', hasVoted:false },
-    { pin:'2468', name:'Layla Ibrahim', dept:'HR', unit:'Learning & Dev', hasVoted:true },
-    { pin:'1357', name:'Omar Abdullah', dept:'IT', unit:'Development', hasVoted:false },
-    { pin:'8642', name:'Mariam Al-Zaabi', dept:'Operations', unit:'Quality', hasVoted:false },
-  ],
-  admins: [
-    { pin:'ADMIN1', name:'Rania Saeed', role:'admin' },
-    { pin:'SUPER1', name:'Director Office', role:'superadmin' },
-  ],
-  nominees: [
-    { id:1, name:'Fatima Noor', dept:'HR', unit:'Recruitment', category:'Employee of the Year' },
-    { id:2, name:'Khalid Hassan', dept:'Operations', unit:'Logistics', category:'Employee of the Year' },
-    { id:3, name:'Omar Abdullah', dept:'IT', unit:'Development', category:'Employee of the Year' },
-    { id:4, name:'Sara Al-Kindi', dept:'Finance', unit:'Treasury', category:'Employee of the Year' },
-    { id:5, name:'Ahmed Al-Rashid', dept:'Finance', unit:'Accounts', category:'Best Team Player' },
-    { id:6, name:'Layla Ibrahim', dept:'HR', unit:'Learning & Dev', category:'Best Team Player' },
-    { id:7, name:'Mariam Al-Zaabi', dept:'Operations', unit:'Quality', category:'Best Team Player' },
-    { id:8, name:'Ahmed Al-Rashid', dept:'Finance', unit:'Accounts', category:'Innovation Award' },
-    { id:9, name:'Omar Abdullah', dept:'IT', unit:'Development', category:'Innovation Award' },
-    { id:10, name:'Khalid Hassan', dept:'Operations', unit:'Logistics', category:'Innovation Award' },
-    { id:11, name:'Fatima Noor', dept:'HR', unit:'Recruitment', category:'Leadership Award' },
-    { id:12, name:'Sara Al-Kindi', dept:'Finance', unit:'Treasury', category:'Leadership Award' },
-  ],
-  votes: [
-    { pin:'3456', nomineeId:1, category:'Employee of the Year' },
-    { pin:'3456', nomineeId:5, category:'Best Team Player' },
-    { pin:'3456', nomineeId:8, category:'Innovation Award' },
-    { pin:'3456', nomineeId:11, category:'Leadership Award' },
-    { pin:'2468', nomineeId:2, category:'Employee of the Year' },
-    { pin:'2468', nomineeId:7, category:'Best Team Player' },
-    { pin:'2468', nomineeId:9, category:'Innovation Award' },
-    { pin:'2468', nomineeId:12, category:'Leadership Award' },
-  ]
+const CFG = {
+  get sheetId()    { return LS.get('cfg_sheet_id')    || ''; },
+  get apiKey()     { return LS.get('cfg_api_key')     || ''; },
+  get scriptUrl()  { return LS.get('cfg_script_url')  || ''; },
+  get votingOpen() { return LS.get('cfg_voting_open') !== false; },
+  get orgName()    { return LS.get('cfg_org_name')    || ''; },
+  set sheetId(v)   { LS.set('cfg_sheet_id', v);    },
+  set apiKey(v)    { LS.set('cfg_api_key', v);     },
+  set scriptUrl(v) { LS.set('cfg_script_url', v);  },
+  set votingOpen(v){ LS.set('cfg_voting_open', v); },
+  set orgName(v)   { LS.set('cfg_org_name', v);    },
+  get isConfigured(){ return !!(this.sheetId && this.apiKey); }
 };
 
-let currentUser = null;
-let currentSelections = {}; // category -> nomineeId
+// ═══════════════════════════════════════════════════════════
+// DATA — loaded entirely from Google Sheets
+// ═══════════════════════════════════════════════════════════
+const DATA = { voters:[], admins:[], nominees:[], votes:[], categories:[], departments:[] };
+// departments = [{id,name,color,units:[{id,name}]}]
+// categories  = [{id,name,scope}]  scope: 'dept'|'unit'|'global'
+// nominees    = [{id,name,dept,unit,category}]
+// voters      = [{pin,name,dept,unit,hasVoted}]
+// admins      = [{pin,role,name}]  role: 'admin'|'superadmin'
+// votes       = [{pin,nomineeId,category,timestamp}]
 
-// ══════════════════════════════════
-// AUTH
-// ══════════════════════════════════
-function doLogin() {
-  const pin = document.getElementById('pin-input').value.trim();
-  if (!pin) { showError('Please enter your PIN'); return; }
+const COLORS=['#c9a84c','#5b8ef0','#4caf7d','#e05555','#9b74db','#5bbef0','#e08a55','#e05599','#7db854'];
+let currentUser=null, selections={};
 
-  // Check superadmin
-  const sa = DATA.admins.find(a => a.pin === pin && a.role === 'superadmin');
-  if (sa) { currentUser = { ...sa }; showScreen('screen-superadmin'); initSuperAdmin(); return; }
+// ═══════════════════════════════════════════════════════════
+// GOOGLE SHEETS — READ (API key)
+// ═══════════════════════════════════════════════════════════
+async function fetchFromSheets() {
+  if (!CFG.sheetId || !CFG.apiKey) return false;
+  const ranges = ['Voters!A2:E','Nominees!A2:F','Votes!A2:D','Admins!A2:C','Categories!A2:C','Departments!A2:D'];
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values:batchGet?ranges=${ranges.map(encodeURIComponent).join('&ranges=')}&key=${CFG.apiKey}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error?.message || `HTTP ${res.status}`);
+  const [vD,nD,vtD,adD,catD,deptD] = json.valueRanges;
 
-  // Check admin
-  const admin = DATA.admins.find(a => a.pin === pin && a.role === 'admin');
-  if (admin) { currentUser = { ...admin }; showScreen('screen-admin'); initAdmin(); return; }
+  if (vD.values)   DATA.voters     = vD.values.map(r=>({pin:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',hasVoted:r[4]==='TRUE'}));
+  if (nD.values)   DATA.nominees   = nD.values.map(r=>({id:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',category:r[4]||'',scope:r[5]||'global'}));
+  if (vtD.values)  DATA.votes      = vtD.values.map(r=>({pin:r[0]||'',nomineeId:r[1]||'',category:r[2]||'',timestamp:r[3]||''}));
+  if (adD.values)  DATA.admins     = adD.values.map(r=>({pin:r[0]||'',role:r[1]||'',name:r[2]||''}));
+  if (catD.values) DATA.categories = catD.values.map(r=>({id:r[0]||'',name:r[1]||'',scope:r[2]||'global'}));
 
-  // Check voter
-  const voter = DATA.voters.find(v => v.pin === pin);
-  if (!voter) { showError('Invalid PIN. Please try again.'); shakePins(); return; }
-  if (voter.hasVoted) { showError('This PIN has already been used to vote.'); return; }
-
-  currentUser = { ...voter, type: 'voter' };
-  currentSelections = {};
-  showScreen('screen-voter');
-  initVoterScreen();
-}
-
-document.getElementById('pin-input').addEventListener('input', function() {
-  const val = this.value;
-  for (let i = 0; i < 6; i++) {
-    const dot = document.getElementById('dot-' + i);
-    if (dot) dot.classList.toggle('filled', i < val.length);
+  // Parse departments (DeptID, DeptName, DeptColor, UnitName — multiple rows per dept)
+  if (deptD.values) {
+    const dMap={};
+    deptD.values.forEach(r=>{
+      const [did,dname,dcolor,uname]=r;
+      if (!did) return;
+      if (!dMap[did]) dMap[did]={id:did,name:dname||did,color:dcolor||COLORS[Object.keys(dMap).length%COLORS.length],units:[]};
+      if (uname) dMap[did].units.push({id:`${did}_${uname.replace(/\s+/g,'_')}`,name:uname});
+    });
+    DATA.departments = Object.values(dMap);
   }
-  document.getElementById('login-error').textContent = '';
-});
-
-document.getElementById('pin-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doLogin();
-});
-
-function showError(msg) {
-  document.getElementById('login-error').textContent = msg;
+  return true;
 }
 
-function shakePins() {
-  const input = document.getElementById('pin-input');
-  input.style.borderColor = 'var(--red)';
-  setTimeout(() => { input.style.borderColor = ''; }, 1000);
+// ═══════════════════════════════════════════════════════════
+// GOOGLE SHEETS — WRITE (Apps Script)
+// ═══════════════════════════════════════════════════════════
+async function writeToSheets(action, payload) {
+  if (!CFG.scriptUrl) { showToast('Apps Script URL not configured — changes saved locally only','err'); return false; }
+  showSyncBadge('syncing','Syncing…');
+  try {
+    const res = await fetch(CFG.scriptUrl, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action, ...payload})
+    });
+    const json = await res.json();
+    if (json.status === 'ok') { showSyncBadge('ok','Synced ✓'); return true; }
+    else throw new Error(json.message || 'Script error');
+  } catch(e) {
+    showSyncBadge('err','Sync failed — '+e.message);
+    return false;
+  }
 }
 
-function doLogout() {
-  currentUser = null;
-  currentSelections = {};
-  document.getElementById('pin-input').value = '';
-  for (let i = 0; i < 6; i++) document.getElementById('dot-' + i)?.classList.remove('filled');
-  document.getElementById('login-error').textContent = '';
+// ═══════════════════════════════════════════════════════════
+// SYNC BADGE
+// ═══════════════════════════════════════════════════════════
+let syncBadgeTimer;
+function showSyncBadge(type, msg) {
+  const badge=document.getElementById('sync-badge');
+  const spin=document.getElementById('sync-spin');
+  const msgEl=document.getElementById('sync-msg');
+  badge.className=`sync-badge show ${type}`;
+  msgEl.textContent=msg;
+  spin.style.display= type==='syncing'?'block':'none';
+  clearTimeout(syncBadgeTimer);
+  if (type!=='syncing') syncBadgeTimer=setTimeout(()=>badge.classList.remove('show'),3000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async ()=>{
+  setLD('Loading…');
+  await new Promise(r=>setTimeout(r,400));
+
+  if (!CFG.isConfigured) {
+    hideLoader();
+    showScreen('screen-setup');
+    return;
+  }
+
+  setLD('Connecting to Google Sheets…');
+  try {
+    await fetchFromSheets();
+    setLD('✓ Data loaded');
+    await new Promise(r=>setTimeout(r,500));
+  } catch(e) {
+    setLD('⚠ Could not reach Sheets — check credentials');
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  hideLoader();
+  showScreen('screen-login');
+  applyOrgName();
+  buildPinDots();
+});
+
+function setLD(msg){ document.getElementById('ld-status').textContent=msg; }
+function hideLoader(){ document.getElementById('loader').style.display='none'; }
+function applyOrgName(){
+  const n=CFG.orgName;
+  ['login-org-name','voter-org-name','admin-org-name','sa-org-name'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=n;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETUP WIZARD
+// ═══════════════════════════════════════════════════════════
+let swStep=0;
+async function setupStep0(){
+  const sid=document.getElementById('sw-sheet-id').value.trim();
+  const key=document.getElementById('sw-api-key').value.trim();
+  const script=document.getElementById('sw-script-url').value.trim();
+  const err=document.getElementById('sw-err-0');
+  if(!sid||!key){err.textContent='Sheet ID and API key are required.';return;}
+  err.textContent='Testing connection…';
+  try{
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${sid}?key=${key}`;
+    const r=await fetch(url);
+    if(!r.ok){const j=await r.json();throw new Error(j.error?.message||`HTTP ${r.status}`);}
+    CFG.sheetId=sid; CFG.apiKey=key; if(script) CFG.scriptUrl=script;
+    err.textContent='';
+    advanceSetup(1);
+  }catch(e){err.textContent='Connection failed: '+e.message;}
+}
+function setupStep1(){
+  const sapin=document.getElementById('sw-sa-pin').value.trim();
+  const saname=document.getElementById('sw-sa-name').value.trim();
+  const apin=document.getElementById('sw-admin-pin').value.trim();
+  const aname=document.getElementById('sw-admin-name').value.trim();
+  const err=document.getElementById('sw-err-1');
+  if(!sapin||!saname||!apin||!aname){err.textContent='All fields required.';return;}
+  if(sapin===apin){err.textContent='SuperAdmin and Admin PINs must be different.';return;}
+  DATA.admins=[{pin:sapin,role:'superadmin',name:saname},{pin:apin,role:'admin',name:aname}];
+  writeToSheets('setAdmins',{admins:DATA.admins});
+  err.textContent='';
+  advanceSetup(2);
+}
+async function setupStep2(){
+  const org=document.getElementById('sw-org-name').value.trim();
+  const err=document.getElementById('sw-err-2');
+  if(!org){err.textContent='Please enter an organisation name.';return;}
+  CFG.orgName=org;
+  err.textContent='Setting up…';
+  try{
+    await fetchFromSheets();
+  }catch(e){}
+  hideLoader();
+  showScreen('screen-login');
+  applyOrgName();
+  buildPinDots();
+}
+function advanceSetup(step){
+  document.getElementById('sw-step-'+(step-1)).style.display='none';
+  document.getElementById('sw-step-'+step).style.display='block';
+  document.getElementById('sw-dot-'+(step-1)).className='setup-step-dot done';
+  document.getElementById('sw-dot-'+step).className='setup-step-dot active';
+  swStep=step;
+}
+function resetSetup(){
+  if(!confirm('This will clear all local settings. You will need to reconnect Google Sheets. Continue?'))return;
+  localStorage.clear();
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════════════
+// PIN DOTS
+// ═══════════════════════════════════════════════════════════
+function buildPinDots(){
+  const c=document.getElementById('pin-dots');
+  if(!c)return;
+  c.innerHTML='';
+  for(let i=0;i<6;i++){const d=document.createElement('div');d.className='pin-dot';d.id='pd'+i;c.appendChild(d);}
+  document.getElementById('pin-inp').addEventListener('input',function(){
+    for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.toggle('on',i<this.value.length);
+    document.getElementById('login-err').textContent='';
+  });
+  document.getElementById('pin-inp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+function doLogin(){
+  const pin=document.getElementById('pin-inp').value.trim();
+  if(!pin){setLoginErr('Please enter your PIN');return;}
+  const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
+  if(sa){currentUser={...sa};showScreen('screen-superadmin');initSA();return;}
+  const admin=DATA.admins.find(a=>a.pin===pin&&a.role==='admin');
+  if(admin){currentUser={...admin};showScreen('screen-admin');initAdmin();return;}
+  const voter=DATA.voters.find(v=>v.pin===pin);
+  if(!voter){setLoginErr('Invalid PIN. Please try again.');return;}
+  if(voter.hasVoted){setLoginErr('This PIN has already been used to vote.');return;}
+  if(!CFG.votingOpen){setLoginErr('Voting is currently closed.');return;}
+  currentUser={...voter,type:'voter'};
+  selections={};
+  showScreen('screen-voter');
+  initVoter();
+}
+function setLoginErr(m){document.getElementById('login-err').textContent=m;}
+function doLogout(){
+  currentUser=null;selections={};
+  const p=document.getElementById('pin-inp');
+  if(p){p.value='';for(let i=0;i<6;i++)document.getElementById('pd'+i)?.classList.remove('on');}
+  setLoginErr('');
   showScreen('screen-login');
 }
-
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+function goToSettings(){
+  const pin=prompt('Enter SuperAdmin PIN to access settings:');
+  if(!pin)return;
+  const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
+  if(!sa){showToast('Invalid SuperAdmin PIN','err');return;}
+  currentUser={...sa};showScreen('screen-superadmin');initSA();
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
 }
 
-// ══════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // VOTER SCREEN
-// ══════════════════════════════════
-function initVoterScreen() {
-  const v = currentUser;
-  document.getElementById('voter-greeting').textContent = `Welcome, ${v.name.split(' ')[0]}!`;
-  document.getElementById('voter-subtitle').textContent = 'Cast your votes — one nominee per category';
-  document.getElementById('voter-meta').innerHTML = `
-    <span class="meta-chip">🏢 ${v.dept}</span>
-    <span class="meta-chip">📍 ${v.unit}</span>
-    <span class="meta-chip">🗳️ PIN: ${v.pin}</span>
-  `;
+// ═══════════════════════════════════════════════════════════
+function initVoter(){
+  const v=currentUser;
+  const deptName = (DATA.departments.find(d=>d.id===v.dept)||{name:v.dept}).name;
+  const unitName = (() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===v.unit);if(u)return u.name;} return v.unit; })();
+  document.getElementById('v-greet').textContent=`Welcome, ${v.name.split(' ')[0]}!`;
+  document.getElementById('v-sub').textContent='Cast your vote — one nominee per category';
+  document.getElementById('v-meta').innerHTML=`
+    <span class="meta-chip">🏢 ${deptName}</span>
+    <span class="meta-chip">📍 ${unitName}</span>`;
+  const bar=document.getElementById('voter-status-bar');
+  bar.className=`status-bar ${CFG.votingOpen?'status-open':'status-closed'}`;
+  bar.textContent=CFG.votingOpen?'✓ Voting is open':'✗ Voting is closed';
 
-  const banner = document.getElementById('voting-status-bar');
-  if (CONFIG.votingOpen) {
-    banner.className = 'voting-status-banner open';
-    banner.textContent = '✓ Voting is currently open';
-  } else {
-    banner.className = 'voting-status-banner closed';
-    banner.textContent = '✗ Voting is closed';
-    document.getElementById('btn-submit').disabled = true;
-  }
+  const container=document.getElementById('cats-container');
+  container.innerHTML='';
+  let idx=0;
 
-  const categories = [...new Set(DATA.nominees.map(n => n.category))];
-  const container = document.getElementById('categories-container');
-  container.innerHTML = '';
-
-  categories.forEach((cat, idx) => {
-    const nominees = DATA.nominees.filter(n => n.category === cat);
-    const section = document.createElement('div');
-    section.className = 'category-section';
-    section.innerHTML = `
-      <div class="category-header">
-        <div class="category-num">${idx+1}</div>
-        <div class="category-title">${cat}</div>
-        <div class="category-desc">${nominees.length} nominees</div>
-      </div>
-      <div class="nominees-grid" id="nominees-${idx}"></div>
-    `;
-    container.appendChild(section);
-
-    const grid = section.querySelector(`#nominees-${idx}`);
-    nominees.forEach((nom, ni) => {
-      const initials = nom.name.split(' ').map(w=>w[0]).join('').slice(0,2);
-      const color = COLORS[ni % COLORS.length];
-      const card = document.createElement('div');
-      card.className = 'nominee-card';
-      card.setAttribute('data-id', nom.id);
-      card.setAttribute('data-cat', cat);
-      card.innerHTML = `
-        <div class="nominee-avatar" style="background:${color}22; color:${color};">${initials}</div>
-        <div class="nominee-name">${nom.name}</div>
-        <div class="nominee-dept">${nom.dept} · ${nom.unit}</div>
-      `;
-      card.onclick = () => selectNominee(cat, nom.id, idx);
+  DATA.categories.forEach(cat=>{
+    let noms=[];
+    if(cat.scope==='dept')   noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
+    else if(cat.scope==='unit') noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
+    else noms=DATA.nominees.filter(n=>n.category===cat.id);
+    if(!noms.length) return;
+    idx++;
+    const sec=document.createElement('div');
+    sec.className='cat-section';
+    sec.innerHTML=`<div class="cat-hdr">
+      <div class="cat-num">${idx}</div>
+      <div class="cat-title">${cat.name}</div>
+      <div class="cat-count">${noms.length} nominee${noms.length!==1?'s':''}</div>
+    </div><div class="noms-grid" id="ng-${cat.id}"></div>`;
+    container.appendChild(sec);
+    const grid=sec.querySelector(`#ng-${cat.id}`);
+    noms.forEach((nom,ni)=>{
+      const initials=nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const color=COLORS[ni%COLORS.length];
+      const card=document.createElement('div');
+      card.className='nom-card';card.dataset.id=nom.id;card.dataset.cat=cat.id;
+      const unitLabel=(() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===nom.unit);if(u)return u.name;} return nom.unit||''; })();
+      const deptLabel=(DATA.departments.find(d=>d.id===nom.dept)||{name:nom.dept||''}).name;
+      card.innerHTML=`<div class="nom-avatar" style="background:${color}22;color:${color};">${initials}</div>
+        <div class="nom-name">${nom.name}</div>
+        <div class="nom-info">${deptLabel}${unitLabel?` · ${unitLabel}`:''}</div>`;
+      card.onclick=()=>selectNom(cat.id,nom.id);
       grid.appendChild(card);
     });
   });
 
-  updateVoteProgress(categories.length);
-}
-
-function selectNominee(category, nomineeId, sectionIdx) {
-  if (!CONFIG.votingOpen) return;
-  const prev = currentSelections[category];
-  currentSelections[category] = nomineeId;
-
-  // Deselect old
-  document.querySelectorAll(`[data-cat="${category}"]`).forEach(c => c.classList.remove('selected'));
-  // Select new
-  const target = document.querySelector(`[data-id="${nomineeId}"][data-cat="${category}"]`);
-  if (target) target.classList.add('selected');
-
-  const categories = [...new Set(DATA.nominees.map(n => n.category))];
-  updateVoteProgress(categories.length);
-}
-
-function updateVoteProgress(total) {
-  const selected = Object.keys(currentSelections).length;
-  document.getElementById('vote-progress-text').innerHTML =
-    `<strong>${selected}/${total}</strong> categories selected`;
-  document.getElementById('btn-submit').disabled = selected < total || !CONFIG.votingOpen;
-}
-
-function submitVotes() {
-  const categories = [...new Set(DATA.nominees.map(n => n.category))];
-  if (Object.keys(currentSelections).length < categories.length) return;
-
-  // Record votes in data store
-  Object.entries(currentSelections).forEach(([cat, nomId]) => {
-    DATA.votes.push({ pin: currentUser.pin, nomineeId: nomId, category: cat, timestamp: new Date().toISOString() });
-  });
-
-  // Mark voter as voted
-  const voter = DATA.voters.find(v => v.pin === currentUser.pin);
-  if (voter) voter.hasVoted = true;
-
-  showScreen('screen-success');
-  showToast('Votes submitted successfully!', 'success');
-
-  // If using Google Sheets, write votes here
-  if (CONFIG.sheetId && CONFIG.apiKey) {
-    writeVotesToSheets();
+  if(idx===0){
+    container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div>No nominees available for your department/unit yet. Please contact the administrator.</div>`;
   }
+  updateVProg();
 }
 
-// ══════════════════════════════════
+function selectNom(catId,nomId){
+  selections[catId]=nomId;
+  document.querySelectorAll(`[data-cat="${catId}"]`).forEach(c=>c.classList.remove('sel'));
+  document.querySelector(`[data-id="${nomId}"][data-cat="${catId}"]`)?.classList.add('sel');
+  updateVProg();
+}
+
+function updateVProg(){
+  const v=currentUser;
+  let total=0;
+  DATA.categories.forEach(cat=>{
+    let noms=[];
+    if(cat.scope==='dept')   noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
+    else if(cat.scope==='unit') noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
+    else noms=DATA.nominees.filter(n=>n.category===cat.id);
+    if(noms.length) total++;
+  });
+  const sel=Object.keys(selections).length;
+  document.getElementById('vprog').innerHTML=`<b>${sel}/${total}</b> categories voted`;
+  document.getElementById('btn-submit').disabled=sel<total||!CFG.votingOpen;
+}
+
+async function submitVotes(){
+  const newVotes=Object.entries(selections).map(([catId,nomId])=>({
+    pin:currentUser.pin, nomineeId:nomId, category:catId, timestamp:new Date().toISOString()
+  }));
+  newVotes.forEach(v=>DATA.votes.push(v));
+  const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
+  if(voter) voter.hasVoted=true;
+  showScreen('screen-success');
+  // Write to Sheets
+  await writeToSheets('submitVotes',{
+    pin:currentUser.pin,
+    votes:newVotes,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+const getVotes = nomId => DATA.votes.filter(v=>v.nomineeId===nomId).length;
+const getDeptName = id => (DATA.departments.find(d=>d.id===id)||{name:id||''}).name;
+const getUnitName = id => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===id);if(u)return u.name;} return id||''; };
+const getCat = id => DATA.categories.find(c=>c.id===id)||{name:id||''};
+
+function getRanked(catF,deptF){
+  return DATA.nominees
+    .filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF))
+    .map(n=>({...n,votes:getVotes(n.id)}))
+    .sort((a,b)=>b.votes-a.votes);
+}
+
+// ═══════════════════════════════════════════════════════════
 // ADMIN DASHBOARD
-// ══════════════════════════════════
-function initAdmin() {
-  renderAdminStats();
-  renderDeptParticipation('dept-participation-chart');
-  populateFilters('admin');
-  renderAdminResults();
-  renderDeptDetails();
+// ═══════════════════════════════════════════════════════════
+function initAdmin(){
+  renderStats('admin');
+  renderDeptBars('admin-dept-bars');
+  fillResultFilters('a');
+  renderResults('admin');
+  renderDeptDetail('admin-dept-detail');
+  applyOrgName();
 }
 
-function renderAdminStats() {
-  const total = DATA.voters.length;
-  const voted = DATA.voters.filter(v => v.hasVoted).length;
-  const pct = total ? Math.round(voted/total*100) : 0;
-  const depts = [...new Set(DATA.voters.map(v => v.dept))].length;
-  const categories = [...new Set(DATA.nominees.map(n => n.category))].length;
-
-  document.getElementById('admin-stats').innerHTML = `
-    <div class="stat-card gold"><div class="stat-label">Total Votes Cast</div><div class="stat-value">${DATA.votes.length / categories || 0}</div><div class="stat-sub">${pct}% participation</div></div>
-    <div class="stat-card"><div class="stat-label">Registered Voters</div><div class="stat-value">${total}</div><div class="stat-sub">${voted} have voted</div></div>
-    <div class="stat-card green"><div class="stat-label">Turnout</div><div class="stat-value">${pct}%</div><div class="stat-sub">${total - voted} remaining</div></div>
-    <div class="stat-card"><div class="stat-label">Departments</div><div class="stat-value">${depts}</div><div class="stat-sub">${categories} categories</div></div>
-  `;
+function renderStats(who){
+  const total=DATA.voters.length, voted=DATA.voters.filter(v=>v.hasVoted).length;
+  const pct=total?Math.round(voted/total*100):0;
+  const id=who==='admin'?'admin-stats':'sa-stats';
+  document.getElementById(id).innerHTML=`
+    <div class="stat-card gold"><div class="stat-lbl">Votes Cast</div><div class="stat-val">${DATA.votes.length}</div><div class="stat-sub">total vote records</div></div>
+    <div class="stat-card"><div class="stat-lbl">Registered Voters</div><div class="stat-val">${total}</div><div class="stat-sub">${voted} voted · ${total-voted} pending</div></div>
+    <div class="stat-card green"><div class="stat-lbl">Turnout</div><div class="stat-val">${pct}%</div><div class="stat-sub">${CFG.votingOpen?'🟢 Voting open':'🔴 Closed'}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Departments</div><div class="stat-val">${DATA.departments.length}</div><div class="stat-sub">${DATA.categories.length} categories</div></div>`;
 }
 
-function renderDeptParticipation(containerId) {
-  const depts = [...new Set(DATA.voters.map(v => v.dept))];
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  const maxVoters = Math.max(...depts.map(d => DATA.voters.filter(v => v.dept === d).length));
-
-  container.innerHTML = depts.map((dept, i) => {
-    const total = DATA.voters.filter(v => v.dept === dept).length;
-    const voted = DATA.voters.filter(v => v.dept === dept && v.hasVoted).length;
-    const pct = total ? Math.round(voted/total*100) : 0;
-    const color = COLORS[i % COLORS.length];
-    return `
-      <div class="dept-bar-row">
-        <div class="dept-name">${dept}</div>
-        <div class="dept-track">
-          <div class="dept-fill" style="width:${pct}%; background:${color}33; color:${color};">${voted}/${total}</div>
-        </div>
-        <div class="dept-pct">${pct}%</div>
-      </div>`;
+function renderDeptBars(containerId){
+  const el=document.getElementById(containerId);
+  if(!el||!DATA.departments.length){if(el)el.innerHTML='<div class="empty-state">No departments configured yet.</div>';return;}
+  el.innerHTML=DATA.departments.map((dept,i)=>{
+    const total=DATA.voters.filter(v=>v.dept===dept.id).length;
+    const voted=DATA.voters.filter(v=>v.dept===dept.id&&v.hasVoted).length;
+    const pct=total?Math.round(voted/total*100):0;
+    const c=dept.color||COLORS[i%COLORS.length];
+    return `<div class="db-row">
+      <div class="db-name">${dept.name}</div>
+      <div class="db-track"><div class="db-fill" style="width:${pct}%;background:${c}33;color:${c};">${voted}/${total}</div></div>
+      <div class="db-pct">${pct}%</div></div>`;
   }).join('');
 }
 
-function populateFilters(prefix) {
-  const cats = [...new Set(DATA.nominees.map(n => n.category))];
-  const depts = [...new Set(DATA.nominees.map(n => n.dept))];
-  const catSel = document.getElementById(`${prefix === 'admin' ? 'admin' : 'sa'}-cat-filter`);
-  const deptSel = document.getElementById(`${prefix === 'admin' ? 'admin' : 'sa'}-dept-filter`);
-  if (catSel) catSel.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option>${c}</option>`).join('');
-  if (deptSel) deptSel.innerHTML = `<option value="">All departments</option>` + depts.map(d => `<option>${d}</option>`).join('');
+function fillResultFilters(prefix){
+  const catEl=document.getElementById(`${prefix}-fcat`);
+  const deptEl=document.getElementById(`${prefix}-fdept`);
+  if(catEl) catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if(deptEl) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
 }
 
-function getVoteCounts(catFilter, deptFilter) {
-  const results = {};
-  DATA.nominees.forEach(nom => {
-    if (catFilter && nom.category !== catFilter) return;
-    if (deptFilter && nom.dept !== deptFilter) return;
-    const votes = DATA.votes.filter(v => v.nomineeId === nom.id).length;
-    results[nom.id] = { ...nom, votes };
-  });
-  return Object.values(results).sort((a,b) => b.votes - a.votes);
-}
-
-function renderResultsTable(tbodyId, catFilter, deptFilter) {
-  const ranked = getVoteCounts(catFilter, deptFilter);
-  const maxVotes = ranked.length ? ranked[0].votes : 1;
-  const tbody = document.getElementById(tbodyId);
-  if (!ranked.length) { tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No results yet</td></tr>`; return; }
-
-  tbody.innerHTML = ranked.map((nom, i) => {
-    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
-    const rankLabel = i < 3 ? `<span class="rank-badge ${rankClass}">${i+1}</span>` : `<span style="color:var(--text3);font-size:13px;">${i+1}</span>`;
-    const barW = maxVotes ? Math.round(nom.votes / maxVotes * 100) : 0;
+function renderResults(who){
+  const prefix=who==='admin'?'a':'sa';
+  const catF=document.getElementById(`${prefix}-fcat`)?.value||'';
+  const deptF=document.getElementById(`${prefix}-fdept`)?.value||'';
+  const tbodyId=who==='admin'?'admin-res-body':'sa-res-body';
+  const ranked=getRanked(catF,deptF);
+  const maxV=ranked[0]?.votes||1;
+  const tbody=document.getElementById(tbodyId);
+  if(!ranked.length){tbody.innerHTML=`<tr><td colspan="6" class="empty-state">No results yet — votes will appear here once cast.</td></tr>`;return;}
+  tbody.innerHTML=ranked.map((nom,i)=>{
+    const rC=i===0?'r1':i===1?'r2':i===2?'r3':'';
+    const rnk=i<3?`<span class="rnk ${rC}">${i+1}</span>`:`<span style="color:var(--text3);font-size:12px;">${i+1}</span>`;
+    const bw=Math.round(nom.votes/maxV*90);
+    const catName=getCat(nom.category).name;
     return `<tr>
-      <td>${rankLabel}</td>
+      <td>${rnk}</td>
       <td style="font-weight:500;">${nom.name}</td>
-      <td style="color:var(--text2);">${nom.dept}</td>
-      <td><span style="font-size:12px;padding:3px 8px;border-radius:20px;background:var(--bg3);color:var(--text2);">${nom.category}</span></td>
-      <td><div class="vote-bar-wrap"><div class="vote-bar" style="width:${barW}px;max-width:80px;"></div><span class="vote-count">${nom.votes}</span></div></td>
+      <td style="color:var(--text2);">${getDeptName(nom.dept)}</td>
+      <td style="color:var(--text3);">${getUnitName(nom.unit)}</td>
+      <td><span style="font-size:11px;padding:2px 7px;border-radius:20px;background:var(--bg3);color:var(--text2);">${catName}</span></td>
+      <td><div class="vbar-wrap"><div class="vbar" style="width:${bw}px;max-width:90px;"></div><span class="vcnt">${nom.votes}</span></div></td>
     </tr>`;
   }).join('');
 }
 
-function renderAdminResults() {
-  const cat = document.getElementById('admin-cat-filter')?.value || '';
-  const dept = document.getElementById('admin-dept-filter')?.value || '';
-  renderResultsTable('admin-results-tbody', cat, dept);
+function renderDeptDetail(containerId){
+  const el=document.getElementById(containerId);
+  if(!el) return;
+  if(!DATA.departments.length){el.innerHTML='<div class="empty-state">No departments configured.</div>';return;}
+  el.innerHTML=DATA.departments.map((dept,di)=>{
+    const noms=DATA.nominees.filter(n=>n.dept===dept.id).map(n=>({...n,votes:getVotes(n.id)})).sort((a,b)=>b.votes-a.votes);
+    const maxV=noms[0]?.votes||1;
+    const c=dept.color||COLORS[di%COLORS.length];
+    if(!noms.length) return `<div style="margin-bottom:20px;"><div style="font-size:13px;font-weight:500;color:${c};margin-bottom:8px;">${dept.name}</div><div style="font-size:12px;color:var(--text3);">No nominees</div></div>`;
+    const rows=noms.map(n=>{const pct=Math.round(n.votes/maxV*100);return `<div class="db-row"><div class="db-name" style="font-size:12px;">${n.name}</div><div class="db-track" style="height:22px;"><div class="db-fill" style="width:${Math.max(pct,5)}%;background:${c}33;color:${c};font-size:11px;">${n.votes}v</div></div></div>`;}).join('');
+    return `<div style="margin-bottom:22px;"><div style="font-size:13px;font-weight:500;color:${c};margin-bottom:8px;">${dept.name}</div>${rows}</div>`;
+  }).join('');
 }
 
-function renderDeptDetails() {
-  const depts = [...new Set(DATA.nominees.map(n => n.dept))];
-  const container = document.getElementById('dept-detail-bars');
-  if (!container) return;
-  container.innerHTML = depts.map((dept, i) => {
-    const nominees = DATA.nominees.filter(n => n.dept === dept);
-    const rows = nominees.map(nom => {
-      const votes = DATA.votes.filter(v => v.nomineeId === nom.id).length;
-      const maxV = Math.max(...nominees.map(n2 => DATA.votes.filter(v => v.nomineeId === n2.id).length), 1);
-      const pct = Math.round(votes / maxV * 100);
-      return `<div class="dept-bar-row" style="margin-bottom:6px;">
-        <div class="dept-name" style="font-size:12px;">${nom.name}</div>
-        <div class="dept-track" style="height:22px;">
-          <div class="dept-fill" style="width:${pct}%; background:${COLORS[i%COLORS.length]}33; color:${COLORS[i%COLORS.length]}; font-size:11px;">${votes} votes</div>
+// ═══════════════════════════════════════════════════════════
+// SUPERADMIN
+// ═══════════════════════════════════════════════════════════
+function initSA(){
+  renderStats('sa');
+  renderDeptBars('sa-dept-bars');
+  fillResultFilters('sa');
+  renderResults('sa');
+  renderVoterList();
+  renderNominees();
+  renderCatList();
+  renderDeptUnitManager();
+  document.getElementById('sa-voting-val').textContent=CFG.votingOpen?'Open':'Closed';
+  document.getElementById('sa-dept-count').textContent=DATA.departments.length;
+  const gsId=document.getElementById('gs-id-inp');
+  const gsKey=document.getElementById('gs-key-inp');
+  const gsScript=document.getElementById('gs-script-inp');
+  const orgInp=document.getElementById('org-name-inp');
+  if(gsId) gsId.value=CFG.sheetId;
+  if(gsKey) gsKey.value=CFG.apiKey;
+  if(gsScript) gsScript.value=CFG.scriptUrl;
+  if(orgInp) orgInp.value=CFG.orgName;
+  if(CFG.isConfigured){
+    document.getElementById('gs-dot').style.background='var(--green)';
+    document.getElementById('gs-status-lbl').textContent='Connected ✓';
+  }
+  applyOrgName();
+}
+
+// ── VOTERS ──
+function renderVoterList(){
+  const el=document.getElementById('voter-list');
+  if(!DATA.voters.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👥</div>No voters yet. Add voters or sync from Google Sheets.</div>';return;}
+  el.innerHTML=DATA.voters.map(v=>`
+    <div class="vrow">
+      <span class="vpin">${v.pin}</span>
+      <span class="vname">${v.name}</span>
+      <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
+      <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
+        <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
+        <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
+      </div>
+      <button class="btn-sm" onclick="resetVoter('${v.pin}')">Reset</button>
+      <button class="btn-sm red" onclick="removeVoter('${v.pin}')">✕</button>
+    </div>`).join('');
+}
+
+async function resetVoter(pin){
+  const v=DATA.voters.find(v=>v.pin===pin);if(!v)return;
+  v.hasVoted=false;
+  DATA.votes=DATA.votes.filter(x=>x.pin!==pin);
+  renderVoterList();renderStats('sa');
+  await writeToSheets('resetVoter',{pin});
+  showToast(`${v.name}'s votes reset`,'ok');
+}
+async function removeVoter(pin){
+  const v=DATA.voters.find(v=>v.pin===pin);if(!v)return;
+  if(!confirm(`Remove voter "${v.name}"?`))return;
+  DATA.voters=DATA.voters.filter(x=>x.pin!==pin);
+  DATA.votes=DATA.votes.filter(x=>x.pin!==pin);
+  renderVoterList();renderStats('sa');
+  await writeToSheets('removeVoter',{pin});
+  showToast(`${v.name} removed`,'ok');
+}
+async function resetAllVotes(){
+  if(!confirm('Reset ALL votes? This cannot be undone.'))return;
+  DATA.votes=[];DATA.voters.forEach(v=>v.hasVoted=false);
+  renderVoterList();renderStats('sa');
+  await writeToSheets('resetAllVotes',{});
+  showToast('All votes reset','ok');
+}
+
+// ── NOMINEES ──
+function renderNominees(){
+  const catF=document.getElementById('nom-fcat')?.value||'';
+  const deptF=document.getElementById('nom-fdept')?.value||'';
+  const catEl=document.getElementById('nom-fcat');
+  const deptEl=document.getElementById('nom-fdept');
+  if(catEl) catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if(deptEl) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const filtered=DATA.nominees.filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF));
+  const grid=document.getElementById('nom-mgr-grid');
+  if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏅</div>No nominees yet. Add nominees or sync from Sheets.</div>';return;}
+  grid.innerHTML=filtered.map(nom=>{
+    const votes=getVotes(nom.id);
+    const catName=getCat(nom.category).name;
+    return `<div class="nom-mgr-card">
+      <div class="nm-info">
+        <div class="nm-name">${nom.name}</div>
+        <div class="nm-meta">${getDeptName(nom.dept)} · ${getUnitName(nom.unit)}</div>
+        <div class="nm-meta" style="margin-top:3px;">${catName}</div>
+        <div class="nm-votes">${votes} vote${votes!==1?'s':''}</div>
+      </div>
+      <button class="btn-sm red" onclick="removeNom('${nom.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+async function removeNom(id){
+  const nom=DATA.nominees.find(n=>n.id===id);
+  if(!nom||!confirm(`Remove "${nom.name}"?`))return;
+  DATA.nominees=DATA.nominees.filter(n=>n.id!==id);
+  DATA.votes=DATA.votes.filter(v=>v.nomineeId!==id);
+  renderNominees();
+  await writeToSheets('removeNominee',{id});
+  showToast(`${nom.name} removed`,'ok');
+}
+
+// ── CATEGORIES ──
+function renderCatList(){
+  const el=document.getElementById('cat-list-container');
+  const scopeLabel={dept:'Dept-wise Best',unit:'Unit-wise Best',global:'Company-wide Overall'};
+  if(!DATA.categories.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏷</div>No categories yet. Add your voting categories.</div>';return;}
+  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">` +
+  DATA.categories.map(cat=>{
+    const voteCount=DATA.votes.filter(v=>v.category===cat.id).length;
+    const nomCount=DATA.nominees.filter(n=>n.category===cat.id).length;
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;">${cat.name}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${scopeLabel[cat.scope]||cat.scope} · ${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</div>
+      </div>
+      <button class="btn-sm red" onclick="removeCat('${cat.id}')">✕</button>
+    </div>`;
+  }).join('') + '</div>';
+}
+async function removeCat(id){
+  const cat=DATA.categories.find(c=>c.id===id);
+  if(!cat||!confirm(`Remove category "${cat.name}"?`))return;
+  DATA.categories=DATA.categories.filter(c=>c.id!==id);
+  DATA.nominees=DATA.nominees.filter(n=>n.category!==id);
+  DATA.votes=DATA.votes.filter(v=>v.category!==id);
+  renderCatList();renderNominees();
+  await writeToSheets('removeCategory',{id});
+  showToast(`Category removed`,'ok');
+}
+
+// ── DEPT/UNIT MANAGER ──
+function renderDeptUnitManager(){
+  document.getElementById('sa-dept-count').textContent=DATA.departments.length;
+  const el=document.getElementById('dept-unit-manager');
+  if(!DATA.departments.length){el.innerHTML='<div class="empty-state">No departments yet. Click "+ Add dept" above.</div>';return;}
+  el.innerHTML=DATA.departments.map((dept,di)=>{
+    const c=dept.color||COLORS[di%COLORS.length];
+    const units=dept.units.map(u=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:5px;">
+        <span style="flex:1;font-size:12px;">${u.name}</span>
+        <button class="btn-sm red" onclick="removeUnit('${dept.id}','${u.id}')">✕</button>
+      </div>`).join('');
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${c};"></div>
+        <span style="font-size:13px;font-weight:500;flex:1;">${dept.name}</span>
+        <button class="btn-sm red" onclick="removeDept('${dept.id}')">Remove dept</button>
+      </div>
+      <div style="padding:10px 14px;">
+        ${units||'<div style="font-size:12px;color:var(--text3);margin-bottom:8px;">No units yet</div>'}
+        <div style="display:flex;gap:7px;margin-top:6px;">
+          <input class="gs-inp" id="unit-inp-${dept.id}" placeholder="New unit name…" style="flex:1;" onkeydown="if(event.key==='Enter')addUnit('${dept.id}')">
+          <button class="btn-sm green" onclick="addUnit('${dept.id}')">+ Add unit</button>
         </div>
-      </div>`;
-    }).join('');
-    return `<div style="margin-bottom:24px;">
-      <div style="font-size:14px;font-weight:500;margin-bottom:10px;color:${COLORS[i%COLORS.length]};">${dept}</div>
-      ${rows}
+      </div>
     </div>`;
   }).join('');
 }
 
-// ══════════════════════════════════
-// SUPERADMIN
-// ══════════════════════════════════
-function initSuperAdmin() {
-  renderAdminStats_SA();
-  renderDeptParticipation('sa-dept-participation');
-  populateFilters('sa');
-  renderSAResults();
-  renderVoterList();
-  renderNomineeManage();
-  document.getElementById('voting-status-val').textContent = CONFIG.votingOpen ? 'Open' : 'Closed';
-  document.getElementById('cat-count-val').textContent = [...new Set(DATA.nominees.map(n => n.category))].length;
-  // Always restore saved credentials into inputs
-  const sidEl = document.getElementById('sheet-id-input');
-  const keyEl = document.getElementById('api-key-input');
-  if (sidEl) sidEl.value = CONFIG.sheetId || '';
-  if (keyEl) keyEl.value = CONFIG.apiKey  || '';
-  if (CONFIG.sheetId && CONFIG.apiKey) {
-    document.getElementById('conn-dot').style.background = 'var(--green)';
-    document.getElementById('conn-label').textContent = 'Connected — credentials loaded from memory ✓';
+async function addUnit(deptId){
+  const inp=document.getElementById(`unit-inp-${deptId}`);
+  const name=inp?.value.trim();
+  if(!name)return;
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  if(!dept)return;
+  if(dept.units.find(u=>u.name.toLowerCase()===name.toLowerCase())){showToast('Unit already exists','err');return;}
+  const uid=`${deptId}_${Date.now()}`;
+  dept.units.push({id:uid,name});
+  if(inp)inp.value='';
+  renderDeptUnitManager();
+  await writeToSheets('addUnit',{deptId,unitId:uid,name});
+  showToast(`Unit "${name}" added`,'ok');
+}
+async function removeUnit(deptId,unitId){
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const unit=dept?.units.find(u=>u.id===unitId);
+  if(!unit||!confirm(`Remove unit "${unit.name}"?`))return;
+  if(DATA.voters.some(v=>v.unit===unitId)){showToast('Cannot remove: voters are assigned to this unit','err');return;}
+  dept.units=dept.units.filter(u=>u.id!==unitId);
+  DATA.nominees=DATA.nominees.filter(n=>n.unit!==unitId);
+  renderDeptUnitManager();
+  await writeToSheets('removeUnit',{deptId,unitId});
+  showToast(`Unit removed`,'ok');
+}
+async function removeDept(deptId){
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  if(!dept||!confirm(`Remove department "${dept.name}" and all its units?`))return;
+  if(DATA.voters.some(v=>v.dept===deptId)){showToast('Cannot remove: voters are assigned to this department','err');return;}
+  DATA.departments=DATA.departments.filter(d=>d.id!==deptId);
+  DATA.nominees=DATA.nominees.filter(n=>n.dept!==deptId);
+  renderDeptUnitManager();renderStats('sa');
+  await writeToSheets('removeDept',{deptId});
+  showToast(`Department removed`,'ok');
+}
+
+// ── SETTINGS ──
+function saveGS(type){
+  if(type==='id')     { CFG.sheetId=document.getElementById('gs-id-inp').value.trim(); showToast('Sheet ID saved','ok'); }
+  if(type==='key')    { CFG.apiKey=document.getElementById('gs-key-inp').value.trim(); showToast('API key saved','ok'); }
+  if(type==='script') { CFG.scriptUrl=document.getElementById('gs-script-inp').value.trim(); showToast('Script URL saved','ok'); }
+}
+function saveOrgName(){
+  CFG.orgName=document.getElementById('org-name-inp').value.trim();
+  applyOrgName();
+  showToast('Organisation name saved','ok');
+}
+async function setVoting(open){
+  CFG.votingOpen=open;
+  document.getElementById('sa-voting-val').textContent=open?'Open':'Closed';
+  await writeToSheets('setVotingStatus',{open});
+  showToast(`Voting ${open?'opened':'closed'}`,'ok');
+}
+async function testConnection(){
+  if(!CFG.sheetId||!CFG.apiKey){showToast('Enter Sheet ID and API key first','err');return;}
+  showToast('Testing…');
+  try{
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}?key=${CFG.apiKey}`);
+    const j=await r.json();
+    if(r.ok){
+      document.getElementById('gs-dot').style.background='var(--green)';
+      document.getElementById('gs-status-lbl').textContent=`Connected — "${j.properties?.title||'Sheet'}" ✓`;
+      showToast('Connected!','ok');
+    } else throw new Error(j.error?.message||`HTTP ${r.status}`);
+  }catch(e){
+    document.getElementById('gs-dot').style.background='var(--red)';
+    document.getElementById('gs-status-lbl').textContent='Connection failed';
+    showToast('Failed: '+e.message,'err');
+  }
+}
+async function manualSync(){
+  showToast('Syncing from Sheets…');
+  try{
+    await fetchFromSheets();
+    initSA();
+    showToast('Sync complete!','ok');
+  }catch(e){showToast('Sync failed: '+e.message,'err');}
+}
+function exportCSV(type){
+  let rows=[],fn='';
+  if(type==='results'){
+    rows=[['Rank','Nominee','Dept','Unit','Category','Votes'],...getRanked('','').map((n,i)=>[i+1,n.name,getDeptName(n.dept),getUnitName(n.unit),getCat(n.category).name,n.votes])];
+    fn='voting-results.csv';
+  }else if(type==='voters'){
+    rows=[['PIN','Name','Dept','Unit','HasVoted'],...DATA.voters.map(v=>[v.pin,v.name,getDeptName(v.dept),getUnitName(v.unit),v.hasVoted])];
+    fn='voters.csv';
+  }else{
+    rows=[['Type','PIN','Name','Dept','Unit','Detail'],
+      ...DATA.voters.map(v=>['voter',v.pin,v.name,getDeptName(v.dept),getUnitName(v.unit),v.hasVoted]),
+      ...DATA.votes.map(v=>['vote',v.pin,'','','',`Cat:${getCat(v.category).name} → Nom:${v.nomineeId}`])];
+    fn='full-export.csv';
+  }
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=fn;a.click();
+  showToast(`${fn} downloaded`,'ok');
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════════
+function openModal(html){
+  closeModal();
+  const ov=document.createElement('div');ov.className='modal-ov';ov.id='modal-ov';
+  ov.innerHTML=`<div class="modal-box">${html}</div>`;
+  ov.onclick=e=>{if(e.target===ov)closeModal();};
+  document.body.appendChild(ov);
+}
+function closeModal(){document.getElementById('modal-ov')?.remove();}
+
+function openAddVoterModal(){
+  const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  openModal(`<div class="modal-title">Add Voter</div>
+    <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mv-name" placeholder="Staff full name"></div>
+    <div class="modal-field"><label class="modal-lbl">PIN</label><input class="modal-inp" id="mv-pin" placeholder="Unique PIN" inputmode="numeric"></div>
+    <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mv-dept" onchange="fillVoterUnits()">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
+    <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mv-unit"></select></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="addVoter()">Add Voter</button>
+    </div>`);
+  fillVoterUnits();
+}
+function fillVoterUnits(){
+  const deptId=document.getElementById('mv-dept')?.value;
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const sel=document.getElementById('mv-unit');
+  if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+}
+async function addVoter(){
+  const name=document.getElementById('mv-name').value.trim();
+  const pin=document.getElementById('mv-pin').value.trim();
+  const dept=document.getElementById('mv-dept').value;
+  const unit=document.getElementById('mv-unit').value;
+  if(!name||!pin){showToast('Name and PIN required','err');return;}
+  if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){showToast('PIN already in use','err');return;}
+  const voter={pin,name,dept,unit,hasVoted:false};
+  DATA.voters.push(voter);
+  closeModal();renderVoterList();renderStats('sa');
+  await writeToSheets('addVoter',{voter});
+  showToast(`${name} added`,'ok');
+}
+
+function openAddNomModal(){
+  const cOpts=DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  openModal(`<div class="modal-title">Add Nominee</div>
+    <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mn-name" placeholder="Nominee full name"></div>
+    <div class="modal-field"><label class="modal-lbl">Category</label><select class="modal-sel" id="mn-cat">${cOpts||'<option value="">— add categories first —</option>'}</select></div>
+    <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" onchange="fillNomUnits()">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
+    <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mn-unit"></select></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="addNom()">Add Nominee</button>
+    </div>`);
+  fillNomUnits();
+}
+function fillNomUnits(){
+  const deptId=document.getElementById('mn-dept')?.value;
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const sel=document.getElementById('mn-unit');
+  if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+}
+async function addNom(){
+  const name=document.getElementById('mn-name').value.trim();
+  const catId=document.getElementById('mn-cat').value;
+  const dept=document.getElementById('mn-dept').value;
+  const unit=document.getElementById('mn-unit').value;
+  if(!name||!catId){showToast('Name and category required','err');return;}
+  const cat=DATA.categories.find(c=>c.id===catId);
+  const nom={id:`nom_${Date.now()}`,name,dept,unit,category:catId,scope:cat?.scope||'global'};
+  DATA.nominees.push(nom);
+  closeModal();renderNominees();
+  await writeToSheets('addNominee',{nominee:nom});
+  showToast(`${name} added as nominee`,'ok');
+}
+
+function openAddCatModal(){
+  openModal(`<div class="modal-title">Add Voting Category</div>
+    <div class="modal-field"><label class="modal-lbl">Category Name</label><input class="modal-inp" id="mc-name" placeholder="e.g. Best Staff — Department"></div>
+    <div class="modal-field"><label class="modal-lbl">Scope</label>
+      <select class="modal-sel" id="mc-scope">
+        <option value="dept">Department-wise — voters see nominees from their own dept only</option>
+        <option value="unit">Unit-wise — voters see nominees from their own unit only</option>
+        <option value="global">Company-wide — all voters see all nominees</option>
+      </select></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="addCat()">Add Category</button>
+    </div>`);
+}
+async function addCat(){
+  const name=document.getElementById('mc-name').value.trim();
+  const scope=document.getElementById('mc-scope').value;
+  if(!name){showToast('Enter a category name','err');return;}
+  const cat={id:`cat_${Date.now()}`,name,scope};
+  DATA.categories.push(cat);
+  closeModal();renderCatList();fillResultFilters('sa');fillResultFilters('a');
+  await writeToSheets('addCategory',{category:cat});
+  showToast(`Category "${name}" added`,'ok');
+}
+
+function openAddDeptModal(){
+  openModal(`<div class="modal-title">Add Department</div>
+    <div class="modal-field"><label class="modal-lbl">Department Name</label><input class="modal-inp" id="md-name" placeholder="e.g. Finance"></div>
+    <div class="modal-field"><label class="modal-lbl">Colour</label>
+      <input type="color" id="md-color" value="#5b8ef0" style="width:44px;height:30px;border:none;background:none;cursor:pointer;padding:0;border-radius:6px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="addDept()">Add Department</button>
+    </div>`);
+}
+async function addDept(){
+  const name=document.getElementById('md-name').value.trim();
+  const color=document.getElementById('md-color').value;
+  if(!name){showToast('Enter a department name','err');return;}
+  if(DATA.departments.find(d=>d.name.toLowerCase()===name.toLowerCase())){showToast('Department already exists','err');return;}
+  const dept={id:`dept_${Date.now()}`,name,color,units:[]};
+  DATA.departments.push(dept);
+  closeModal();renderDeptUnitManager();renderStats('sa');
+  await writeToSheets('addDept',{dept:{id:dept.id,name:dept.name,color:dept.color}});
+  showToast(`Department "${name}" added`,'ok');
+}
+
+// ═══════════════════════════════════════════════════════════
+// APPS SCRIPT HELP MODAL
+// ═══════════════════════════════════════════════════════════
+function showScriptHelp(){
+  const code = `// ── Paste this into Google Apps Script ──
+// Tools → Script editor in your Google Sheet
+
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const data = JSON.parse(e.postData.contents);
+  const action = data.action;
+  let result = {status:'ok'};
+
+  if (action === 'submitVotes') {
+    const vSheet = ss.getSheetByName('Votes') || ss.insertSheet('Votes');
+    data.votes.forEach(v => vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]));
+    const voterSheet = ss.getSheetByName('Voters');
+    if (voterSheet) {
+      const rows = voterSheet.getDataRange().getValues();
+      for (let i=1;i<rows.length;i++) {
+        if (rows[i][0] == data.pin) { voterSheet.getRange(i+1,5).setValue('TRUE'); break; }
+      }
+    }
+  }
+  else if (action === 'addVoter') {
+    const s = ss.getSheetByName('Voters') || ss.insertSheet('Voters');
+    const v = data.voter;
+    s.appendRow([v.pin, v.name, v.dept, v.unit, 'FALSE']);
+  }
+  else if (action === 'removeVoter') {
+    deleteRowByValue(ss.getSheetByName('Voters'), data.pin, 0);
+    deleteRowsByValue(ss.getSheetByName('Votes'), data.pin, 0);
+  }
+  else if (action === 'resetVoter') {
+    const s = ss.getSheetByName('Voters');
+    if (s) {
+      const rows = s.getDataRange().getValues();
+      for (let i=1;i<rows.length;i++) {
+        if (rows[i][0] == data.pin) { s.getRange(i+1,5).setValue('FALSE'); break; }
+      }
+    }
+    deleteRowsByValue(ss.getSheetByName('Votes'), data.pin, 0);
+  }
+  else if (action === 'resetAllVotes') {
+    const vs = ss.getSheetByName('Votes');
+    if (vs && vs.getLastRow()>1) vs.deleteRows(2, vs.getLastRow()-1);
+    const voterSheet = ss.getSheetByName('Voters');
+    if (voterSheet && voterSheet.getLastRow()>1) {
+      voterSheet.getRange(2,5,voterSheet.getLastRow()-1,1).setValue('FALSE');
+    }
+  }
+  else if (action === 'addNominee') {
+    const s = ss.getSheetByName('Nominees') || ss.insertSheet('Nominees');
+    const n = data.nominee;
+    s.appendRow([n.id, n.name, n.dept, n.unit, n.category, n.scope]);
+  }
+  else if (action === 'removeNominee') {
+    deleteRowByValue(ss.getSheetByName('Nominees'), data.id, 0);
+  }
+  else if (action === 'addCategory') {
+    const s = ss.getSheetByName('Categories') || ss.insertSheet('Categories');
+    const c = data.category;
+    s.appendRow([c.id, c.name, c.scope]);
+  }
+  else if (action === 'removeCategory') {
+    deleteRowByValue(ss.getSheetByName('Categories'), data.id, 0);
+  }
+  else if (action === 'addDept') {
+    const s = ss.getSheetByName('Departments') || ss.insertSheet('Departments');
+    const d = data.dept;
+    s.appendRow([d.id, d.name, d.color, '']);
+  }
+  else if (action === 'addUnit') {
+    const s = ss.getSheetByName('Departments') || ss.insertSheet('Departments');
+    s.appendRow([data.deptId, '', '', data.name, data.unitId]);
+  }
+  else if (action === 'removeDept') {
+    deleteRowsByValue(ss.getSheetByName('Departments'), data.deptId, 0);
+  }
+  else if (action === 'removeUnit') {
+    const s = ss.getSheetByName('Departments');
+    if (s) {
+      const rows = s.getDataRange().getValues();
+      for (let i=rows.length-1;i>=1;i--) {
+        if (rows[i][0]==data.deptId && rows[i][4]==data.unitId) s.deleteRow(i+1);
+      }
+    }
+  }
+  else if (action === 'setAdmins') {
+    const s = ss.getSheetByName('Admins') || ss.insertSheet('Admins');
+    if (s.getLastRow()>1) s.deleteRows(2,s.getLastRow()-1);
+    data.admins.forEach(a => s.appendRow([a.pin, a.role, a.name]));
+  }
+  else if (action === 'setVotingStatus') {
+    const s = ss.getSheetByName('Config') || ss.insertSheet('Config');
+    s.getRange(1,1).setValue('votingOpen');
+    s.getRange(1,2).setValue(data.open ? 'TRUE' : 'FALSE');
+  }
+
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function deleteRowByValue(sheet, value, col) {
+  if (!sheet) return;
+  const rows = sheet.getDataRange().getValues();
+  for (let i=rows.length-1;i>=1;i--) {
+    if (rows[i][col] == value) { sheet.deleteRow(i+1); break; }
+  }
+}
+function deleteRowsByValue(sheet, value, col) {
+  if (!sheet) return;
+  const rows = sheet.getDataRange().getValues();
+  for (let i=rows.length-1;i>=1;i--) {
+    if (rows[i][col] == value) sheet.deleteRow(i+1);
   }
 }
 
-function renderAdminStats_SA() {
-  const total = DATA.voters.length;
-  const voted = DATA.voters.filter(v => v.hasVoted).length;
-  const pct = total ? Math.round(voted/total*100) : 0;
-  const categories = [...new Set(DATA.nominees.map(n => n.category))].length;
+// After pasting: click Deploy → New deployment
+// Type: Web app · Execute as: Me · Who has access: Anyone
+// Copy the /exec URL and paste it as the Script URL in the portal Settings`;
 
-  document.getElementById('superadmin-stats').innerHTML = `
-    <div class="stat-card gold"><div class="stat-label">Total Votes</div><div class="stat-value">${DATA.votes.length}</div><div class="stat-sub">across ${categories} categories</div></div>
-    <div class="stat-card"><div class="stat-label">Registered Voters</div><div class="stat-value">${total}</div><div class="stat-sub">${voted} voted · ${total-voted} pending</div></div>
-    <div class="stat-card green"><div class="stat-label">Turnout</div><div class="stat-value">${pct}%</div><div class="stat-sub">${CONFIG.votingOpen ? '🟢 Voting open' : '🔴 Voting closed'}</div></div>
-    <div class="stat-card"><div class="stat-label">Nominees</div><div class="stat-value">${DATA.nominees.length}</div><div class="stat-sub">${[...new Set(DATA.nominees.map(n=>n.dept))].length} departments</div></div>
-  `;
-}
-
-function renderSAResults() {
-  const cat = document.getElementById('sa-cat-filter')?.value || '';
-  const dept = document.getElementById('sa-dept-filter')?.value || '';
-  renderResultsTable('sa-results-tbody', cat, dept);
-}
-
-function renderVoterList() {
-  const container = document.getElementById('voter-list');
-  container.innerHTML = DATA.voters.map(v => `
-    <div class="voter-row">
-      <span class="voter-pin">${v.pin}</span>
-      <span class="voter-name">${v.name}</span>
-      <span class="voter-dept">${v.dept} · ${v.unit}</span>
-      <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
-        <div class="voted-dot ${v.hasVoted ? 'voted-yes' : 'voted-no'}"></div>
-        <span class="voted-label">${v.hasVoted ? 'Voted' : 'Pending'}</span>
-      </div>
-      <button class="btn-sm danger" onclick="resetVoter('${v.pin}')" style="margin-left:8px;">Reset</button>
+  openModal(`<div class="modal-title">📋 Google Apps Script — Copy &amp; Paste</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
+      1. Open your Google Sheet → <b>Extensions → Apps Script</b><br>
+      2. Delete any existing code, paste everything below<br>
+      3. Click <b>Deploy → New deployment → Web app</b><br>
+      4. Set <i>Execute as: Me</i>, <i>Who has access: Anyone</i><br>
+      5. Copy the <code>/exec</code> URL → paste it as <b>Script URL</b> in Settings
     </div>
-  `).join('');
+    <textarea style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px;color:var(--text);font-family:monospace;font-size:10px;outline:none;resize:vertical;" onclick="this.select()" readonly>${code}</textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Close</button>
+      <button class="btn-confirm" onclick="navigator.clipboard.writeText(document.querySelector('textarea').value);showToast('Copied!','ok');">Copy Code</button>
+    </div>`);
 }
 
-function renderNomineeManage() {
-  const container = document.getElementById('nominee-manage-grid');
-  container.innerHTML = DATA.nominees.map(nom => {
-    const votes = DATA.votes.filter(v => v.nomineeId === nom.id).length;
-    const initials = nom.name.split(' ').map(w=>w[0]).join('').slice(0,2);
-    return `
-      <div class="nominee-manage-card">
-        <div>
-          <div style="font-size:14px;font-weight:500;">${nom.name}</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:2px;">${nom.dept} · ${nom.unit}</div>
-          <span class="status-pill status-open">${nom.category}</span>
-          <div style="font-size:12px;color:var(--text3);margin-top:6px;">${votes} vote${votes!==1?'s':''}</div>
-        </div>
-        <button class="btn-sm danger" onclick="removeNominee(${nom.id})" style="flex-shrink:0;">✕</button>
-      </div>
-    `;
-  }).join('');
-}
-
-function resetVoter(pin) {
-  const voter = DATA.voters.find(v => v.pin === pin);
-  if (!voter) return;
-  voter.hasVoted = false;
-  DATA.votes = DATA.votes.filter(v => v.pin !== pin);
-  renderVoterList();
-  renderAdminStats_SA();
-  renderDeptParticipation('sa-dept-participation');
-  renderSAResults();
-  showToast(`Votes reset for ${voter.name}`, 'success');
-}
-
-function resetAllVotes() {
-  if (!confirm('Reset ALL votes? This cannot be undone.')) return;
-  DATA.votes = [];
-  DATA.voters.forEach(v => v.hasVoted = false);
-  renderVoterList();
-  renderAdminStats_SA();
-  renderDeptParticipation('sa-dept-participation');
-  renderSAResults();
-  showToast('All votes have been reset', 'success');
-}
-
-function generatePINs() {
-  showToast('PINs regenerated and ready to distribute', 'success');
-}
-
-function toggleVoting(open) {
-  CONFIG.votingOpen = open;
-  localStorage.setItem('gs_voting_open', JSON.stringify(open));
-  document.getElementById('voting-status-val').textContent = open ? 'Open' : 'Closed';
-  showToast(`Voting ${open ? 'opened' : 'closed'} successfully`, open ? 'success' : 'error');
-}
-
-function showAddNominee() {
-  const name = prompt('Nominee name:');
-  if (!name) return;
-  const dept = prompt('Department:');
-  if (!dept) return;
-  const unit = prompt('Unit:');
-  const cat = prompt('Category (Employee of the Year / Best Team Player / Innovation Award / Leadership Award):');
-  if (!cat) return;
-  DATA.nominees.push({ id: Date.now(), name, dept, unit: unit||dept, category: cat });
-  renderNomineeManage();
-  showToast(`${name} added as nominee`, 'success');
-}
-
-function removeNominee(id) {
-  const nom = DATA.nominees.find(n => n.id === id);
-  if (!nom) return;
-  if (!confirm(`Remove ${nom.name}?`)) return;
-  DATA.nominees = DATA.nominees.filter(n => n.id !== id);
-  DATA.votes = DATA.votes.filter(v => v.nomineeId !== id);
-  renderNomineeManage();
-  showToast(`${nom.name} removed`, 'success');
-}
-
-function manageCats() {
-  const cats = [...new Set(DATA.nominees.map(n => n.category))];
-  showToast(`Categories: ${cats.join(', ')}`, 'success');
-}
-
-// ══════════════════════════════════
-// GOOGLE SHEETS INTEGRATION
-// ══════════════════════════════════
-function saveSheetId() {
-  CONFIG.sheetId = document.getElementById('sheet-id-input').value.trim();
-  localStorage.setItem('gs_sheet_id', CONFIG.sheetId);
-  showToast('Sheet ID saved ✓', 'success');
-}
-
-function saveApiKey() {
-  CONFIG.apiKey = document.getElementById('api-key-input').value.trim();
-  localStorage.setItem('gs_api_key', CONFIG.apiKey);
-  showToast('API key saved ✓', 'success');
-}
-
-async function testSheetsConnection() {
-  if (!CONFIG.sheetId || !CONFIG.apiKey) {
-    showToast('Enter Sheet ID and API key first', 'error'); return;
-  }
-  showToast('Testing connection…');
-  try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}?key=${CONFIG.apiKey}`;
-    const res = await fetch(url);
-    if (res.ok) {
-      document.getElementById('conn-dot').style.background = 'var(--green)';
-      document.getElementById('conn-label').textContent = 'Connected to Google Sheets ✓';
-      showToast('Connected successfully!', 'success');
-    } else {
-      throw new Error('Auth failed');
-    }
-  } catch (e) {
-    document.getElementById('conn-dot').style.background = 'var(--red)';
-    document.getElementById('conn-label').textContent = 'Connection failed — check credentials';
-    showToast('Connection failed', 'error');
-  }
-}
-
-async function syncFromSheets() {
-  if (!CONFIG.sheetId || !CONFIG.apiKey) {
-    showToast('Configure Sheets ID and API key first', 'error'); return;
-  }
-  showToast('Syncing from Google Sheets…');
-  try {
-    const ranges = ['Voters!A2:E', 'Nominees!A2:E', 'Votes!A2:D', 'Admins!A2:C'];
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}/values:batchGet?ranges=${ranges.join('&ranges=')}&key=${CONFIG.apiKey}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error?.message || 'Error');
-
-    const [votersData, nomData, votesData, adminsData] = json.valueRanges;
-
-    if (votersData.values) {
-      DATA.voters = votersData.values.map(r => ({
-        pin: r[0], name: r[1], dept: r[2], unit: r[3], hasVoted: r[4]==='TRUE'
-      }));
-    }
-    if (nomData.values) {
-      DATA.nominees = nomData.values.map(r => ({
-        id: parseInt(r[0]), name: r[1], dept: r[2], unit: r[3], category: r[4]
-      }));
-    }
-    if (votesData.values) {
-      DATA.votes = votesData.values.map(r => ({
-        pin: r[0], nomineeId: parseInt(r[1]), category: r[2], timestamp: r[3]
-      }));
-    }
-    if (adminsData.values) {
-      DATA.admins = adminsData.values.map(r => ({
-        pin: r[0], role: r[1], name: r[2]
-      }));
-    }
-
-    initSuperAdmin();
-    showToast('Synced from Google Sheets!', 'success');
-  } catch (e) {
-    showToast('Sync failed: ' + e.message, 'error');
-  }
-}
-
-async function writeVotesToSheets() {
-  if (!CONFIG.sheetId || !CONFIG.apiKey) return;
-  const rows = Object.entries(currentSelections).map(([cat, nomId]) => [
-    currentUser.pin, nomId, cat, new Date().toISOString()
-  ]);
-  // Append to Votes sheet & update Voters HasVoted — requires OAuth, not just API key.
-  // For write access, use Apps Script Web App endpoint or gapi with OAuth2.
-  console.log('Would write to Sheets:', rows);
-}
-
-// ══════════════════════════════════
-// AUTO-SYNC ON PAGE LOAD
-// ══════════════════════════════════
-async function autoSyncOnLoad() {
-  // Always restore credentials into input fields if they exist
-  const sidEl = document.getElementById('sheet-id-input');
-  const keyEl = document.getElementById('api-key-input');
-  if (sidEl && CONFIG.sheetId) sidEl.value = CONFIG.sheetId;
-  if (keyEl && CONFIG.apiKey)  keyEl.value  = CONFIG.apiKey;
-
-  if (!CONFIG.sheetId || !CONFIG.apiKey) {
-    // No credentials saved — hide loader and show login normally
-    document.getElementById('loader-screen').style.display = 'none';
-    document.getElementById('screen-login').classList.add('active');
-    return;
-  }
-
-  // Show loading screen while syncing
-  document.getElementById('loader-screen').style.display = 'flex';
-
-  try {
-    const ranges = ['Voters!A2:E', 'Nominees!A2:E', 'Votes!A2:D', 'Admins!A2:C'];
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}/values:batchGet?ranges=${ranges.join('&ranges=')}&key=${CONFIG.apiKey}`;
-    const res = await fetch(url);
-    const json = await res.json();
-
-    if (!res.ok) throw new Error(json.error?.message || 'Sync failed');
-
-    const [votersData, nomData, votesData, adminsData] = json.valueRanges;
-    if (votersData.values) DATA.voters  = votersData.values.map(r => ({ pin:r[0], name:r[1], dept:r[2], unit:r[3], hasVoted:r[4]==='TRUE' }));
-    if (nomData.values)    DATA.nominees = nomData.values.map(r => ({ id:parseInt(r[0]), name:r[1], dept:r[2], unit:r[3], category:r[4] }));
-    if (votesData.values)  DATA.votes    = votesData.values.map(r => ({ pin:r[0], nomineeId:parseInt(r[1]), category:r[2], timestamp:r[3] }));
-    if (adminsData.values) DATA.admins   = adminsData.values.map(r => ({ pin:r[0], role:r[1], name:r[2] }));
-
-    document.getElementById('loader-status').textContent = '✓ Data loaded from Google Sheets';
-    setTimeout(() => {
-      document.getElementById('loader-screen').style.display = 'none';
-      document.getElementById('screen-login').classList.add('active');
-    }, 700);
-
-  } catch (e) {
-    // Sync failed — still show login with cached/demo data
-    document.getElementById('loader-status').textContent = '⚠ Could not reach Sheets — using cached data';
-    document.getElementById('loader-status').style.color = '#e8c96a';
-    setTimeout(() => {
-      document.getElementById('loader-screen').style.display = 'none';
-      document.getElementById('screen-login').classList.add('active');
-    }, 1400);
-  }
-}
-
-window.addEventListener('DOMContentLoaded', autoSyncOnLoad);
-
-function exportCSV(type) {
-  let rows = [], filename = '';
-  if (type === 'results') {
-    rows = [['Nominee','Department','Unit','Category','Votes'], ...getVoteCounts('','').map(n => [n.name,n.dept,n.unit,n.category,n.votes])];
-    filename = 'voting-results.csv';
-  } else if (type === 'voters') {
-    rows = [['PIN','Name','Department','Unit','HasVoted'], ...DATA.voters.map(v => [v.pin,v.name,v.dept,v.unit,v.hasVoted])];
-    filename = 'voters.csv';
-  } else {
-    rows = [['Type','PIN/ID','Name','Department','Detail','Value'],
-      ...DATA.voters.map(v => ['voter',v.pin,v.name,v.dept,v.unit,v.hasVoted]),
-      ...DATA.votes.map(v => ['vote',v.pin,'',v.category,v.nomineeId,v.timestamp||''])];
-    filename = 'full-export.csv';
-  }
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = filename;
-  a.click();
-  showToast(`${filename} downloaded`, 'success');
-}
-
-// ══════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // TAB SWITCHING
-// ══════════════════════════════════
-function switchTab(scope, tab) {
-  const prefix = scope === 'admin' ? 'admin' : 'superadmin';
-  document.querySelectorAll(`#screen-${scope} .tab-btn`).forEach((btn, i) => {
-    btn.classList.remove('active');
-  });
-  event.target.classList.add('active');
-  document.querySelectorAll(`#screen-${scope} .tab-panel`).forEach(p => p.classList.remove('active'));
-  const panel = document.getElementById(`${prefix}-tab-${tab}`);
-  if (panel) panel.classList.add('active');
-
-  // Re-render on switch
-  if (tab === 'results' && scope === 'admin') renderAdminResults();
-  if (tab === 'results' && scope === 'superadmin') renderSAResults();
-  if (tab === 'departments') renderDeptDetails();
-  if (tab === 'voters') renderVoterList();
-  if (tab === 'nominees') renderNomineeManage();
+// ═══════════════════════════════════════════════════════════
+function switchTab(scope,tab,btn){
+  document.querySelectorAll(`#screen-${scope} .tab-btn`).forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  document.querySelectorAll(`#screen-${scope} .tab-panel`).forEach(p=>p.classList.remove('on'));
+  document.getElementById(`${scope}-${tab}`)?.classList.add('on');
+  if(tab==='overview'&&scope==='admin'){renderStats('admin');renderDeptBars('admin-dept-bars');}
+  if(tab==='overview'&&scope==='superadmin'){renderStats('sa');renderDeptBars('sa-dept-bars');}
+  if(tab==='results'&&scope==='admin') renderResults('admin');
+  if(tab==='results'&&scope==='superadmin') renderResults('sa');
+  if(tab==='departments') renderDeptDetail('admin-dept-detail');
+  if(tab==='voters') renderVoterList();
+  if(tab==='nominees') renderNominees();
+  if(tab==='categories') renderCatList();
+  if(tab==='settings') initSA();
 }
 
-// ══════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // TOAST
-// ══════════════════════════════════
-let toastTimer;
-function showToast(msg, type) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type||''} show`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.classList.remove('show'); }, 2800);
+// ═══════════════════════════════════════════════════════════
+let toastTmr;
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=`toast ${type||''} show`;
+  clearTimeout(toastTmr);toastTmr=setTimeout(()=>t.classList.remove('show'),2800);
 }
 </script>
 </body>
