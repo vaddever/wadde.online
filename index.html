@@ -537,6 +537,20 @@ const LS = {
   del: k => localStorage.removeItem(k)
 };
 
+  function setLD(message) {
+  const statusEl = document.getElementById('ld-status');
+  if (statusEl) {
+    statusEl.textContent = message;
+  }
+}
+
+function hideLoader() {
+  const loader = document.getElementById('loader');
+  if (loader) {
+    loader.style.display = 'none';
+  }
+}
+
 const CFG = {
   sheetId: '',
   apiKey: '',
