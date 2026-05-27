@@ -583,6 +583,7 @@ const LS = {
   del: k => localStorage.removeItem(k)
 };
 
+// Replace the CFG object with this updated version
 const CFG = {
   sheetId: '',
   apiKey: '',
@@ -590,6 +591,65 @@ const CFG = {
   votingOpen: true,
   orgName: '',
   isConfigured: false,
+
+  // Save all settings to localStorage
+  saveToLocalStorage() {
+    LS.set('cfg_sheetId', this.sheetId);
+    LS.set('cfg_apiKey', this.apiKey);
+    LS.set('cfg_scriptUrl', this.scriptUrl);
+    LS.set('cfg_votingOpen', this.votingOpen);
+    LS.set('cfg_orgName', this.orgName);
+    LS.set('cfg_isConfigured', this.isConfigured);
+  },
+
+  // Load settings from localStorage
+  loadFromLocalStorage() {
+    this.sheetId = LS.get('cfg_sheetId') || '';
+    this.apiKey = LS.get('cfg_apiKey') || '';
+    this.scriptUrl = LS.get('cfg_scriptUrl') || '';
+    this.votingOpen = LS.get('cfg_votingOpen') !== null ? LS.get('cfg_votingOpen') : true;
+    this.orgName = LS.get('cfg_orgName') || 'Voting Portal';
+    this.isConfigured = LS.get('cfg_isConfigured') || false;
+  },
+
+  async load() {
+    // First try to load from localStorage
+    this.loadFromLocalStorage();
+    
+    // If we have bootstrap credentials, try to load from Google Sheets
+    const tempSheetId = localStorage.getItem('bootstrap_sheet_id');
+    const tempApiKey = localStorage.getItem('bootstrap_api_key');
+
+    if(tempSheetId && tempApiKey) {
+      try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${tempSheetId}/values/Config!A:B?key=${tempApiKey}`;
+        const res = await fetch(url);
+        const json = await res.json();
+
+        const cfg = {};
+        (json.values || []).forEach(r => {
+          cfg[r[0]] = r[1];
+        });
+
+        if (cfg.sheet_id) this.sheetId = cfg.sheet_id;
+        if (cfg.api_key) this.apiKey = cfg.api_key;
+        if (cfg.script_url) this.scriptUrl = cfg.script_url;
+        if (cfg.org_name) this.orgName = cfg.org_name;
+        if (cfg.voting_open !== undefined) this.votingOpen = cfg.voting_open === 'TRUE';
+        
+        this.isConfigured = true;
+        this.saveToLocalStorage(); // Save to localStorage
+        
+        return true;
+      } catch(e) {
+        console.error('Failed to load config from sheet:', e);
+        return false;
+      }
+    }
+    
+    return this.isConfigured;
+  }
+};
 
   async load() {
     const tempSheetId = localStorage.getItem('bootstrap_sheet_id');
@@ -713,7 +773,11 @@ async function fetchFromSheets() {
 // GOOGLE SHEETS — WRITE (Apps Script)
 // ═══════════════════════════════════════════════════════════
 async function writeToSheets(action, payload) {
-  if (!CFG.scriptUrl) { showToast('Apps Script URL not configured — changes saved locally only','err'); return false; }
+  if (!CFG.scriptUrl) { 
+    console.log('Apps Script URL not configured - changes saved locally only');
+    showToast('Changes saved locally only. Configure Script URL to sync to Google Sheets.', 'err');
+    return false; 
+  }
   showSyncBadge('syncing','Syncing…');
   try {
     const res = await fetch(CFG.scriptUrl, {
@@ -765,18 +829,33 @@ function showSyncBadge(type, msg) {
 window.addEventListener('DOMContentLoaded', async () => {
   setLD('Loading…');
   await new Promise(r => setTimeout(r, 400));
+  
   try {
+    // Load config first
     await CFG.load();
+    
     setLD('Connecting to Google Sheets…');
-    await fetchFromSheets();
-    setLD('✓ Data loaded');
+    
+    // Only try to fetch from sheets if we have credentials
+    if (CFG.sheetId && CFG.apiKey) {
+      await fetchFromSheets();
+      setLD('✓ Data loaded');
+    } else {
+      setLD('✓ Ready - Configure Google Sheets');
+      // Initialize empty data structures
+      DATA.voters = [];
+      DATA.admins = [];
+      DATA.nominees = [];
+      DATA.votes = [];
+      DATA.categories = [];
+      DATA.departments = [];
+    }
+    
     await new Promise(r => setTimeout(r, 500));
   }
   catch(e) {
-    console.error(e);
-    hideLoader();
-    showScreen('screen-setup');
-    return;
+    console.error('Boot error:', e);
+    setLD('Error: ' + e.message);
   }
 
   hideLoader();
@@ -787,22 +866,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     showScreen('screen-login');
   }
 
-  setInterval(async () => {
-    try {
-      await fetchFromSheets();
-      if(currentUser?.role === 'admin') {
-        initAdmin();
+  // Auto sync only if configured
+  if (CFG.sheetId && CFG.apiKey) {
+    setInterval(async () => {
+      try {
+        await fetchFromSheets();
+        if(currentUser?.role === 'admin') {
+          initAdmin();
+        }
+        if(currentUser?.role === 'superadmin') {
+          initSA();
+        }
+      } catch(e) {
+        console.error('Auto-sync error:', e);
       }
-      if(currentUser?.role === 'superadmin') {
-        initSA();
-      }
-    }
-    catch(e) {
-      console.error(e);
-    }
-  }, 15000);
+    }, 15000);
+  }
 });
-
 // ═══════════════════════════════════════════════════════════
 // SETUP WIZARD
 // ═══════════════════════════════════════════════════════════
@@ -1152,24 +1232,26 @@ function initSA(){
   renderNominees();
   renderCatList();
   renderDeptUnitManager();
+  
   const votingVal = document.getElementById('sa-voting-val');
   const deptCount = document.getElementById('sa-dept-count');
-  if(votingVal) votingVal.textContent=CFG.votingOpen?'Open':'Closed';
-  if(deptCount) deptCount.textContent=DATA.departments.length;
-  const gsId=document.getElementById('gs-id-inp');
-  const gsKey=document.getElementById('gs-key-inp');
-  const gsScript=document.getElementById('gs-script-inp');
-  const orgInp=document.getElementById('org-name-inp');
-  if(gsId) gsId.value=CFG.sheetId;
-  if(gsKey) gsKey.value=CFG.apiKey;
-  if(gsScript) gsScript.value=CFG.scriptUrl;
-  if(orgInp) orgInp.value=CFG.orgName;
-  const gsDot = document.getElementById('gs-dot');
-  const gsStatus = document.getElementById('gs-status-lbl');
-  if(gsDot && CFG.isConfigured) {
-    gsDot.style.background='var(--green)';
-    if(gsStatus) gsStatus.textContent='Connected ✓';
-  }
+  if(votingVal) votingVal.textContent = CFG.votingOpen ? 'Open' : 'Closed';
+  if(deptCount) deptCount.textContent = DATA.departments.length;
+  
+  // Load saved values into input fields
+  const gsId = document.getElementById('gs-id-inp');
+  const gsKey = document.getElementById('gs-key-inp');
+  const gsScript = document.getElementById('gs-script-inp');
+  const orgInp = document.getElementById('org-name-inp');
+  
+  if(gsId) gsId.value = CFG.sheetId || '';
+  if(gsKey) gsKey.value = CFG.apiKey || '';
+  if(gsScript) gsScript.value = CFG.scriptUrl || '';
+  if(orgInp) orgInp.value = CFG.orgName || '';
+  
+  updateConnectionStatus();
+  applyOrgName();
+}
   applyOrgName();
 }
 
@@ -1358,9 +1440,37 @@ async function removeDept(deptId){
 
 // ── SETTINGS ──
 function saveGS(type){
-  if(type==='id')     { CFG.sheetId=document.getElementById('gs-id-inp').value.trim(); showToast('Sheet ID saved','ok'); }
-  if(type==='key')    { CFG.apiKey=document.getElementById('gs-key-inp').value.trim(); showToast('API key saved','ok'); }
-  if(type==='script') { CFG.scriptUrl=document.getElementById('gs-script-inp').value.trim(); showToast('Script URL saved','ok'); }
+  if(type === 'id') { 
+    CFG.sheetId = document.getElementById('gs-id-inp').value.trim(); 
+    CFG.saveToLocalStorage();
+    showToast('Sheet ID saved', 'ok');
+  }
+  if(type === 'key') { 
+    CFG.apiKey = document.getElementById('gs-key-inp').value.trim(); 
+    CFG.saveToLocalStorage();
+    showToast('API key saved', 'ok');
+  }
+  if(type === 'script') { 
+    CFG.scriptUrl = document.getElementById('gs-script-inp').value.trim(); 
+    CFG.saveToLocalStorage();
+    showToast('Script URL saved', 'ok');
+  }
+  
+  // Update the UI to show connection status
+  updateConnectionStatus();
+}
+
+function updateConnectionStatus() {
+  const gsDot = document.getElementById('gs-dot');
+  const gsStatus = document.getElementById('gs-status-lbl');
+  
+  if (CFG.sheetId && CFG.apiKey) {
+    gsDot.style.background = 'var(--gold)';
+    gsStatus.textContent = 'Credentials saved - click Test connection';
+  } else {
+    gsDot.style.background = 'var(--border2)';
+    gsStatus.textContent = 'Not connected';
+  }
 }
 
 function saveOrgName(){
@@ -1378,24 +1488,51 @@ async function setVoting(open){
 }
 
 async function testConnection(){
-  if(!CFG.sheetId||!CFG.apiKey){showToast('Enter Sheet ID and API key first','err');return;}
-  showToast('Testing…');
+  if(!CFG.sheetId || !CFG.apiKey){
+    // Try to get values from input fields first
+    const sheetIdInput = document.getElementById('gs-id-inp')?.value.trim();
+    const apiKeyInput = document.getElementById('gs-key-inp')?.value.trim();
+    
+    if (sheetIdInput) CFG.sheetId = sheetIdInput;
+    if (apiKeyInput) CFG.apiKey = apiKeyInput;
+    
+    if(!CFG.sheetId || !CFG.apiKey){
+      showToast('Enter Sheet ID and API key first', 'err');
+      return;
+    }
+    
+    CFG.saveToLocalStorage();
+  }
+  
+  showToast('Testing connection...');
+  
   try{
-    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}?key=${CFG.apiKey}`);
-    const j=await r.json();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}?key=${CFG.apiKey}`;
+    const r = await fetch(url);
+    const j = await r.json();
+    
     if(r.ok){
       const gsDot = document.getElementById('gs-dot');
       const gsStatus = document.getElementById('gs-status-lbl');
-      if(gsDot) gsDot.style.background='var(--green)';
-      if(gsStatus) gsStatus.textContent=`Connected — "${j.properties?.title||'Sheet'}" ✓`;
-      showToast('Connected!','ok');
-    } else throw new Error(j.error?.message||`HTTP ${r.status}`);
-  }catch(e){
+      if(gsDot) gsDot.style.background = 'var(--green)';
+      if(gsStatus) gsStatus.textContent = `Connected — "${j.properties?.title || 'Sheet'}" ✓`;
+      CFG.isConfigured = true;
+      CFG.saveToLocalStorage();
+      showToast('Connected successfully!', 'ok');
+      
+      // Now try to fetch data
+      await fetchFromSheets();
+      showToast('Data loaded from sheet', 'ok');
+      initSA(); // Refresh the UI
+    } else {
+      throw new Error(j.error?.message || `HTTP ${r.status}`);
+    }
+  } catch(e){
     const gsDot = document.getElementById('gs-dot');
     const gsStatus = document.getElementById('gs-status-lbl');
-    if(gsDot) gsDot.style.background='var(--red)';
-    if(gsStatus) gsStatus.textContent='Connection failed';
-    showToast('Failed: '+e.message,'err');
+    if(gsDot) gsDot.style.background = 'var(--red)';
+    if(gsStatus) gsStatus.textContent = 'Connection failed';
+    showToast('Failed: ' + e.message, 'err');
   }
 }
 
