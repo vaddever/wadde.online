@@ -565,6 +565,53 @@ const DATA = { voters:[], admins:[], nominees:[], votes:[], categories:[], depar
 const COLORS=['#c9a84c','#5b8ef0','#4caf7d','#e05555','#9b74db','#5bbef0','#e08a55','#e05599','#7db854'];
 let currentUser=null, selections={};
 
+function saveSession(){
+  if(currentUser){
+    sessionStorage.setItem('svp_session_user', JSON.stringify(currentUser));
+  }
+}
+
+function clearSession(){
+  sessionStorage.removeItem('svp_session_user');
+}
+
+function restoreSession(){
+  try{
+    const saved = sessionStorage.getItem('svp_session_user');
+    if(!saved) return false;
+
+    currentUser = JSON.parse(saved);
+
+    if(currentUser.role==='superadmin'){
+      showScreen('screen-superadmin');
+      initSA();
+      return true;
+    }
+
+    if(currentUser.role==='admin'){
+      showScreen('screen-admin');
+      initAdmin();
+      return true;
+    }
+
+    if(currentUser.type==='voter'){
+      const voter = DATA.voters.find(v=>v.pin===currentUser.pin);
+
+      if(voter && !voter.hasVoted){
+        currentUser = {...voter, type:'voter'};
+        showScreen('screen-voter');
+        initVoter();
+        return true;
+      }
+    }
+  }catch(e){
+    console.error('Session restore failed', e);
+  }
+
+  clearSession();
+  return false;
+}
+
 // ═══════════════════════════════════════════════════════════
 // GOOGLE SHEETS — READ (API key)
 // ═══════════════════════════════════════════════════════════
@@ -606,12 +653,25 @@ async function writeToSheets(action, payload) {
   try {
     const res = await fetch(CFG.scriptUrl, {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({action, ...payload})
     });
-    const json = await res.json();
-    if (json.status === 'ok') { showSyncBadge('ok','Synced ✓'); return true; }
-    else throw new Error(json.message || 'Script error');
+
+    const txt = await res.text();
+    let json = {};
+    try {
+      json = JSON.parse(txt);
+    } catch(e) {
+      console.error('Invalid Apps Script response:', txt);
+      throw new Error('Apps Script did not return valid JSON. Make sure the Web App is deployed with access set to "Anyone".');
+    }
+
+    if (json.status === 'ok') {
+      showSyncBadge('ok','Synced ✓');
+      return true;
+    } else {
+      throw new Error(json.message || 'Script error');
+    }
   } catch(e) {
     showSyncBadge('err','Sync failed — '+e.message);
     return false;
@@ -656,9 +716,12 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     await new Promise(r=>setTimeout(r,1500));
   }
   hideLoader();
-  showScreen('screen-login');
   applyOrgName();
   buildPinDots();
+
+  if(!restoreSession()){
+    showScreen('screen-login');
+  }
 });
 
 function setLD(msg){ document.getElementById('ld-status').textContent=msg; }
@@ -753,21 +816,21 @@ function doLogin(){
   const pin=document.getElementById('pin-inp').value.trim();
   if(!pin){setLoginErr('Please enter your PIN');return;}
   const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
-  if(sa){currentUser={...sa};showScreen('screen-superadmin');initSA();return;}
+  if(sa){currentUser={...sa};saveSession();showScreen('screen-superadmin');initSA();return;}
   const admin=DATA.admins.find(a=>a.pin===pin&&a.role==='admin');
-  if(admin){currentUser={...admin};showScreen('screen-admin');initAdmin();return;}
+  if(admin){currentUser={...admin};saveSession();showScreen('screen-admin');initAdmin();return;}
   const voter=DATA.voters.find(v=>v.pin===pin);
   if(!voter){setLoginErr('Invalid PIN. Please try again.');return;}
   if(voter.hasVoted){setLoginErr('This PIN has already been used to vote.');return;}
   if(!CFG.votingOpen){setLoginErr('Voting is currently closed.');return;}
-  currentUser={...voter,type:'voter'};
+  currentUser={...voter,type:'voter'};saveSession();
   selections={};
   showScreen('screen-voter');
   initVoter();
 }
 function setLoginErr(m){document.getElementById('login-err').textContent=m;}
 function doLogout(){
-  currentUser=null;selections={};
+  clearSession();currentUser=null;selections={};
   const p=document.getElementById('pin-inp');
   if(p){p.value='';for(let i=0;i<6;i++)document.getElementById('pd'+i)?.classList.remove('on');}
   setLoginErr('');
@@ -871,7 +934,7 @@ async function submitVotes(){
   newVotes.forEach(v=>DATA.votes.push(v));
   const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
   if(voter) voter.hasVoted=true;
-  showScreen('screen-success');
+  clearSession();showScreen('screen-success');
   // Write to Sheets
   await writeToSheets('submitVotes',{
     pin:currentUser.pin,
