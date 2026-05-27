@@ -538,17 +538,44 @@ const LS = {
 };
 
 const CFG = {
-  get sheetId()    { return LS.get('cfg_sheet_id')    || ''; },
-  get apiKey()     { return LS.get('cfg_api_key')     || ''; },
-  get scriptUrl()  { return LS.get('cfg_script_url')  || ''; },
-  get votingOpen() { return LS.get('cfg_voting_open') !== false; },
-  get orgName()    { return LS.get('cfg_org_name')    || ''; },
-  set sheetId(v)   { LS.set('cfg_sheet_id', v);    },
-  set apiKey(v)    { LS.set('cfg_api_key', v);     },
-  set scriptUrl(v) { LS.set('cfg_script_url', v);  },
-  set votingOpen(v){ LS.set('cfg_voting_open', v); },
-  set orgName(v)   { LS.set('cfg_org_name', v);    },
-  get isConfigured(){ return !!(this.sheetId && this.apiKey); }
+  sheetId: '',
+  apiKey: '',
+  scriptUrl: '',
+  votingOpen: true,
+  orgName: '',
+
+  async load() {
+
+    const tempSheetId =
+      localStorage.getItem('bootstrap_sheet_id');
+
+    const tempApiKey =
+      localStorage.getItem('bootstrap_api_key');
+
+    if(!tempSheetId || !tempApiKey) {
+      return false;
+    }
+
+    const url =
+      `https://sheets.googleapis.com/v4/spreadsheets/${tempSheetId}/values/Config!A:B?key=${tempApiKey}`;
+
+    const res = await fetch(url);
+    const json = await res.json();
+
+    const cfg = {};
+
+    (json.values || []).forEach(r => {
+      cfg[r[0]] = r[1];
+    });
+
+    this.sheetId = cfg.sheet_id || tempSheetId;
+    this.apiKey = cfg.api_key || tempApiKey;
+    this.scriptUrl = cfg.script_url || '';
+    this.orgName = cfg.org_name || 'Voting Portal';
+    this.votingOpen = cfg.voting_open === 'TRUE';
+
+    return true;
+  }
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -567,17 +594,17 @@ let currentUser=null, selections={};
 
 function saveSession(){
   if(currentUser){
-    sessionStorage.setItem('svp_session_user', JSON.stringify(currentUser));
+    localStorage.setItem('svp_session_user', JSON.stringify(currentUser));
   }
 }
 
 function clearSession(){
-  sessionStorage.removeItem('svp_session_user');
+  localStorage.removeItem('svp_session_user');
 }
 
 function restoreSession(){
   try{
-    const saved = sessionStorage.getItem('svp_session_user');
+    const saved = localStorage.getItem('svp_session_user');
     if(!saved) return false;
 
     currentUser = JSON.parse(saved);
@@ -696,11 +723,43 @@ function showSyncBadge(type, msg) {
 // ═══════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', async ()=>{
+window.addEventListener('DOMContentLoaded', setInterval(async ()=>{
+
+  try{
+
+    await fetchFromSheets();
+
+    if(currentUser?.role === 'admin'){
+      initAdmin();
+    }
+
+    if(currentUser?.role === 'superadmin'){
+      initSA();
+    }
+
+  }catch(e){
+    console.error(e);
+  }
+
+}, 15000);async ()=>{
   setLD('Loading…');
   await new Promise(r=>setTimeout(r,400));
 
-  if (!CFG.isConfigured) {
+  try {
+
+  await CFG.load();
+
+  await fetchFromSheets();
+
+}
+catch(e){
+
+  console.error(e);
+
+  showScreen('screen-setup');
+
+  return;
+} {
     hideLoader();
     showScreen('screen-setup');
     return;
@@ -749,7 +808,8 @@ async function setupStep0(){
     const url=`https://sheets.googleapis.com/v4/spreadsheets/${sid}?key=${key}`;
     const r=await fetch(url);
     if(!r.ok){const j=await r.json();throw new Error(j.error?.message||`HTTP ${r.status}`);}
-    CFG.sheetId=sid; CFG.apiKey=key; if(script) CFG.scriptUrl=script;
+    localStorage.setItem('bootstrap_sheet_id', sid);
+localStorage.setItem('bootstrap_api_key', key); if(script) CFG.scriptUrl=script;
     err.textContent='';
     advanceSetup(1);
   }catch(e){err.textContent='Connection failed: '+e.message;}
@@ -941,9 +1001,34 @@ function updateVProg(){
   let total=0;
   DATA.categories.forEach(cat=>{
     let noms=[];
-    if(cat.scope==='dept')   noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
-    else if(cat.scope==='unit') noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
-    else noms=DATA.nominees.filter(n=>n.category===cat.id);
+    if(cat.scope === 'dept') {
+
+  noms = DATA.nominees.filter(
+    n =>
+      n.category === cat.id &&
+      n.dept === v.dept
+  );
+
+}
+else if(cat.scope === 'unit') {
+
+  noms = DATA.nominees.filter(
+    n =>
+      n.category === cat.id &&
+      n.unit === v.unit
+  );
+
+}
+else {
+
+  noms = DATA.nominees.filter(
+    n =>
+      n.category === cat.id &&
+      (!n.dept || n.dept === '') &&
+      (!n.unit || n.unit === '')
+  );
+}
+}
     if(noms.length) total++;
   });
   const sel=Object.keys(selections).length;
