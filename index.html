@@ -529,7 +529,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// HELPER FUNCTIONS (ADDED)
+// HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════
 function setLD(message) {
   const statusEl = document.getElementById('ld-status');
@@ -547,15 +547,7 @@ function hideLoader() {
 
 function applyOrgName() {
   const orgName = CFG.orgName || 'Voting Portal';
-  // TEMPORARY: Add test admin if none exist
-if (DATA.admins.length === 0) {
-  console.log('No admins found, adding test admin');
-  DATA.admins.push({
-    pin: '123456',
-    role: 'superadmin',
-    name: 'Test Admin'
-  });
-}
+  
   const loginOrgEl = document.getElementById('login-org-name');
   if (loginOrgEl) loginOrgEl.textContent = orgName;
   
@@ -570,20 +562,36 @@ if (DATA.admins.length === 0) {
 }
 
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
+  document.querySelectorAll('.screen').forEach(function(s) {
+    s.classList.remove('active');
+  });
+  const screen = document.getElementById(id);
+  if (screen) screen.classList.add('active');
 }
 
 // ═══════════════════════════════════════════════════════════
-// CONFIG — all persisted in localStorage
+// LOCALSTORAGE WRAPPER
 // ═══════════════════════════════════════════════════════════
 const LS = {
-  get: k => { try { const v=localStorage.getItem(k); return v!==null?JSON.parse(v):null; } catch{ return null; } },
-  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
-  del: k => localStorage.removeItem(k)
+  get: function(k) { 
+    try { 
+      const v = localStorage.getItem(k); 
+      return v !== null ? JSON.parse(v) : null; 
+    } catch(e) { 
+      return null; 
+    } 
+  },
+  set: function(k, v) { 
+    localStorage.setItem(k, JSON.stringify(v)); 
+  },
+  del: function(k) { 
+    localStorage.removeItem(k); 
+  }
 };
 
-// Replace the CFG object with this updated version
+// ═══════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════
 const CFG = {
   sheetId: '',
   apiKey: '',
@@ -592,8 +600,7 @@ const CFG = {
   orgName: '',
   isConfigured: false,
 
-  // Save all settings to localStorage
-  saveToLocalStorage() {
+  saveToLocalStorage: function() {
     LS.set('cfg_sheetId', this.sheetId);
     LS.set('cfg_apiKey', this.apiKey);
     LS.set('cfg_scriptUrl', this.scriptUrl);
@@ -602,8 +609,7 @@ const CFG = {
     LS.set('cfg_isConfigured', this.isConfigured);
   },
 
-  // Load settings from localStorage
-  loadFromLocalStorage() {
+  loadFromLocalStorage: function() {
     this.sheetId = LS.get('cfg_sheetId') || '';
     this.apiKey = LS.get('cfg_apiKey') || '';
     this.scriptUrl = LS.get('cfg_scriptUrl') || '';
@@ -612,24 +618,24 @@ const CFG = {
     this.isConfigured = LS.get('cfg_isConfigured') || false;
   },
 
-  async load() {
-    // First try to load from localStorage
+  load: async function() {
     this.loadFromLocalStorage();
     
-    // If we have bootstrap credentials, try to load from Google Sheets
     const tempSheetId = localStorage.getItem('bootstrap_sheet_id');
     const tempApiKey = localStorage.getItem('bootstrap_api_key');
 
     if(tempSheetId && tempApiKey) {
       try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${tempSheetId}/values/Config!A:B?key=${tempApiKey}`;
+        const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + tempSheetId + '/values/Config!A:B?key=' + tempApiKey;
         const res = await fetch(url);
         const json = await res.json();
 
         const cfg = {};
-        (json.values || []).forEach(r => {
-          cfg[r[0]] = r[1];
-        });
+        if (json.values) {
+          for (var i = 0; i < json.values.length; i++) {
+            cfg[json.values[i][0]] = json.values[i][1];
+          }
+        }
 
         if (cfg.sheet_id) this.sheetId = cfg.sheet_id;
         if (cfg.api_key) this.apiKey = cfg.api_key;
@@ -638,7 +644,7 @@ const CFG = {
         if (cfg.voting_open !== undefined) this.votingOpen = cfg.voting_open === 'TRUE';
         
         this.isConfigured = true;
-        this.saveToLocalStorage(); // Save to localStorage
+        this.saveToLocalStorage();
         
         return true;
       } catch(e) {
@@ -651,86 +657,137 @@ const CFG = {
   }
 };
 
-  async load() {
-    const tempSheetId = localStorage.getItem('bootstrap_sheet_id');
-    const tempApiKey = localStorage.getItem('bootstrap_api_key');
-
-    if(!tempSheetId || !tempApiKey) {
-      return false;
-    }
-
-    try {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${tempSheetId}/values/Config!A:B?key=${tempApiKey}`;
-      const res = await fetch(url);
-      const json = await res.json();
-
-      const cfg = {};
-      (json.values || []).forEach(r => {
-        cfg[r[0]] = r[1];
-      });
-
-      this.sheetId = cfg.sheet_id || tempSheetId;
-      this.apiKey = cfg.api_key || tempApiKey;
-      this.scriptUrl = cfg.script_url || '';
-      this.orgName = cfg.org_name || 'Voting Portal';
-      this.votingOpen = cfg.voting_open === 'TRUE';
-      this.isConfigured = true;
-      
-      return true;
-    } catch(e) {
-      console.error('Failed to load config:', e);
-      return false;
-    }
-  }
+// ═══════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════
+const DATA = { 
+  voters: [], 
+  admins: [], 
+  nominees: [], 
+  votes: [], 
+  categories: [], 
+  departments: [] 
 };
 
-// ═══════════════════════════════════════════════════════════
-// DATA — loaded entirely from Google Sheets
-// ═══════════════════════════════════════════════════════════
-const DATA = { voters:[], admins:[], nominees:[], votes:[], categories:[], departments:[] };
+const COLORS = ['#c9a84c','#5b8ef0','#4caf7d','#e05555','#9b74db','#5bbef0','#e08a55','#e05599','#7db854'];
+let currentUser = null;
+let selections = {};
 
-const COLORS=['#c9a84c','#5b8ef0','#4caf7d','#e05555','#9b74db','#5bbef0','#e08a55','#e05599','#7db854'];
-let currentUser=null, selections={};
+// ═══════════════════════════════════════════════════════════
+// GOOGLE SHEETS READ
+// ═══════════════════════════════════════════════════════════
+async function fetchFromSheets() {
+  if (!CFG.sheetId || !CFG.apiKey) return false;
+  
+  const ranges = ['Voters!A2:E','Nominees!A2:F','Votes!A2:D','Admins!A2:C','Categories!A2:C','Departments!A2:D'];
+  const rangesParam = ranges.map(function(r) { return encodeURIComponent(r); }).join('&ranges=');
+  const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + CFG.sheetId + '/values:batchGet?ranges=' + rangesParam + '&key=' + CFG.apiKey;
+  
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error?.message || 'HTTP ' + res.status);
+  
+  const valueRanges = json.valueRanges || [];
+  const vD = valueRanges[0];
+  const nD = valueRanges[1];
+  const vtD = valueRanges[2];
+  const adD = valueRanges[3];
+  const catD = valueRanges[4];
+  const deptD = valueRanges[5];
 
-function saveSession(){
-  if(currentUser){
+  if (vD && vD.values) {
+    DATA.voters = vD.values.map(function(r) {
+      return {pin: r[0] || '', name: r[1] || '', dept: r[2] || '', unit: r[3] || '', hasVoted: r[4] === 'TRUE'};
+    });
+  }
+  
+  if (nD && nD.values) {
+    DATA.nominees = nD.values.map(function(r) {
+      return {id: r[0] || '', name: r[1] || '', dept: r[2] || '', unit: r[3] || '', category: r[4] || '', scope: r[5] || 'global'};
+    });
+  }
+  
+  if (vtD && vtD.values) {
+    DATA.votes = vtD.values.map(function(r) {
+      return {pin: r[0] || '', nomineeId: r[1] || '', category: r[2] || '', timestamp: r[3] || ''};
+    });
+  }
+  
+  if (adD && adD.values) {
+    DATA.admins = adD.values.map(function(r) {
+      return {pin: r[0] || '', role: r[1] || '', name: r[2] || ''};
+    });
+  }
+  
+  if (catD && catD.values) {
+    DATA.categories = catD.values.map(function(r) {
+      return {id: r[0] || '', name: r[1] || '', scope: r[2] || 'global'};
+    });
+  }
+
+  if (deptD && deptD.values) {
+    var dMap = {};
+    deptD.values.forEach(function(r) {
+      var did = r[0];
+      var dname = r[1];
+      var dcolor = r[2];
+      var uname = r[3];
+      if (!did) return;
+      if (!dMap[did]) {
+        dMap[did] = {id: did, name: dname || did, color: dcolor || COLORS[Object.keys(dMap).length % COLORS.length], units: []};
+      }
+      if (uname) {
+        dMap[did].units.push({id: did + '_' + uname.replace(/\s+/g, '_'), name: uname});
+      }
+    });
+    DATA.departments = Object.values(dMap);
+  }
+  
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SESSION MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function saveSession() {
+  if (currentUser) {
     localStorage.setItem('svp_session_user', JSON.stringify(currentUser));
   }
 }
 
-function clearSession(){
+function clearSession() {
   localStorage.removeItem('svp_session_user');
 }
 
-function restoreSession(){
-  try{
-    const saved = localStorage.getItem('svp_session_user');
-    if(!saved) return false;
+function restoreSession() {
+  try {
+    var saved = localStorage.getItem('svp_session_user');
+    if (!saved) return false;
 
     currentUser = JSON.parse(saved);
 
-    if(currentUser.role==='superadmin'){
+    if (currentUser.role === 'superadmin') {
       showScreen('screen-superadmin');
-      initSA();
+      if (typeof initSA === 'function') initSA();
       return true;
     }
 
-    if(currentUser.role==='admin'){
+    if (currentUser.role === 'admin') {
       showScreen('screen-admin');
-      initAdmin();
+      if (typeof initAdmin === 'function') initAdmin();
       return true;
     }
 
-    if(currentUser.type==='voter'){
-      const voter = DATA.voters.find(v=>v.pin===currentUser.pin);
-      if(voter && !voter.hasVoted){
-        currentUser = {...voter, type:'voter'};
+    if (currentUser.type === 'voter') {
+      var voter = DATA.voters.find(function(v) { return v.pin === currentUser.pin; });
+      if (voter && !voter.hasVoted) {
+        currentUser = Object.assign({}, voter, {type: 'voter'});
         showScreen('screen-voter');
-        initVoter();
+        if (typeof initVoter === 'function') initVoter();
         return true;
       }
     }
-  }catch(e){
+  } catch(e) {
     console.error('Session restore failed', e);
   }
 
@@ -739,121 +796,263 @@ function restoreSession(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// GOOGLE SHEETS — READ (API key)
+// PIN DOTS
 // ═══════════════════════════════════════════════════════════
-async function fetchFromSheets() {
-  if (!CFG.sheetId || !CFG.apiKey) return false;
-  const ranges = ['Voters!A2:E','Nominees!A2:F','Votes!A2:D','Admins!A2:C','Categories!A2:C','Departments!A2:D'];
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values:batchGet?ranges=${ranges.map(encodeURIComponent).join('&ranges=')}&key=${CFG.apiKey}`;
-  const res = await fetch(url);
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error?.message || `HTTP ${res.status}`);
-  const [vD,nD,vtD,adD,catD,deptD] = json.valueRanges;
-
-  if (vD && vD.values)   DATA.voters     = vD.values.map(r=>({pin:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',hasVoted:r[4]==='TRUE'}));
-  if (nD && nD.values)   DATA.nominees   = nD.values.map(r=>({id:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',category:r[4]||'',scope:r[5]||'global'}));
-  if (vtD && vtD.values)  DATA.votes      = vtD.values.map(r=>({pin:r[0]||'',nomineeId:r[1]||'',category:r[2]||'',timestamp:r[3]||''}));
-  if (adD && adD.values)  DATA.admins     = adD.values.map(r=>({pin:r[0]||'',role:r[1]||'',name:r[2]||''}));
-  if (catD && catD.values) DATA.categories = catD.values.map(r=>({id:r[0]||'',name:r[1]||'',scope:r[2]||'global'}));
-
-  if (deptD && deptD.values) {
-    const dMap={};
-    deptD.values.forEach(r=>{
-      const [did,dname,dcolor,uname]=r;
-      if (!did) return;
-      if (!dMap[did]) dMap[did]={id:did,name:dname||did,color:dcolor||COLORS[Object.keys(dMap).length%COLORS.length],units:[]};
-      if (uname) dMap[did].units.push({id:`${did}_${uname.replace(/\s+/g,'_')}`,name:uname});
-    });
-    DATA.departments = Object.values(dMap);
+function buildPinDots() {
+  var c = document.getElementById('pin-dots');
+  if (!c) return;
+  c.innerHTML = '';
+  for (var i = 0; i < 6; i++) {
+    var d = document.createElement('div');
+    d.className = 'pin-dot';
+    d.id = 'pd' + i;
+    c.appendChild(d);
   }
-  return true;
-}
-
-// ═══════════════════════════════════════════════════════════
-// GOOGLE SHEETS — WRITE (Apps Script)
-// ═══════════════════════════════════════════════════════════
-async function writeToSheets(action, payload) {
-  if (!CFG.scriptUrl) { 
-    console.log('Apps Script URL not configured - changes saved locally only');
-    showToast('Changes saved locally only. Configure Script URL to sync to Google Sheets.', 'err');
-    return false; 
-  }
-  showSyncBadge('syncing','Syncing…');
-  try {
-    const res = await fetch(CFG.scriptUrl, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({action, ...payload})
+  
+  var pinInp = document.getElementById('pin-inp');
+  if (pinInp) {
+    pinInp.addEventListener('input', function() {
+      for (var i = 0; i < 6; i++) {
+        var dot = document.getElementById('pd' + i);
+        if (dot) dot.classList.toggle('on', i < this.value.length);
+      }
+      var errEl = document.getElementById('login-err');
+      if (errEl) errEl.textContent = '';
     });
-
-    const txt = await res.text();
-    let json = {};
-    try {
-      json = JSON.parse(txt);
-    } catch(e) {
-      console.error('Invalid Apps Script response:', txt);
-      throw new Error('Apps Script did not return valid JSON. Make sure the Web App is deployed with access set to "Anyone".');
-    }
-
-    if (json.status === 'ok') {
-      showSyncBadge('ok','Synced ✓');
-      return true;
-    } else {
-      throw new Error(json.message || 'Script error');
-    }
-  } catch(e) {
-    showSyncBadge('err','Sync failed — '+e.message);
-    return false;
+    pinInp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doLogin();
+    });
   }
 }
 
 // ═══════════════════════════════════════════════════════════
-// SYNC BADGE
+// LOGIN
 // ═══════════════════════════════════════════════════════════
-let syncBadgeTimer;
-function showSyncBadge(type, msg) {
-  const badge=document.getElementById('sync-badge');
-  const spin=document.getElementById('sync-spin');
-  const msgEl=document.getElementById('sync-msg');
-  if(!badge) return;
-  badge.className=`sync-badge show ${type}`;
-  msgEl.textContent=msg;
-  spin.style.display= type==='syncing'?'block':'none';
-  clearTimeout(syncBadgeTimer);
-  if (type!=='syncing') syncBadgeTimer=setTimeout(()=>badge.classList.remove('show'),3000);
+function doLogin() {
+  var pin = document.getElementById('pin-inp').value.trim();
+  if (!pin) {
+    setLoginErr('Please enter your PIN');
+    return;
+  }
+  
+  var sa = DATA.admins.find(function(a) { return a.pin === pin && a.role === 'superadmin'; });
+  if (sa) {
+    currentUser = Object.assign({}, sa);
+    saveSession();
+    showScreen('screen-superadmin');
+    if (typeof initSA === 'function') initSA();
+    return;
+  }
+  
+  var admin = DATA.admins.find(function(a) { return a.pin === pin && a.role === 'admin'; });
+  if (admin) {
+    currentUser = Object.assign({}, admin);
+    saveSession();
+    showScreen('screen-admin');
+    if (typeof initAdmin === 'function') initAdmin();
+    return;
+  }
+  
+  var voter = DATA.voters.find(function(v) { return v.pin === pin; });
+  if (!voter) {
+    setLoginErr('Invalid PIN. Please try again.');
+    return;
+  }
+  
+  if (voter.hasVoted) {
+    setLoginErr('This PIN has already been used to vote.');
+    return;
+  }
+  
+  if (!CFG.votingOpen) {
+    setLoginErr('Voting is currently closed.');
+    return;
+  }
+  
+  currentUser = Object.assign({}, voter, {type: 'voter'});
+  saveSession();
+  selections = {};
+  showScreen('screen-voter');
+  if (typeof initVoter === 'function') initVoter();
+}
+
+function setLoginErr(msg) {
+  var errEl = document.getElementById('login-err');
+  if (errEl) errEl.textContent = msg;
+}
+
+function doLogout() {
+  clearSession();
+  currentUser = null;
+  selections = {};
+  var p = document.getElementById('pin-inp');
+  if (p) {
+    p.value = '';
+    for (var i = 0; i < 6; i++) {
+      var dot = document.getElementById('pd' + i);
+      if (dot) dot.classList.remove('on');
+    }
+  }
+  setLoginErr('');
+  showScreen('screen-login');
+}
+
+function goToSettings() {
+  var pin = prompt('Enter SuperAdmin PIN to access settings:');
+  if (!pin) return;
+  var sa = DATA.admins.find(function(a) { return a.pin === pin && a.role === 'superadmin'; });
+  if (!sa) {
+    showToast('Invalid SuperAdmin PIN', 'err');
+    return;
+  }
+  currentUser = Object.assign({}, sa);
+  showScreen('screen-superadmin');
+  if (typeof initSA === 'function') initSA();
+}
+
+// ═══════════════════════════════════════════════════════════
+// BASIC VOTER FUNCTIONS (placeholder for now)
+// ═══════════════════════════════════════════════════════════
+function initVoter() {
+  console.log('Voter screen initialized');
+  var v = currentUser;
+  var greetEl = document.getElementById('v-greet');
+  if (greetEl) greetEl.textContent = 'Welcome, ' + (v.name ? v.name.split(' ')[0] : 'Voter') + '!';
+}
+
+function initAdmin() {
+  console.log('Admin screen initialized');
+  applyOrgName();
+}
+
+function initSA() {
+  console.log('SuperAdmin screen initialized');
+  applyOrgName();
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast ' + (type || '') + ' show';
+  setTimeout(function() { t.classList.remove('show'); }, 2800);
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETUP FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+var swStep = 0;
+
+function setupStep0() {
+  var sid = document.getElementById('sw-sheet-id').value.trim();
+  var key = document.getElementById('sw-api-key').value.trim();
+  var script = document.getElementById('sw-script-url').value.trim();
+  var err = document.getElementById('sw-err-0');
+  
+  if (!sid || !key) {
+    err.textContent = 'Sheet ID and API key are required.';
+    return;
+  }
+  
+  err.textContent = 'Testing connection…';
+  
+  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + sid + '?key=' + key)
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      localStorage.setItem('bootstrap_sheet_id', sid);
+      localStorage.setItem('bootstrap_api_key', key);
+      if (script) CFG.scriptUrl = script;
+      err.textContent = '';
+      advanceSetup(1);
+    })
+    .catch(function(e) {
+      err.textContent = 'Connection failed: ' + e.message;
+    });
+}
+
+function setupStep1() {
+  var sapin = document.getElementById('sw-sa-pin').value.trim();
+  var saname = document.getElementById('sw-sa-name').value.trim();
+  var apin = document.getElementById('sw-admin-pin').value.trim();
+  var aname = document.getElementById('sw-admin-name').value.trim();
+  var err = document.getElementById('sw-err-1');
+  
+  if (!sapin || !saname || !apin || !aname) {
+    err.textContent = 'All fields required.';
+    return;
+  }
+  
+  if (sapin === apin) {
+    err.textContent = 'SuperAdmin and Admin PINs must be different.';
+    return;
+  }
+  
+  DATA.admins = [
+    {pin: sapin, role: 'superadmin', name: saname},
+    {pin: apin, role: 'admin', name: aname}
+  ];
+  
+  err.textContent = '';
+  advanceSetup(2);
+}
+
+function setupStep2() {
+  var org = document.getElementById('sw-org-name').value.trim();
+  var err = document.getElementById('sw-err-2');
+  
+  if (!org) {
+    err.textContent = 'Please enter an organisation name.';
+    return;
+  }
+  
+  CFG.orgName = org;
+  err.textContent = 'Setting up…';
+  
+  hideLoader();
+  showScreen('screen-login');
+  applyOrgName();
+  buildPinDots();
+}
+
+function advanceSetup(step) {
+  var prevStep = document.getElementById('sw-step-' + (step - 1));
+  var currStep = document.getElementById('sw-step-' + step);
+  var prevDot = document.getElementById('sw-dot-' + (step - 1));
+  var currDot = document.getElementById('sw-dot-' + step);
+  
+  if (prevStep) prevStep.style.display = 'none';
+  if (currStep) currStep.style.display = 'block';
+  if (prevDot) prevDot.className = 'setup-step-dot done';
+  if (currDot) currDot.className = 'setup-step-dot active';
+  swStep = step;
+}
+
+function resetSetup() {
+  if (!confirm('This will clear all local settings. You will need to reconnect Google Sheets. Continue?')) return;
+  localStorage.clear();
+  location.reload();
 }
 
 // ═══════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', async function() {
   setLD('Loading…');
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(function(r) { setTimeout(r, 400); });
   
   try {
-    // Load config first
     await CFG.load();
-    
     setLD('Connecting to Google Sheets…');
     
-    // Only try to fetch from sheets if we have credentials
     if (CFG.sheetId && CFG.apiKey) {
       await fetchFromSheets();
       setLD('✓ Data loaded');
     } else {
       setLD('✓ Ready - Configure Google Sheets');
-      // Initialize empty data structures
-      DATA.voters = [];
-      DATA.admins = [];
-      DATA.nominees = [];
-      DATA.votes = [];
-      DATA.categories = [];
-      DATA.departments = [];
     }
     
-    await new Promise(r => setTimeout(r, 500));
-  }
-  catch(e) {
+    await new Promise(function(r) { setTimeout(r, 500); });
+  } catch(e) {
     console.error('Boot error:', e);
     setLD('Error: ' + e.message);
   }
@@ -862,1003 +1061,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   applyOrgName();
   buildPinDots();
 
-  if(!restoreSession()) {
+  if (!restoreSession()) {
     showScreen('screen-login');
   }
-
-  // Auto sync only if configured
-  if (CFG.sheetId && CFG.apiKey) {
-    setInterval(async () => {
-      try {
-        await fetchFromSheets();
-        if(currentUser?.role === 'admin') {
-          initAdmin();
-        }
-        if(currentUser?.role === 'superadmin') {
-          initSA();
-        }
-      } catch(e) {
-        console.error('Auto-sync error:', e);
-      }
-    }, 15000);
-  }
 });
-// ═══════════════════════════════════════════════════════════
-// SETUP WIZARD
-// ═══════════════════════════════════════════════════════════
-let swStep=0;
-async function setupStep0(){
-  const sid=document.getElementById('sw-sheet-id').value.trim();
-  const key=document.getElementById('sw-api-key').value.trim();
-  const script=document.getElementById('sw-script-url').value.trim();
-  const err=document.getElementById('sw-err-0');
-  if(!sid||!key){err.textContent='Sheet ID and API key are required.';return;}
-  err.textContent='Testing connection…';
-  try{
-    const url=`https://sheets.googleapis.com/v4/spreadsheets/${sid}?key=${key}`;
-    const r=await fetch(url);
-    if(!r.ok){const j=await r.json();throw new Error(j.error?.message||`HTTP ${r.status}`);}
-    localStorage.setItem('bootstrap_sheet_id', sid);
-    localStorage.setItem('bootstrap_api_key', key); 
-    if(script) CFG.scriptUrl=script;
-    err.textContent='';
-    advanceSetup(1);
-  }catch(e){err.textContent='Connection failed: '+e.message;}
-}
-
-function setupStep1(){
-  const sapin=document.getElementById('sw-sa-pin').value.trim();
-  const saname=document.getElementById('sw-sa-name').value.trim();
-  const apin=document.getElementById('sw-admin-pin').value.trim();
-  const aname=document.getElementById('sw-admin-name').value.trim();
-  const err=document.getElementById('sw-err-1');
-  if(!sapin||!saname||!apin||!aname){err.textContent='All fields required.';return;}
-  if(sapin===apin){err.textContent='SuperAdmin and Admin PINs must be different.';return;}
-  DATA.admins=[{pin:sapin,role:'superadmin',name:saname},{pin:apin,role:'admin',name:aname}];
-  writeToSheets('setAdmins',{admins:DATA.admins});
-  err.textContent='';
-  advanceSetup(2);
-}
-
-async function setupStep2(){
-  const org=document.getElementById('sw-org-name').value.trim();
-  const err=document.getElementById('sw-err-2');
-  if(!org){err.textContent='Please enter an organisation name.';return;}
-  CFG.orgName=org;
-  err.textContent='Setting up…';
-  try{
-    await fetchFromSheets();
-  }catch(e){}
-  hideLoader();
-  showScreen('screen-login');
-  applyOrgName();
-  buildPinDots();
-}
-
-function advanceSetup(step){
-  document.getElementById('sw-step-'+(step-1)).style.display='none';
-  document.getElementById('sw-step-'+step).style.display='block';
-  document.getElementById('sw-dot-'+(step-1)).className='setup-step-dot done';
-  document.getElementById('sw-dot-'+step).className='setup-step-dot active';
-  swStep=step;
-}
-
-function resetSetup(){
-  if(!confirm('This will clear all local settings. You will need to reconnect Google Sheets. Continue?'))return;
-  localStorage.clear();
-  location.reload();
-}
-
-// ═══════════════════════════════════════════════════════════
-// PIN DOTS
-// ═══════════════════════════════════════════════════════════
-function buildPinDots(){
-  const c=document.getElementById('pin-dots');
-  if(!c)return;
-  c.innerHTML='';
-  for(let i=0;i<6;i++){const d=document.createElement('div');d.className='pin-dot';d.id='pd'+i;c.appendChild(d);}
-  const pinInp = document.getElementById('pin-inp');
-  if(pinInp) {
-    pinInp.addEventListener('input',function(){
-      for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.toggle('on',i<this.value.length);
-      document.getElementById('login-err').textContent='';
-    });
-    pinInp.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════════════════════
-function doLogin(){
-  const pin=document.getElementById('pin-inp').value.trim();
-  if(!pin){setLoginErr('Please enter your PIN');return;}
-  const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
-  if(sa){currentUser={...sa};saveSession();showScreen('screen-superadmin');initSA();return;}
-  const admin=DATA.admins.find(a=>a.pin===pin&&a.role==='admin');
-  if(admin){currentUser={...admin};saveSession();showScreen('screen-admin');initAdmin();return;}
-  const voter=DATA.voters.find(v=>v.pin===pin);
-  if(!voter){setLoginErr('Invalid PIN. Please try again.');return;}
-  if(voter.hasVoted){setLoginErr('This PIN has already been used to vote.');return;}
-  if(!CFG.votingOpen){setLoginErr('Voting is currently closed.');return;}
-  currentUser={...voter,type:'voter'};saveSession();
-  selections={};
-  showScreen('screen-voter');
-  initVoter();
-}
-
-function setLoginErr(m){
-  const errEl = document.getElementById('login-err');
-  if(errEl) errEl.textContent=m;
-}
-
-function doLogout(){
-  clearSession();currentUser=null;selections={};
-  const p=document.getElementById('pin-inp');
-  if(p){p.value='';for(let i=0;i<6;i++)document.getElementById('pd'+i)?.classList.remove('on');}
-  setLoginErr('');
-  showScreen('screen-login');
-}
-
-function goToSettings(){
-  const pin=prompt('Enter SuperAdmin PIN to access settings:');
-  if(!pin)return;
-  const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
-  if(!sa){showToast('Invalid SuperAdmin PIN','err');return;}
-  currentUser={...sa};showScreen('screen-superadmin');initSA();
-}
-
-// ═══════════════════════════════════════════════════════════
-// VOTER SCREEN
-// ═══════════════════════════════════════════════════════════
-function initVoter(){
-  const v=currentUser;
-  const deptName = (DATA.departments.find(d=>d.id===v.dept)||{name:v.dept}).name;
-  const unitName = (() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===v.unit);if(u)return u.name;} return v.unit; })();
-  document.getElementById('v-greet').textContent=`Welcome, ${v.name.split(' ')[0]}!`;
-  document.getElementById('v-sub').textContent='Cast your vote — one nominee per category';
-  const metaEl = document.getElementById('v-meta');
-  if(metaEl) metaEl.innerHTML=`
-    <span class="meta-chip">🏢 ${deptName}</span>
-    <span class="meta-chip">📍 ${unitName}</span>`;
-  const bar=document.getElementById('voter-status-bar');
-  if(bar) {
-    bar.className=`status-bar ${CFG.votingOpen?'status-open':'status-closed'}`;
-    bar.textContent=CFG.votingOpen?'✓ Voting is open':'✗ Voting is closed';
-  }
-
-  const container=document.getElementById('cats-container');
-  if(!container) return;
-  container.innerHTML='';
-  let idx=0;
-
-  DATA.categories.forEach(cat=>{
-    let noms=[];
-    if(cat.scope === 'dept') {
-      noms = DATA.nominees.filter(n => n.category === cat.id && n.dept === v.dept);
-    }
-    else if(cat.scope === 'unit') {
-      noms = DATA.nominees.filter(n => n.category === cat.id && n.unit === v.unit);
-    }
-    else {
-      noms = DATA.nominees.filter(n => n.category === cat.id && (!n.dept || n.dept === '') && (!n.unit || n.unit === ''));
-    }
-    if(!noms.length) return;
-    idx++;
-    const sec=document.createElement('div');
-    sec.className='cat-section';
-    sec.innerHTML=`<div class="cat-hdr">
-      <div class="cat-num">${idx}</div>
-      <div class="cat-title">${cat.name}</div>
-      <div class="cat-count">${noms.length} nominee${noms.length!==1?'s':''}</div>
-    </div><div class="noms-grid" id="ng-${cat.id}"></div>`;
-    container.appendChild(sec);
-    const grid=sec.querySelector(`#ng-${cat.id}`);
-    noms.forEach((nom,ni)=>{
-      const initials=nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      const color=COLORS[ni%COLORS.length];
-      const card=document.createElement('div');
-      card.className='nom-card';card.dataset.id=nom.id;card.dataset.cat=cat.id;
-      const unitLabel=(() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===nom.unit);if(u)return u.name;} return nom.unit||''; })();
-      const deptLabel=(DATA.departments.find(d=>d.id===nom.dept)||{name:nom.dept||''}).name;
-      card.innerHTML=`<div class="nom-avatar" style="background:${color}22;color:${color};">${initials}</div>
-        <div class="nom-name">${nom.name}</div>
-        <div class="nom-info">${deptLabel}${unitLabel?` · ${unitLabel}`:''}</div>`;
-      card.onclick=()=>selectNom(cat.id,nom.id);
-      grid.appendChild(card);
-    });
-  });
-
-  if(idx===0 && container){
-    container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div>No nominees available for your department/unit yet. Please contact the administrator.</div>`;
-  }
-  updateVProg();
-}
-
-function selectNom(catId,nomId){
-  selections[catId]=nomId;
-  document.querySelectorAll(`[data-cat="${catId}"]`).forEach(c=>c.classList.remove('sel'));
-  document.querySelector(`[data-id="${nomId}"][data-cat="${catId}"]`)?.classList.add('sel');
-  updateVProg();
-}
-
-function updateVProg(){
-  const v=currentUser;
-  let total=0;
-  DATA.categories.forEach(cat=>{
-    let noms=[];
-    if(cat.scope === 'dept') {
-      noms = DATA.nominees.filter(n => n.category === cat.id && n.dept === v.dept);
-    }
-    else if(cat.scope === 'unit') {
-      noms = DATA.nominees.filter(n => n.category === cat.id && n.unit === v.unit);
-    }
-    else {
-      noms = DATA.nominees.filter(n => n.category === cat.id && (!n.dept || n.dept === '') && (!n.unit || n.unit === ''));
-    }
-    if(noms.length) total++;
-  });
-  const sel=Object.keys(selections).length;
-  const progEl = document.getElementById('vprog');
-  const submitBtn = document.getElementById('btn-submit');
-  if(progEl) progEl.innerHTML=`<b>${sel}/${total}</b> categories voted`;
-  if(submitBtn) submitBtn.disabled=sel<total||!CFG.votingOpen;
-}
-
-async function submitVotes(){
-  const newVotes=Object.entries(selections).map(([catId,nomId])=>({
-    pin:currentUser.pin, nomineeId:nomId, category:catId, timestamp:new Date().toISOString()
-  }));
-  newVotes.forEach(v=>DATA.votes.push(v));
-  const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
-  if(voter) voter.hasVoted=true;
-  clearSession();showScreen('screen-success');
-  await writeToSheets('submitVotes',{
-    pin:currentUser.pin,
-    votes:newVotes,
-  });
-}
-
-// ═══════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════
-const getVotes = nomId => DATA.votes.filter(v=>v.nomineeId===nomId).length;
-const getDeptName = id => (DATA.departments.find(d=>d.id===id)||{name:id||''}).name;
-const getUnitName = id => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===id);if(u)return u.name;} return id||''; };
-const getCat = id => DATA.categories.find(c=>c.id===id)||{name:id||''};
-
-function getRanked(catF,deptF){
-  return DATA.nominees
-    .filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF))
-    .map(n=>({...n,votes:getVotes(n.id)}))
-    .sort((a,b)=>b.votes-a.votes);
-}
-
-// ═══════════════════════════════════════════════════════════
-// ADMIN DASHBOARD
-// ═══════════════════════════════════════════════════════════
-function initAdmin(){
-  renderStats('admin');
-  renderDeptBars('admin-dept-bars');
-  fillResultFilters('a');
-  renderResults('admin');
-  renderDeptDetail('admin-dept-detail');
-  applyOrgName();
-}
-
-function renderStats(who){
-  const total=DATA.voters.length, voted=DATA.voters.filter(v=>v.hasVoted).length;
-  const pct=total?Math.round(voted/total*100):0;
-  const id=who==='admin'?'admin-stats':'sa-stats';
-  const el = document.getElementById(id);
-  if(el) el.innerHTML=`
-    <div class="stat-card gold"><div class="stat-lbl">Votes Cast</div><div class="stat-val">${DATA.votes.length}</div><div class="stat-sub">total vote records</div></div>
-    <div class="stat-card"><div class="stat-lbl">Registered Voters</div><div class="stat-val">${total}</div><div class="stat-sub">${voted} voted · ${total-voted} pending</div></div>
-    <div class="stat-card green"><div class="stat-lbl">Turnout</div><div class="stat-val">${pct}%</div><div class="stat-sub">${CFG.votingOpen?'🟢 Voting open':'🔴 Closed'}</div></div>
-    <div class="stat-card"><div class="stat-lbl">Departments</div><div class="stat-val">${DATA.departments.length}</div><div class="stat-sub">${DATA.categories.length} categories</div></div>`;
-}
-
-function renderDeptBars(containerId){
-  const el=document.getElementById(containerId);
-  if(!el||!DATA.departments.length){if(el)el.innerHTML='<div class="empty-state">No departments configured yet.</div>';return;}
-  el.innerHTML=DATA.departments.map((dept,i)=>{
-    const total=DATA.voters.filter(v=>v.dept===dept.id).length;
-    const voted=DATA.voters.filter(v=>v.dept===dept.id&&v.hasVoted).length;
-    const pct=total?Math.round(voted/total*100):0;
-    const c=dept.color||COLORS[i%COLORS.length];
-    return `<div class="db-row">
-      <div class="db-name">${dept.name}</div>
-      <div class="db-track"><div class="db-fill" style="width:${pct}%;background:${c}33;color:${c};">${voted}/${total}</div></div>
-      <div class="db-pct">${pct}%</div></div>`;
-  }).join('');
-}
-
-function fillResultFilters(prefix){
-  const catEl=document.getElementById(`${prefix}-fcat`);
-  const deptEl=document.getElementById(`${prefix}-fdept`);
-  if(catEl) catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  if(deptEl) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-}
-
-function renderResults(who){
-  const prefix=who==='admin'?'a':'sa';
-  const catF=document.getElementById(`${prefix}-fcat`)?.value||'';
-  const deptF=document.getElementById(`${prefix}-fdept`)?.value||'';
-  const tbodyId=who==='admin'?'admin-res-body':'sa-res-body';
-  const ranked=getRanked(catF,deptF);
-  const maxV=ranked[0]?.votes||1;
-  const tbody=document.getElementById(tbodyId);
-  if(!tbody) return;
-  if(!ranked.length){tbody.innerHTML=`<tr><td colspan="6" class="empty-state">No results yet — votes will appear here once cast.</td></tr>`;return;}
-  tbody.innerHTML=ranked.map((nom,i)=>{
-    const rC=i===0?'r1':i===1?'r2':i===2?'r3':'';
-    const rnk=i<3?`<span class="rnk ${rC}">${i+1}</span>`:`<span style="color:var(--text3);font-size:12px;">${i+1}</span>`;
-    const bw=Math.round(nom.votes/maxV*90);
-    const catName=getCat(nom.category).name;
-    return `<tr>
-      <td>${rnk}</td>
-      <td style="font-weight:500;">${nom.name}</td>
-      <td style="color:var(--text2);">${getDeptName(nom.dept)}</td>
-      <td style="color:var(--text3);">${getUnitName(nom.unit)}</td>
-      <td><span style="font-size:11px;padding:2px 7px;border-radius:20px;background:var(--bg3);color:var(--text2);">${catName}</span></td>
-      <td><div class="vbar-wrap"><div class="vbar" style="width:${bw}px;max-width:90px;"></div><span class="vcnt">${nom.votes}</span></div></td>
-    </tr>`;
-  }).join('');
-}
-
-function renderDeptDetail(containerId){
-  const el=document.getElementById(containerId);
-  if(!el) return;
-  if(!DATA.departments.length){el.innerHTML='<div class="empty-state">No departments configured.</div>';return;}
-  el.innerHTML=DATA.departments.map((dept,di)=>{
-    const noms=DATA.nominees.filter(n=>n.dept===dept.id).map(n=>({...n,votes:getVotes(n.id)})).sort((a,b)=>b.votes-a.votes);
-    const maxV=noms[0]?.votes||1;
-    const c=dept.color||COLORS[di%COLORS.length];
-    if(!noms.length) return `<div style="margin-bottom:20px;"><div style="font-size:13px;font-weight:500;color:${c};margin-bottom:8px;">${dept.name}</div><div style="font-size:12px;color:var(--text3);">No nominees</div></div>`;
-    const rows=noms.map(n=>{const pct=Math.round(n.votes/maxV*100);return `<div class="db-row"><div class="db-name" style="font-size:12px;">${n.name}</div><div class="db-track" style="height:22px;"><div class="db-fill" style="width:${Math.max(pct,5)}%;background:${c}33;color:${c};font-size:11px;">${n.votes}v</div></div></div>`;}).join('');
-    return `<div style="margin-bottom:22px;"><div style="font-size:13px;font-weight:500;color:${c};margin-bottom:8px;">${dept.name}</div>${rows}</div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════════
-// SUPERADMIN
-// ═══════════════════════════════════════════════════════════
-function initSA(){
-  renderStats('sa');
-  renderDeptBars('sa-dept-bars');
-  fillResultFilters('sa');
-  renderResults('sa');
-  renderVoterList();
-  renderNominees();
-  renderCatList();
-  renderDeptUnitManager();
-  
-  const votingVal = document.getElementById('sa-voting-val');
-  const deptCount = document.getElementById('sa-dept-count');
-  if(votingVal) votingVal.textContent = CFG.votingOpen ? 'Open' : 'Closed';
-  if(deptCount) deptCount.textContent = DATA.departments.length;
-  
-  // Load saved values into input fields
-  const gsId = document.getElementById('gs-id-inp');
-  const gsKey = document.getElementById('gs-key-inp');
-  const gsScript = document.getElementById('gs-script-inp');
-  const orgInp = document.getElementById('org-name-inp');
-  
-  if(gsId) gsId.value = CFG.sheetId || '';
-  if(gsKey) gsKey.value = CFG.apiKey || '';
-  if(gsScript) gsScript.value = CFG.scriptUrl || '';
-  if(orgInp) orgInp.value = CFG.orgName || '';
-  
-  updateConnectionStatus();
-  applyOrgName();
-}
-  applyOrgName();
-}
-
-// ── VOTERS ──
-function renderVoterList(){
-  const el=document.getElementById('voter-list');
-  if(!el) return;
-  if(!DATA.voters.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👥</div>No voters yet. Add voters or sync from Google Sheets.</div>';return;}
-  el.innerHTML=DATA.voters.map(v=>`
-    <div class="vrow">
-      <span class="vpin">${v.pin}</span>
-      <span class="vname">${v.name}</span>
-      <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
-      <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
-        <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
-        <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
-      </div>
-      <button class="btn-sm" onclick="resetVoter('${v.pin}')">Reset</button>
-      <button class="btn-sm red" onclick="removeVoter('${v.pin}')">✕</button>
-    </div>`).join('');
-}
-
-async function resetVoter(pin){
-  const v=DATA.voters.find(v=>v.pin===pin);if(!v)return;
-  v.hasVoted=false;
-  DATA.votes=DATA.votes.filter(x=>x.pin!==pin);
-  renderVoterList();renderStats('sa');
-  await writeToSheets('resetVoter',{pin});
-  showToast(`${v.name}'s votes reset`,'ok');
-}
-
-async function removeVoter(pin){
-  const v=DATA.voters.find(v=>v.pin===pin);if(!v)return;
-  if(!confirm(`Remove voter "${v.name}"?`))return;
-  DATA.voters=DATA.voters.filter(x=>x.pin!==pin);
-  DATA.votes=DATA.votes.filter(x=>x.pin!==pin);
-  renderVoterList();renderStats('sa');
-  await writeToSheets('removeVoter',{pin});
-  showToast(`${v.name} removed`,'ok');
-}
-
-async function resetAllVotes(){
-  if(!confirm('Reset ALL votes? This cannot be undone.'))return;
-  DATA.votes=[];DATA.voters.forEach(v=>v.hasVoted=false);
-  renderVoterList();renderStats('sa');
-  await writeToSheets('resetAllVotes',{});
-  showToast('All votes reset','ok');
-}
-
-// ── NOMINEES ──
-function renderNominees(){
-  const catF=document.getElementById('nom-fcat')?.value||'';
-  const deptF=document.getElementById('nom-fdept')?.value||'';
-  const catEl=document.getElementById('nom-fcat');
-  const deptEl=document.getElementById('nom-fdept');
-  if(catEl) catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  if(deptEl) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  const filtered=DATA.nominees.filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF));
-  const grid=document.getElementById('nom-mgr-grid');
-  if(!grid) return;
-  if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏅</div>No nominees yet. Add nominees or sync from Sheets.</div>';return;}
-  grid.innerHTML=filtered.map(nom=>{
-    const votes=getVotes(nom.id);
-    const catName=getCat(nom.category).name;
-    return `<div class="nom-mgr-card">
-      <div class="nm-info">
-        <div class="nm-name">${nom.name}</div>
-        <div class="nm-meta">${getDeptName(nom.dept)} · ${getUnitName(nom.unit)}</div>
-        <div class="nm-meta" style="margin-top:3px;">${catName}</div>
-        <div class="nm-votes">${votes} vote${votes!==1?'s':''}</div>
-      </div>
-      <button class="btn-sm red" onclick="removeNom('${nom.id}')">✕</button>
-    </div>`;
-  }).join('');
-}
-
-async function removeNom(id){
-  const nom=DATA.nominees.find(n=>n.id===id);
-  if(!nom||!confirm(`Remove "${nom.name}"?`))return;
-  DATA.nominees=DATA.nominees.filter(n=>n.id!==id);
-  DATA.votes=DATA.votes.filter(v=>v.nomineeId!==id);
-  renderNominees();
-  await writeToSheets('removeNominee',{id});
-  showToast(`${nom.name} removed`,'ok');
-}
-
-// ── CATEGORIES ──
-function renderCatList(){
-  const el=document.getElementById('cat-list-container');
-  if(!el) return;
-  const scopeLabel={dept:'Dept-wise Best',unit:'Unit-wise Best',global:'Company-wide Overall'};
-  if(!DATA.categories.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏷</div>No categories yet. Add your voting categories.</div>';return;}
-  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">` +
-  DATA.categories.map(cat=>{
-    const voteCount=DATA.votes.filter(v=>v.category===cat.id).length;
-    const nomCount=DATA.nominees.filter(n=>n.category===cat.id).length;
-    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;">
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:500;">${cat.name}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${scopeLabel[cat.scope]||cat.scope} · ${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</div>
-      </div>
-      <button class="btn-sm red" onclick="removeCat('${cat.id}')">✕</button>
-    </div>`;
-  }).join('') + '</div>';
-}
-
-async function removeCat(id){
-  const cat=DATA.categories.find(c=>c.id===id);
-  if(!cat||!confirm(`Remove category "${cat.name}"?`))return;
-  DATA.categories=DATA.categories.filter(c=>c.id!==id);
-  DATA.nominees=DATA.nominees.filter(n=>n.category!==id);
-  DATA.votes=DATA.votes.filter(v=>v.category!==id);
-  renderCatList();renderNominees();
-  await writeToSheets('removeCategory',{id});
-  showToast(`Category removed`,'ok');
-}
-
-// ── DEPT/UNIT MANAGER ──
-function renderDeptUnitManager(){
-  const deptCount = document.getElementById('sa-dept-count');
-  if(deptCount) deptCount.textContent=DATA.departments.length;
-  const el=document.getElementById('dept-unit-manager');
-  if(!el) return;
-  if(!DATA.departments.length){el.innerHTML='<div class="empty-state">No departments yet. Click "+ Add dept" above.</div>';return;}
-  el.innerHTML=DATA.departments.map((dept,di)=>{
-    const c=dept.color||COLORS[di%COLORS.length];
-    const units=dept.units.map(u=>`
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:5px;">
-        <span style="flex:1;font-size:12px;">${u.name}</span>
-        <button class="btn-sm red" onclick="removeUnit('${dept.id}','${u.id}')">✕</button>
-      </div>`).join('');
-    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;">
-      <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
-        <div style="width:10px;height:10px;border-radius:50%;background:${c};"></div>
-        <span style="font-size:13px;font-weight:500;flex:1;">${dept.name}</span>
-        <button class="btn-sm red" onclick="removeDept('${dept.id}')">Remove dept</button>
-      </div>
-      <div style="padding:10px 14px;">
-        ${units||'<div style="font-size:12px;color:var(--text3);margin-bottom:8px;">No units yet</div>'}
-        <div style="display:flex;gap:7px;margin-top:6px;">
-          <input class="gs-inp" id="unit-inp-${dept.id}" placeholder="New unit name…" style="flex:1;" onkeydown="if(event.key==='Enter')addUnit('${dept.id}')">
-          <button class="btn-sm green" onclick="addUnit('${dept.id}')">+ Add unit</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function addUnit(deptId){
-  const inp=document.getElementById(`unit-inp-${deptId}`);
-  const name=inp?.value.trim();
-  if(!name)return;
-  const dept=DATA.departments.find(d=>d.id===deptId);
-  if(!dept)return;
-  if(dept.units.find(u=>u.name.toLowerCase()===name.toLowerCase())){showToast('Unit already exists','err');return;}
-  const uid=`${deptId}_${Date.now()}`;
-  dept.units.push({id:uid,name});
-  if(inp)inp.value='';
-  renderDeptUnitManager();
-  await writeToSheets('addUnit',{deptId,unitId:uid,name});
-  showToast(`Unit "${name}" added`,'ok');
-}
-
-async function removeUnit(deptId,unitId){
-  const dept=DATA.departments.find(d=>d.id===deptId);
-  const unit=dept?.units.find(u=>u.id===unitId);
-  if(!unit||!confirm(`Remove unit "${unit.name}"?`))return;
-  if(DATA.voters.some(v=>v.unit===unitId)){showToast('Cannot remove: voters are assigned to this unit','err');return;}
-  dept.units=dept.units.filter(u=>u.id!==unitId);
-  DATA.nominees=DATA.nominees.filter(n=>n.unit!==unitId);
-  renderDeptUnitManager();
-  await writeToSheets('removeUnit',{deptId,unitId});
-  showToast(`Unit removed`,'ok');
-}
-
-async function removeDept(deptId){
-  const dept=DATA.departments.find(d=>d.id===deptId);
-  if(!dept||!confirm(`Remove department "${dept.name}" and all its units?`))return;
-  if(DATA.voters.some(v=>v.dept===deptId)){showToast('Cannot remove: voters are assigned to this department','err');return;}
-  DATA.departments=DATA.departments.filter(d=>d.id!==deptId);
-  DATA.nominees=DATA.nominees.filter(n=>n.dept!==deptId);
-  renderDeptUnitManager();renderStats('sa');
-  await writeToSheets('removeDept',{deptId});
-  showToast(`Department removed`,'ok');
-}
-
-// ── SETTINGS ──
-function saveGS(type){
-  if(type === 'id') { 
-    CFG.sheetId = document.getElementById('gs-id-inp').value.trim(); 
-    CFG.saveToLocalStorage();
-    showToast('Sheet ID saved', 'ok');
-  }
-  if(type === 'key') { 
-    CFG.apiKey = document.getElementById('gs-key-inp').value.trim(); 
-    CFG.saveToLocalStorage();
-    showToast('API key saved', 'ok');
-  }
-  if(type === 'script') { 
-    CFG.scriptUrl = document.getElementById('gs-script-inp').value.trim(); 
-    CFG.saveToLocalStorage();
-    showToast('Script URL saved', 'ok');
-  }
-  
-  // Update the UI to show connection status
-  updateConnectionStatus();
-}
-
-function updateConnectionStatus() {
-  const gsDot = document.getElementById('gs-dot');
-  const gsStatus = document.getElementById('gs-status-lbl');
-  
-  if (CFG.sheetId && CFG.apiKey) {
-    gsDot.style.background = 'var(--gold)';
-    gsStatus.textContent = 'Credentials saved - click Test connection';
-  } else {
-    gsDot.style.background = 'var(--border2)';
-    gsStatus.textContent = 'Not connected';
-  }
-}
-
-function saveOrgName(){
-  CFG.orgName=document.getElementById('org-name-inp').value.trim();
-  applyOrgName();
-  showToast('Organisation name saved','ok');
-}
-
-async function setVoting(open){
-  CFG.votingOpen=open;
-  const votingVal = document.getElementById('sa-voting-val');
-  if(votingVal) votingVal.textContent=open?'Open':'Closed';
-  await writeToSheets('setVotingStatus',{open});
-  showToast(`Voting ${open?'opened':'closed'}`,'ok');
-}
-
-async function testConnection(){
-  if(!CFG.sheetId || !CFG.apiKey){
-    // Try to get values from input fields first
-    const sheetIdInput = document.getElementById('gs-id-inp')?.value.trim();
-    const apiKeyInput = document.getElementById('gs-key-inp')?.value.trim();
-    
-    if (sheetIdInput) CFG.sheetId = sheetIdInput;
-    if (apiKeyInput) CFG.apiKey = apiKeyInput;
-    
-    if(!CFG.sheetId || !CFG.apiKey){
-      showToast('Enter Sheet ID and API key first', 'err');
-      return;
-    }
-    
-    CFG.saveToLocalStorage();
-  }
-  
-  showToast('Testing connection...');
-  
-  try{
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}?key=${CFG.apiKey}`;
-    const r = await fetch(url);
-    const j = await r.json();
-    
-    if(r.ok){
-      const gsDot = document.getElementById('gs-dot');
-      const gsStatus = document.getElementById('gs-status-lbl');
-      if(gsDot) gsDot.style.background = 'var(--green)';
-      if(gsStatus) gsStatus.textContent = `Connected — "${j.properties?.title || 'Sheet'}" ✓`;
-      CFG.isConfigured = true;
-      CFG.saveToLocalStorage();
-      showToast('Connected successfully!', 'ok');
-      
-      // Now try to fetch data
-      await fetchFromSheets();
-      showToast('Data loaded from sheet', 'ok');
-      initSA(); // Refresh the UI
-    } else {
-      throw new Error(j.error?.message || `HTTP ${r.status}`);
-    }
-  } catch(e){
-    const gsDot = document.getElementById('gs-dot');
-    const gsStatus = document.getElementById('gs-status-lbl');
-    if(gsDot) gsDot.style.background = 'var(--red)';
-    if(gsStatus) gsStatus.textContent = 'Connection failed';
-    showToast('Failed: ' + e.message, 'err');
-  }
-}
-
-async function manualSync(){
-  showToast('Syncing from Sheets…');
-  try{
-    await fetchFromSheets();
-    initSA();
-    showToast('Sync complete!','ok');
-  }catch(e){showToast('Sync failed: '+e.message,'err');}
-}
-
-function exportCSV(type){
-  let rows=[],fn='';
-  if(type==='results'){
-    rows=[['Rank','Nominee','Dept','Unit','Category','Votes'],...getRanked('','').map((n,i)=>[i+1,n.name,getDeptName(n.dept),getUnitName(n.unit),getCat(n.category).name,n.votes])];
-    fn='voting-results.csv';
-  }else if(type==='voters'){
-    rows=[['PIN','Name','Dept','Unit','HasVoted'],...DATA.voters.map(v=>[v.pin,v.name,getDeptName(v.dept),getUnitName(v.unit),v.hasVoted])];
-    fn='voters.csv';
-  }else{
-    rows=[['Type','PIN','Name','Dept','Unit','Detail'],
-      ...DATA.voters.map(v=>['voter',v.pin,v.name,getDeptName(v.dept),getUnitName(v.unit),v.hasVoted]),
-      ...DATA.votes.map(v=>['vote',v.pin,'','','',`Cat:${getCat(v.category).name} → Nom:${v.nomineeId}`])];
-    fn='full-export.csv';
-  }
-  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=fn;a.click();
-  showToast(`${fn} downloaded`,'ok');
-}
-
-// ═══════════════════════════════════════════════════════════
-// MODALS
-// ═══════════════════════════════════════════════════════════
-function openModal(html){
-  closeModal();
-  const ov=document.createElement('div');ov.className='modal-ov';ov.id='modal-ov';
-  ov.innerHTML=`<div class="modal-box">${html}</div>`;
-  ov.onclick=e=>{if(e.target===ov)closeModal();};
-  document.body.appendChild(ov);
-}
-
-function closeModal(){document.getElementById('modal-ov')?.remove();}
-
-function openAddVoterModal(){
-  const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  openModal(`<div class="modal-title">Add Voter</div>
-    <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mv-name" placeholder="Staff full name"></div>
-    <div class="modal-field"><label class="modal-lbl">PIN</label><input class="modal-inp" id="mv-pin" placeholder="Unique PIN" inputmode="numeric"></div>
-    <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mv-dept" onchange="fillVoterUnits()">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
-    <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mv-unit"></select></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-confirm" onclick="addVoter()">Add Voter</button>
-    </div>`);
-  fillVoterUnits();
-}
-
-function fillVoterUnits(){
-  const deptId=document.getElementById('mv-dept')?.value;
-  const dept=DATA.departments.find(d=>d.id===deptId);
-  const sel=document.getElementById('mv-unit');
-  if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
-}
-
-async function addVoter(){
-  const name=document.getElementById('mv-name').value.trim();
-  const pin=document.getElementById('mv-pin').value.trim();
-  const dept=document.getElementById('mv-dept').value;
-  const unit=document.getElementById('mv-unit').value;
-  if(!name||!pin){showToast('Name and PIN required','err');return;}
-  if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){showToast('PIN already in use','err');return;}
-  const voter={pin,name,dept,unit,hasVoted:false};
-  DATA.voters.push(voter);
-  closeModal();renderVoterList();renderStats('sa');
-  await writeToSheets('addVoter',{voter});
-  showToast(`${name} added`,'ok');
-}
-
-function openAddNomModal(){
-  const cOpts=DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  openModal(`<div class="modal-title">Add Nominee</div>
-    <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mn-name" placeholder="Nominee full name"></div>
-    <div class="modal-field"><label class="modal-lbl">Category</label><select class="modal-sel" id="mn-cat">${cOpts||'<option value="">— add categories first —</option>'}</select></div>
-    <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" onchange="fillNomUnits()">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
-    <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mn-unit"></select></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-confirm" onclick="addNom()">Add Nominee</button>
-    </div>`);
-  fillNomUnits();
-}
-
-function fillNomUnits(){
-  const deptId=document.getElementById('mn-dept')?.value;
-  const dept=DATA.departments.find(d=>d.id===deptId);
-  const sel=document.getElementById('mn-unit');
-  if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
-}
-
-async function addNom(){
-  const name=document.getElementById('mn-name').value.trim();
-  const catId=document.getElementById('mn-cat').value;
-  const dept=document.getElementById('mn-dept').value;
-  const unit=document.getElementById('mn-unit').value;
-  if(!name||!catId){showToast('Name and category required','err');return;}
-  const cat=DATA.categories.find(c=>c.id===catId);
-  const nom={id:`nom_${Date.now()}`,name,dept,unit,category:catId,scope:cat?.scope||'global'};
-  DATA.nominees.push(nom);
-  closeModal();renderNominees();
-  await writeToSheets('addNominee',{nominee:nom});
-  showToast(`${name} added as nominee`,'ok');
-}
-
-function openAddCatModal(){
-  openModal(`<div class="modal-title">Add Voting Category</div>
-    <div class="modal-field"><label class="modal-lbl">Category Name</label><input class="modal-inp" id="mc-name" placeholder="e.g. Best Staff — Department"></div>
-    <div class="modal-field"><label class="modal-lbl">Scope</label>
-      <select class="modal-sel" id="mc-scope">
-        <option value="dept">Department-wise — voters see nominees from their own dept only</option>
-        <option value="unit">Unit-wise — voters see nominees from their own unit only</option>
-        <option value="global">Company-wide — all voters see all nominees</option>
-      </select></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-confirm" onclick="addCat()">Add Category</button>
-    </div>`);
-}
-
-async function addCat(){
-  const name=document.getElementById('mc-name').value.trim();
-  const scope=document.getElementById('mc-scope').value;
-  if(!name){showToast('Enter a category name','err');return;}
-  const cat={id:`cat_${Date.now()}`,name,scope};
-  DATA.categories.push(cat);
-  closeModal();renderCatList();fillResultFilters('sa');fillResultFilters('a');
-  await writeToSheets('addCategory',{category:cat});
-  showToast(`Category "${name}" added`,'ok');
-}
-
-function openAddDeptModal(){
-  openModal(`<div class="modal-title">Add Department</div>
-    <div class="modal-field"><label class="modal-lbl">Department Name</label><input class="modal-inp" id="md-name" placeholder="e.g. Finance"></div>
-    <div class="modal-field"><label class="modal-lbl">Colour</label>
-      <input type="color" id="md-color" value="#5b8ef0" style="width:44px;height:30px;border:none;background:none;cursor:pointer;padding:0;border-radius:6px;"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-confirm" onclick="addDept()">Add Department</button>
-    </div>`);
-}
-
-async function addDept(){
-  const name=document.getElementById('md-name').value.trim();
-  const color=document.getElementById('md-color').value;
-  if(!name){showToast('Enter a department name','err');return;}
-  if(DATA.departments.find(d=>d.name.toLowerCase()===name.toLowerCase())){showToast('Department already exists','err');return;}
-  const dept={id:`dept_${Date.now()}`,name,color,units:[]};
-  DATA.departments.push(dept);
-  closeModal();renderDeptUnitManager();renderStats('sa');
-  await writeToSheets('addDept',{dept:{id:dept.id,name:dept.name,color:dept.color}});
-  showToast(`Department "${name}" added`,'ok');
-}
-
-// ═══════════════════════════════════════════════════════════
-// APPS SCRIPT HELP MODAL
-// ═══════════════════════════════════════════════════════════
-function showScriptHelp(){
-  const code = `// ── Paste this into Google Apps Script ──
-// Tools → Script editor in your Google Sheet
-
-function doPost(e) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const data = JSON.parse(e.postData.contents);
-  const action = data.action;
-  let result = {status:'ok'};
-
-  if (action === 'submitVotes') {
-    const vSheet = ss.getSheetByName('Votes') || ss.insertSheet('Votes');
-    data.votes.forEach(v => vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]));
-    const voterSheet = ss.getSheetByName('Voters');
-    if (voterSheet) {
-      const rows = voterSheet.getDataRange().getValues();
-      for (let i=1;i<rows.length;i++) {
-        if (rows[i][0] == data.pin) { voterSheet.getRange(i+1,5).setValue('TRUE'); break; }
-      }
-    }
-  }
-  else if (action === 'addVoter') {
-    const s = ss.getSheetByName('Voters') || ss.insertSheet('Voters');
-    const v = data.voter;
-    s.appendRow([v.pin, v.name, v.dept, v.unit, 'FALSE']);
-  }
-  else if (action === 'removeVoter') {
-    deleteRowByValue(ss.getSheetByName('Voters'), data.pin, 0);
-    deleteRowsByValue(ss.getSheetByName('Votes'), data.pin, 0);
-  }
-  else if (action === 'resetVoter') {
-    const s = ss.getSheetByName('Voters');
-    if (s) {
-      const rows = s.getDataRange().getValues();
-      for (let i=1;i<rows.length;i++) {
-        if (rows[i][0] == data.pin) { s.getRange(i+1,5).setValue('FALSE'); break; }
-      }
-    }
-    deleteRowsByValue(ss.getSheetByName('Votes'), data.pin, 0);
-  }
-  else if (action === 'resetAllVotes') {
-    const vs = ss.getSheetByName('Votes');
-    if (vs && vs.getLastRow()>1) vs.deleteRows(2, vs.getLastRow()-1);
-    const voterSheet = ss.getSheetByName('Voters');
-    if (voterSheet && voterSheet.getLastRow()>1) {
-      voterSheet.getRange(2,5,voterSheet.getLastRow()-1,1).setValue('FALSE');
-    }
-  }
-  else if (action === 'addNominee') {
-    const s = ss.getSheetByName('Nominees') || ss.insertSheet('Nominees');
-    const n = data.nominee;
-    s.appendRow([n.id, n.name, n.dept, n.unit, n.category, n.scope]);
-  }
-  else if (action === 'removeNominee') {
-    deleteRowByValue(ss.getSheetByName('Nominees'), data.id, 0);
-  }
-  else if (action === 'addCategory') {
-    const s = ss.getSheetByName('Categories') || ss.insertSheet('Categories');
-    const c = data.category;
-    s.appendRow([c.id, c.name, c.scope]);
-  }
-  else if (action === 'removeCategory') {
-    deleteRowByValue(ss.getSheetByName('Categories'), data.id, 0);
-  }
-  else if (action === 'addDept') {
-    const s = ss.getSheetByName('Departments') || ss.insertSheet('Departments');
-    const d = data.dept;
-    s.appendRow([d.id, d.name, d.color, '']);
-  }
-  else if (action === 'addUnit') {
-    const s = ss.getSheetByName('Departments') || ss.insertSheet('Departments');
-    s.appendRow([data.deptId, '', '', data.name, data.unitId]);
-  }
-  else if (action === 'removeDept') {
-    deleteRowsByValue(ss.getSheetByName('Departments'), data.deptId, 0);
-  }
-  else if (action === 'removeUnit') {
-    const s = ss.getSheetByName('Departments');
-    if (s) {
-      const rows = s.getDataRange().getValues();
-      for (let i=rows.length-1;i>=1;i--) {
-        if (rows[i][0]==data.deptId && rows[i][4]==data.unitId) s.deleteRow(i+1);
-      }
-    }
-  }
-  else if (action === 'setAdmins') {
-    const s = ss.getSheetByName('Admins') || ss.insertSheet('Admins');
-    if (s.getLastRow()>1) s.deleteRows(2,s.getLastRow()-1);
-    data.admins.forEach(a => s.appendRow([a.pin, a.role, a.name]));
-  }
-  else if (action === 'setVotingStatus') {
-    const s = ss.getSheetByName('Config') || ss.insertSheet('Config');
-    s.getRange(1,1).setValue('votingOpen');
-    s.getRange(1,2).setValue(data.open ? 'TRUE' : 'FALSE');
-  }
-
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function deleteRowByValue(sheet, value, col) {
-  if (!sheet) return;
-  const rows = sheet.getDataRange().getValues();
-  for (let i=rows.length-1;i>=1;i--) {
-    if (rows[i][col] == value) { sheet.deleteRow(i+1); break; }
-  }
-}
-function deleteRowsByValue(sheet, value, col) {
-  if (!sheet) return;
-  const rows = sheet.getDataRange().getValues();
-  for (let i=rows.length-1;i>=1;i--) {
-    if (rows[i][col] == value) sheet.deleteRow(i+1);
-  }
-}`;
-
-  openModal(`<div class="modal-title">📋 Google Apps Script — Copy &amp; Paste</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
-      1. Open your Google Sheet → <b>Extensions → Apps Script</b><br>
-      2. Delete any existing code, paste everything below<br>
-      3. Click <b>Deploy → New deployment → Web app</b><br>
-      4. Set <i>Execute as: Me</i>, <i>Who has access: Anyone</i><br>
-      5. Copy the <code>/exec</code> URL → paste it as <b>Script URL</b> in Settings
-    </div>
-    <textarea style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px;color:var(--text);font-family:monospace;font-size:10px;outline:none;resize:vertical;" onclick="this.select()" readonly>${code}</textarea>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Close</button>
-      <button class="btn-confirm" onclick="navigator.clipboard.writeText(document.querySelector('textarea').value);showToast('Copied!','ok');">Copy Code</button>
-    </div>`);
-}
-
-// ═══════════════════════════════════════════════════════════
-// TAB SWITCHING
-// ═══════════════════════════════════════════════════════════
-function switchTab(scope,tab,btn){
-  document.querySelectorAll(`#screen-${scope} .tab-btn`).forEach(b=>b.classList.remove('on'));
-  if(btn)btn.classList.add('on');
-  document.querySelectorAll(`#screen-${scope} .tab-panel`).forEach(p=>p.classList.remove('on'));
-  document.getElementById(`${scope}-${tab}`)?.classList.add('on');
-  if(tab==='overview'&&scope==='admin'){renderStats('admin');renderDeptBars('admin-dept-bars');}
-  if(tab==='overview'&&scope==='superadmin'){renderStats('sa');renderDeptBars('sa-dept-bars');}
-  if(tab==='results'&&scope==='admin') renderResults('admin');
-  if(tab==='results'&&scope==='superadmin') renderResults('sa');
-  if(tab==='departments') renderDeptDetail('admin-dept-detail');
-  if(tab==='voters') renderVoterList();
-  if(tab==='nominees') renderNominees();
-  if(tab==='categories') renderCatList();
-  if(tab==='settings') initSA();
-}
-
-// ═══════════════════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════════════════
-let toastTmr;
-function showToast(msg,type){
-  const t=document.getElementById('toast');
-  if(!t) return;
-  t.textContent=msg;t.className=`toast ${type||''} show`;
-  clearTimeout(toastTmr);toastTmr=setTimeout(()=>t.classList.remove('show'),2800);
-}
 </script>
 </body>
 </html>
