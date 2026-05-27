@@ -70,7 +70,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .setup-btn-sec:hover{border-color:var(--border2);color:var(--text);}
 .setup-err{font-size:12px;color:var(--red);text-align:center;margin-top:8px;min-height:16px;}
 .setup-note{font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6;text-align:center;}
-.setup-note a{color:var(--gold);text-decoration:none;}
+.setup-note a{color:var(--gold);text-decoration:none;cursor:pointer;}
 
 /* LOGIN */
 #screen-login{align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden;}
@@ -529,15 +529,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// CONFIG — all persisted in localStorage
+// HELPER FUNCTIONS (ADDED)
 // ═══════════════════════════════════════════════════════════
-const LS = {
-  get: k => { try { const v=localStorage.getItem(k); return v!==null?JSON.parse(v):null; } catch{ return null; } },
-  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
-  del: k => localStorage.removeItem(k)
-};
-
-  function setLD(message) {
+function setLD(message) {
   const statusEl = document.getElementById('ld-status');
   if (statusEl) {
     statusEl.textContent = message;
@@ -551,44 +545,74 @@ function hideLoader() {
   }
 }
 
+function applyOrgName() {
+  const orgName = CFG.orgName || 'Voting Portal';
+  
+  const loginOrgEl = document.getElementById('login-org-name');
+  if (loginOrgEl) loginOrgEl.textContent = orgName;
+  
+  const voterOrgEl = document.getElementById('voter-org-name');
+  if (voterOrgEl) voterOrgEl.textContent = orgName;
+  
+  const adminOrgEl = document.getElementById('admin-org-name');
+  if (adminOrgEl) adminOrgEl.textContent = orgName;
+  
+  const saOrgEl = document.getElementById('sa-org-name');
+  if (saOrgEl) saOrgEl.textContent = orgName;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG — all persisted in localStorage
+// ═══════════════════════════════════════════════════════════
+const LS = {
+  get: k => { try { const v=localStorage.getItem(k); return v!==null?JSON.parse(v):null; } catch{ return null; } },
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: k => localStorage.removeItem(k)
+};
+
 const CFG = {
   sheetId: '',
   apiKey: '',
   scriptUrl: '',
   votingOpen: true,
   orgName: '',
+  isConfigured: false,
 
   async load() {
-
-    const tempSheetId =
-      localStorage.getItem('bootstrap_sheet_id');
-
-    const tempApiKey =
-      localStorage.getItem('bootstrap_api_key');
+    const tempSheetId = localStorage.getItem('bootstrap_sheet_id');
+    const tempApiKey = localStorage.getItem('bootstrap_api_key');
 
     if(!tempSheetId || !tempApiKey) {
       return false;
     }
 
-    const url =
-      `https://sheets.googleapis.com/v4/spreadsheets/${tempSheetId}/values/Config!A:B?key=${tempApiKey}`;
+    try {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${tempSheetId}/values/Config!A:B?key=${tempApiKey}`;
+      const res = await fetch(url);
+      const json = await res.json();
 
-    const res = await fetch(url);
-    const json = await res.json();
+      const cfg = {};
+      (json.values || []).forEach(r => {
+        cfg[r[0]] = r[1];
+      });
 
-    const cfg = {};
-
-    (json.values || []).forEach(r => {
-      cfg[r[0]] = r[1];
-    });
-
-    this.sheetId = cfg.sheet_id || tempSheetId;
-    this.apiKey = cfg.api_key || tempApiKey;
-    this.scriptUrl = cfg.script_url || '';
-    this.orgName = cfg.org_name || 'Voting Portal';
-    this.votingOpen = cfg.voting_open === 'TRUE';
-
-    return true;
+      this.sheetId = cfg.sheet_id || tempSheetId;
+      this.apiKey = cfg.api_key || tempApiKey;
+      this.scriptUrl = cfg.script_url || '';
+      this.orgName = cfg.org_name || 'Voting Portal';
+      this.votingOpen = cfg.voting_open === 'TRUE';
+      this.isConfigured = true;
+      
+      return true;
+    } catch(e) {
+      console.error('Failed to load config:', e);
+      return false;
+    }
   }
 };
 
@@ -596,12 +620,6 @@ const CFG = {
 // DATA — loaded entirely from Google Sheets
 // ═══════════════════════════════════════════════════════════
 const DATA = { voters:[], admins:[], nominees:[], votes:[], categories:[], departments:[] };
-// departments = [{id,name,color,units:[{id,name}]}]
-// categories  = [{id,name,scope}]  scope: 'dept'|'unit'|'global'
-// nominees    = [{id,name,dept,unit,category}]
-// voters      = [{pin,name,dept,unit,hasVoted}]
-// admins      = [{pin,role,name}]  role: 'admin'|'superadmin'
-// votes       = [{pin,nomineeId,category,timestamp}]
 
 const COLORS=['#c9a84c','#5b8ef0','#4caf7d','#e05555','#9b74db','#5bbef0','#e08a55','#e05599','#7db854'];
 let currentUser=null, selections={};
@@ -637,7 +655,6 @@ function restoreSession(){
 
     if(currentUser.type==='voter'){
       const voter = DATA.voters.find(v=>v.pin===currentUser.pin);
-
       if(voter && !voter.hasVoted){
         currentUser = {...voter, type:'voter'};
         showScreen('screen-voter');
@@ -665,14 +682,13 @@ async function fetchFromSheets() {
   if (!res.ok) throw new Error(json.error?.message || `HTTP ${res.status}`);
   const [vD,nD,vtD,adD,catD,deptD] = json.valueRanges;
 
-  if (vD.values)   DATA.voters     = vD.values.map(r=>({pin:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',hasVoted:r[4]==='TRUE'}));
-  if (nD.values)   DATA.nominees   = nD.values.map(r=>({id:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',category:r[4]||'',scope:r[5]||'global'}));
-  if (vtD.values)  DATA.votes      = vtD.values.map(r=>({pin:r[0]||'',nomineeId:r[1]||'',category:r[2]||'',timestamp:r[3]||''}));
-  if (adD.values)  DATA.admins     = adD.values.map(r=>({pin:r[0]||'',role:r[1]||'',name:r[2]||''}));
-  if (catD.values) DATA.categories = catD.values.map(r=>({id:r[0]||'',name:r[1]||'',scope:r[2]||'global'}));
+  if (vD && vD.values)   DATA.voters     = vD.values.map(r=>({pin:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',hasVoted:r[4]==='TRUE'}));
+  if (nD && nD.values)   DATA.nominees   = nD.values.map(r=>({id:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',category:r[4]||'',scope:r[5]||'global'}));
+  if (vtD && vtD.values)  DATA.votes      = vtD.values.map(r=>({pin:r[0]||'',nomineeId:r[1]||'',category:r[2]||'',timestamp:r[3]||''}));
+  if (adD && adD.values)  DATA.admins     = adD.values.map(r=>({pin:r[0]||'',role:r[1]||'',name:r[2]||''}));
+  if (catD && catD.values) DATA.categories = catD.values.map(r=>({id:r[0]||'',name:r[1]||'',scope:r[2]||'global'}));
 
-  // Parse departments (DeptID, DeptName, DeptColor, UnitName — multiple rows per dept)
-  if (deptD.values) {
+  if (deptD && deptD.values) {
     const dMap={};
     deptD.values.forEach(r=>{
       const [did,dname,dcolor,uname]=r;
@@ -727,6 +743,7 @@ function showSyncBadge(type, msg) {
   const badge=document.getElementById('sync-badge');
   const spin=document.getElementById('sync-spin');
   const msgEl=document.getElementById('sync-msg');
+  if(!badge) return;
   badge.className=`sync-badge show ${type}`;
   msgEl.textContent=msg;
   spin.style.display= type==='syncing'?'block':'none';
@@ -738,68 +755,46 @@ function showSyncBadge(type, msg) {
 // BOOT
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-
   setLD('Loading…');
-
   await new Promise(r => setTimeout(r, 400));
-
   try {
-
     await CFG.load();
-
     setLD('Connecting to Google Sheets…');
-
     await fetchFromSheets();
-
     setLD('✓ Data loaded');
-
     await new Promise(r => setTimeout(r, 500));
-
   }
   catch(e) {
-
     console.error(e);
-
     hideLoader();
-
     showScreen('screen-setup');
-
     return;
   }
 
   hideLoader();
-
   applyOrgName();
-
   buildPinDots();
 
   if(!restoreSession()) {
     showScreen('screen-login');
   }
 
-  // AUTO SYNC
   setInterval(async () => {
-
     try {
-
       await fetchFromSheets();
-
       if(currentUser?.role === 'admin') {
         initAdmin();
       }
-
       if(currentUser?.role === 'superadmin') {
         initSA();
       }
-
     }
     catch(e) {
       console.error(e);
     }
-
   }, 15000);
-
 });
+
 // ═══════════════════════════════════════════════════════════
 // SETUP WIZARD
 // ═══════════════════════════════════════════════════════════
@@ -816,11 +811,13 @@ async function setupStep0(){
     const r=await fetch(url);
     if(!r.ok){const j=await r.json();throw new Error(j.error?.message||`HTTP ${r.status}`);}
     localStorage.setItem('bootstrap_sheet_id', sid);
-localStorage.setItem('bootstrap_api_key', key); if(script) CFG.scriptUrl=script;
+    localStorage.setItem('bootstrap_api_key', key); 
+    if(script) CFG.scriptUrl=script;
     err.textContent='';
     advanceSetup(1);
   }catch(e){err.textContent='Connection failed: '+e.message;}
 }
+
 function setupStep1(){
   const sapin=document.getElementById('sw-sa-pin').value.trim();
   const saname=document.getElementById('sw-sa-name').value.trim();
@@ -834,6 +831,7 @@ function setupStep1(){
   err.textContent='';
   advanceSetup(2);
 }
+
 async function setupStep2(){
   const org=document.getElementById('sw-org-name').value.trim();
   const err=document.getElementById('sw-err-2');
@@ -848,6 +846,7 @@ async function setupStep2(){
   applyOrgName();
   buildPinDots();
 }
+
 function advanceSetup(step){
   document.getElementById('sw-step-'+(step-1)).style.display='none';
   document.getElementById('sw-step-'+step).style.display='block';
@@ -855,6 +854,7 @@ function advanceSetup(step){
   document.getElementById('sw-dot-'+step).className='setup-step-dot active';
   swStep=step;
 }
+
 function resetSetup(){
   if(!confirm('This will clear all local settings. You will need to reconnect Google Sheets. Continue?'))return;
   localStorage.clear();
@@ -869,11 +869,14 @@ function buildPinDots(){
   if(!c)return;
   c.innerHTML='';
   for(let i=0;i<6;i++){const d=document.createElement('div');d.className='pin-dot';d.id='pd'+i;c.appendChild(d);}
-  document.getElementById('pin-inp').addEventListener('input',function(){
-    for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.toggle('on',i<this.value.length);
-    document.getElementById('login-err').textContent='';
-  });
-  document.getElementById('pin-inp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  const pinInp = document.getElementById('pin-inp');
+  if(pinInp) {
+    pinInp.addEventListener('input',function(){
+      for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.toggle('on',i<this.value.length);
+      document.getElementById('login-err').textContent='';
+    });
+    pinInp.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -895,7 +898,12 @@ function doLogin(){
   showScreen('screen-voter');
   initVoter();
 }
-function setLoginErr(m){document.getElementById('login-err').textContent=m;}
+
+function setLoginErr(m){
+  const errEl = document.getElementById('login-err');
+  if(errEl) errEl.textContent=m;
+}
+
 function doLogout(){
   clearSession();currentUser=null;selections={};
   const p=document.getElementById('pin-inp');
@@ -903,16 +911,13 @@ function doLogout(){
   setLoginErr('');
   showScreen('screen-login');
 }
+
 function goToSettings(){
   const pin=prompt('Enter SuperAdmin PIN to access settings:');
   if(!pin)return;
   const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
   if(!sa){showToast('Invalid SuperAdmin PIN','err');return;}
   currentUser={...sa};showScreen('screen-superadmin');initSA();
-}
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -924,46 +929,32 @@ function initVoter(){
   const unitName = (() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===v.unit);if(u)return u.name;} return v.unit; })();
   document.getElementById('v-greet').textContent=`Welcome, ${v.name.split(' ')[0]}!`;
   document.getElementById('v-sub').textContent='Cast your vote — one nominee per category';
-  document.getElementById('v-meta').innerHTML=`
+  const metaEl = document.getElementById('v-meta');
+  if(metaEl) metaEl.innerHTML=`
     <span class="meta-chip">🏢 ${deptName}</span>
     <span class="meta-chip">📍 ${unitName}</span>`;
   const bar=document.getElementById('voter-status-bar');
-  bar.className=`status-bar ${CFG.votingOpen?'status-open':'status-closed'}`;
-  bar.textContent=CFG.votingOpen?'✓ Voting is open':'✗ Voting is closed';
+  if(bar) {
+    bar.className=`status-bar ${CFG.votingOpen?'status-open':'status-closed'}`;
+    bar.textContent=CFG.votingOpen?'✓ Voting is open':'✗ Voting is closed';
+  }
 
   const container=document.getElementById('cats-container');
+  if(!container) return;
   container.innerHTML='';
   let idx=0;
 
   DATA.categories.forEach(cat=>{
     let noms=[];
     if(cat.scope === 'dept') {
-
-  noms = DATA.nominees.filter(
-    n => n.category === cat.id &&
-         n.dept === v.dept
-  );
-
-}
-else if(cat.scope === 'unit') {
-
-  noms = DATA.nominees.filter(
-    n => n.category === cat.id &&
-         n.unit === v.unit
-  );
-
-}
-else {
-
-  // Global category
-  // Only show nominees without dept/unit restrictions
-
-  noms = DATA.nominees.filter(
-    n => n.category === cat.id &&
-         (!n.dept || n.dept === '') &&
-         (!n.unit || n.unit === '')
-  );
-}
+      noms = DATA.nominees.filter(n => n.category === cat.id && n.dept === v.dept);
+    }
+    else if(cat.scope === 'unit') {
+      noms = DATA.nominees.filter(n => n.category === cat.id && n.unit === v.unit);
+    }
+    else {
+      noms = DATA.nominees.filter(n => n.category === cat.id && (!n.dept || n.dept === '') && (!n.unit || n.unit === ''));
+    }
     if(!noms.length) return;
     idx++;
     const sec=document.createElement('div');
@@ -990,7 +981,7 @@ else {
     });
   });
 
-  if(idx===0){
+  if(idx===0 && container){
     container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div>No nominees available for your department/unit yet. Please contact the administrator.</div>`;
   }
   updateVProg();
@@ -1009,37 +1000,21 @@ function updateVProg(){
   DATA.categories.forEach(cat=>{
     let noms=[];
     if(cat.scope === 'dept') {
-
-  noms = DATA.nominees.filter(
-    n =>
-      n.category === cat.id &&
-      n.dept === v.dept
-  );
-
-}
-else if(cat.scope === 'unit') {
-
-  noms = DATA.nominees.filter(
-    n =>
-      n.category === cat.id &&
-      n.unit === v.unit
-  );
-
-}
-else {
-
-  noms = DATA.nominees.filter(
-    n =>
-      n.category === cat.id &&
-      (!n.dept || n.dept === '') &&
-      (!n.unit || n.unit === '')
-  );
-}
+      noms = DATA.nominees.filter(n => n.category === cat.id && n.dept === v.dept);
+    }
+    else if(cat.scope === 'unit') {
+      noms = DATA.nominees.filter(n => n.category === cat.id && n.unit === v.unit);
+    }
+    else {
+      noms = DATA.nominees.filter(n => n.category === cat.id && (!n.dept || n.dept === '') && (!n.unit || n.unit === ''));
+    }
     if(noms.length) total++;
   });
   const sel=Object.keys(selections).length;
-  document.getElementById('vprog').innerHTML=`<b>${sel}/${total}</b> categories voted`;
-  document.getElementById('btn-submit').disabled=sel<total||!CFG.votingOpen;
+  const progEl = document.getElementById('vprog');
+  const submitBtn = document.getElementById('btn-submit');
+  if(progEl) progEl.innerHTML=`<b>${sel}/${total}</b> categories voted`;
+  if(submitBtn) submitBtn.disabled=sel<total||!CFG.votingOpen;
 }
 
 async function submitVotes(){
@@ -1050,7 +1025,6 @@ async function submitVotes(){
   const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
   if(voter) voter.hasVoted=true;
   clearSession();showScreen('screen-success');
-  // Write to Sheets
   await writeToSheets('submitVotes',{
     pin:currentUser.pin,
     votes:newVotes,
@@ -1088,7 +1062,8 @@ function renderStats(who){
   const total=DATA.voters.length, voted=DATA.voters.filter(v=>v.hasVoted).length;
   const pct=total?Math.round(voted/total*100):0;
   const id=who==='admin'?'admin-stats':'sa-stats';
-  document.getElementById(id).innerHTML=`
+  const el = document.getElementById(id);
+  if(el) el.innerHTML=`
     <div class="stat-card gold"><div class="stat-lbl">Votes Cast</div><div class="stat-val">${DATA.votes.length}</div><div class="stat-sub">total vote records</div></div>
     <div class="stat-card"><div class="stat-lbl">Registered Voters</div><div class="stat-val">${total}</div><div class="stat-sub">${voted} voted · ${total-voted} pending</div></div>
     <div class="stat-card green"><div class="stat-lbl">Turnout</div><div class="stat-val">${pct}%</div><div class="stat-sub">${CFG.votingOpen?'🟢 Voting open':'🔴 Closed'}</div></div>
@@ -1125,6 +1100,7 @@ function renderResults(who){
   const ranked=getRanked(catF,deptF);
   const maxV=ranked[0]?.votes||1;
   const tbody=document.getElementById(tbodyId);
+  if(!tbody) return;
   if(!ranked.length){tbody.innerHTML=`<tr><td colspan="6" class="empty-state">No results yet — votes will appear here once cast.</td></tr>`;return;}
   tbody.innerHTML=ranked.map((nom,i)=>{
     const rC=i===0?'r1':i===1?'r2':i===2?'r3':'';
@@ -1168,8 +1144,10 @@ function initSA(){
   renderNominees();
   renderCatList();
   renderDeptUnitManager();
-  document.getElementById('sa-voting-val').textContent=CFG.votingOpen?'Open':'Closed';
-  document.getElementById('sa-dept-count').textContent=DATA.departments.length;
+  const votingVal = document.getElementById('sa-voting-val');
+  const deptCount = document.getElementById('sa-dept-count');
+  if(votingVal) votingVal.textContent=CFG.votingOpen?'Open':'Closed';
+  if(deptCount) deptCount.textContent=DATA.departments.length;
   const gsId=document.getElementById('gs-id-inp');
   const gsKey=document.getElementById('gs-key-inp');
   const gsScript=document.getElementById('gs-script-inp');
@@ -1178,9 +1156,11 @@ function initSA(){
   if(gsKey) gsKey.value=CFG.apiKey;
   if(gsScript) gsScript.value=CFG.scriptUrl;
   if(orgInp) orgInp.value=CFG.orgName;
-  if(CFG.isConfigured){
-    document.getElementById('gs-dot').style.background='var(--green)';
-    document.getElementById('gs-status-lbl').textContent='Connected ✓';
+  const gsDot = document.getElementById('gs-dot');
+  const gsStatus = document.getElementById('gs-status-lbl');
+  if(gsDot && CFG.isConfigured) {
+    gsDot.style.background='var(--green)';
+    if(gsStatus) gsStatus.textContent='Connected ✓';
   }
   applyOrgName();
 }
@@ -1188,6 +1168,7 @@ function initSA(){
 // ── VOTERS ──
 function renderVoterList(){
   const el=document.getElementById('voter-list');
+  if(!el) return;
   if(!DATA.voters.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👥</div>No voters yet. Add voters or sync from Google Sheets.</div>';return;}
   el.innerHTML=DATA.voters.map(v=>`
     <div class="vrow">
@@ -1211,6 +1192,7 @@ async function resetVoter(pin){
   await writeToSheets('resetVoter',{pin});
   showToast(`${v.name}'s votes reset`,'ok');
 }
+
 async function removeVoter(pin){
   const v=DATA.voters.find(v=>v.pin===pin);if(!v)return;
   if(!confirm(`Remove voter "${v.name}"?`))return;
@@ -1220,6 +1202,7 @@ async function removeVoter(pin){
   await writeToSheets('removeVoter',{pin});
   showToast(`${v.name} removed`,'ok');
 }
+
 async function resetAllVotes(){
   if(!confirm('Reset ALL votes? This cannot be undone.'))return;
   DATA.votes=[];DATA.voters.forEach(v=>v.hasVoted=false);
@@ -1238,6 +1221,7 @@ function renderNominees(){
   if(deptEl) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
   const filtered=DATA.nominees.filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF));
   const grid=document.getElementById('nom-mgr-grid');
+  if(!grid) return;
   if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏅</div>No nominees yet. Add nominees or sync from Sheets.</div>';return;}
   grid.innerHTML=filtered.map(nom=>{
     const votes=getVotes(nom.id);
@@ -1253,6 +1237,7 @@ function renderNominees(){
     </div>`;
   }).join('');
 }
+
 async function removeNom(id){
   const nom=DATA.nominees.find(n=>n.id===id);
   if(!nom||!confirm(`Remove "${nom.name}"?`))return;
@@ -1266,6 +1251,7 @@ async function removeNom(id){
 // ── CATEGORIES ──
 function renderCatList(){
   const el=document.getElementById('cat-list-container');
+  if(!el) return;
   const scopeLabel={dept:'Dept-wise Best',unit:'Unit-wise Best',global:'Company-wide Overall'};
   if(!DATA.categories.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏷</div>No categories yet. Add your voting categories.</div>';return;}
   el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">` +
@@ -1281,6 +1267,7 @@ function renderCatList(){
     </div>`;
   }).join('') + '</div>';
 }
+
 async function removeCat(id){
   const cat=DATA.categories.find(c=>c.id===id);
   if(!cat||!confirm(`Remove category "${cat.name}"?`))return;
@@ -1294,8 +1281,10 @@ async function removeCat(id){
 
 // ── DEPT/UNIT MANAGER ──
 function renderDeptUnitManager(){
-  document.getElementById('sa-dept-count').textContent=DATA.departments.length;
+  const deptCount = document.getElementById('sa-dept-count');
+  if(deptCount) deptCount.textContent=DATA.departments.length;
   const el=document.getElementById('dept-unit-manager');
+  if(!el) return;
   if(!DATA.departments.length){el.innerHTML='<div class="empty-state">No departments yet. Click "+ Add dept" above.</div>';return;}
   el.innerHTML=DATA.departments.map((dept,di)=>{
     const c=dept.color||COLORS[di%COLORS.length];
@@ -1335,6 +1324,7 @@ async function addUnit(deptId){
   await writeToSheets('addUnit',{deptId,unitId:uid,name});
   showToast(`Unit "${name}" added`,'ok');
 }
+
 async function removeUnit(deptId,unitId){
   const dept=DATA.departments.find(d=>d.id===deptId);
   const unit=dept?.units.find(u=>u.id===unitId);
@@ -1346,6 +1336,7 @@ async function removeUnit(deptId,unitId){
   await writeToSheets('removeUnit',{deptId,unitId});
   showToast(`Unit removed`,'ok');
 }
+
 async function removeDept(deptId){
   const dept=DATA.departments.find(d=>d.id===deptId);
   if(!dept||!confirm(`Remove department "${dept.name}" and all its units?`))return;
@@ -1363,17 +1354,21 @@ function saveGS(type){
   if(type==='key')    { CFG.apiKey=document.getElementById('gs-key-inp').value.trim(); showToast('API key saved','ok'); }
   if(type==='script') { CFG.scriptUrl=document.getElementById('gs-script-inp').value.trim(); showToast('Script URL saved','ok'); }
 }
+
 function saveOrgName(){
   CFG.orgName=document.getElementById('org-name-inp').value.trim();
   applyOrgName();
   showToast('Organisation name saved','ok');
 }
+
 async function setVoting(open){
   CFG.votingOpen=open;
-  document.getElementById('sa-voting-val').textContent=open?'Open':'Closed';
+  const votingVal = document.getElementById('sa-voting-val');
+  if(votingVal) votingVal.textContent=open?'Open':'Closed';
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
+
 async function testConnection(){
   if(!CFG.sheetId||!CFG.apiKey){showToast('Enter Sheet ID and API key first','err');return;}
   showToast('Testing…');
@@ -1381,16 +1376,21 @@ async function testConnection(){
     const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}?key=${CFG.apiKey}`);
     const j=await r.json();
     if(r.ok){
-      document.getElementById('gs-dot').style.background='var(--green)';
-      document.getElementById('gs-status-lbl').textContent=`Connected — "${j.properties?.title||'Sheet'}" ✓`;
+      const gsDot = document.getElementById('gs-dot');
+      const gsStatus = document.getElementById('gs-status-lbl');
+      if(gsDot) gsDot.style.background='var(--green)';
+      if(gsStatus) gsStatus.textContent=`Connected — "${j.properties?.title||'Sheet'}" ✓`;
       showToast('Connected!','ok');
     } else throw new Error(j.error?.message||`HTTP ${r.status}`);
   }catch(e){
-    document.getElementById('gs-dot').style.background='var(--red)';
-    document.getElementById('gs-status-lbl').textContent='Connection failed';
+    const gsDot = document.getElementById('gs-dot');
+    const gsStatus = document.getElementById('gs-status-lbl');
+    if(gsDot) gsDot.style.background='var(--red)';
+    if(gsStatus) gsStatus.textContent='Connection failed';
     showToast('Failed: '+e.message,'err');
   }
 }
+
 async function manualSync(){
   showToast('Syncing from Sheets…');
   try{
@@ -1399,6 +1399,7 @@ async function manualSync(){
     showToast('Sync complete!','ok');
   }catch(e){showToast('Sync failed: '+e.message,'err');}
 }
+
 function exportCSV(type){
   let rows=[],fn='';
   if(type==='results'){
@@ -1428,6 +1429,7 @@ function openModal(html){
   ov.onclick=e=>{if(e.target===ov)closeModal();};
   document.body.appendChild(ov);
 }
+
 function closeModal(){document.getElementById('modal-ov')?.remove();}
 
 function openAddVoterModal(){
@@ -1443,12 +1445,14 @@ function openAddVoterModal(){
     </div>`);
   fillVoterUnits();
 }
+
 function fillVoterUnits(){
   const deptId=document.getElementById('mv-dept')?.value;
   const dept=DATA.departments.find(d=>d.id===deptId);
   const sel=document.getElementById('mv-unit');
   if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
 }
+
 async function addVoter(){
   const name=document.getElementById('mv-name').value.trim();
   const pin=document.getElementById('mv-pin').value.trim();
@@ -1477,12 +1481,14 @@ function openAddNomModal(){
     </div>`);
   fillNomUnits();
 }
+
 function fillNomUnits(){
   const deptId=document.getElementById('mn-dept')?.value;
   const dept=DATA.departments.find(d=>d.id===deptId);
   const sel=document.getElementById('mn-unit');
   if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
 }
+
 async function addNom(){
   const name=document.getElementById('mn-name').value.trim();
   const catId=document.getElementById('mn-cat').value;
@@ -1511,6 +1517,7 @@ function openAddCatModal(){
       <button class="btn-confirm" onclick="addCat()">Add Category</button>
     </div>`);
 }
+
 async function addCat(){
   const name=document.getElementById('mc-name').value.trim();
   const scope=document.getElementById('mc-scope').value;
@@ -1532,6 +1539,7 @@ function openAddDeptModal(){
       <button class="btn-confirm" onclick="addDept()">Add Department</button>
     </div>`);
 }
+
 async function addDept(){
   const name=document.getElementById('md-name').value.trim();
   const color=document.getElementById('md-color').value;
@@ -1660,11 +1668,7 @@ function deleteRowsByValue(sheet, value, col) {
   for (let i=rows.length-1;i>=1;i--) {
     if (rows[i][col] == value) sheet.deleteRow(i+1);
   }
-}
-
-// After pasting: click Deploy → New deployment
-// Type: Web app · Execute as: Me · Who has access: Anyone
-// Copy the /exec URL and paste it as the Script URL in the portal Settings`;
+}`;
 
   openModal(`<div class="modal-title">📋 Google Apps Script — Copy &amp; Paste</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
@@ -1706,6 +1710,7 @@ function switchTab(scope,tab,btn){
 let toastTmr;
 function showToast(msg,type){
   const t=document.getElementById('toast');
+  if(!t) return;
   t.textContent=msg;t.className=`toast ${type||''} show`;
   clearTimeout(toastTmr);toastTmr=setTimeout(()=>t.classList.remove('show'),2800);
 }
