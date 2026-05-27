@@ -723,76 +723,69 @@ function showSyncBadge(type, msg) {
 // ═══════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', setInterval(async ()=>{
+window.addEventListener('DOMContentLoaded', async () => {
 
-  try{
-
-    await fetchFromSheets();
-
-    if(currentUser?.role === 'admin'){
-      initAdmin();
-    }
-
-    if(currentUser?.role === 'superadmin'){
-      initSA();
-    }
-
-  }catch(e){
-    console.error(e);
-  }
-
-}, 15000);async ()=>{
   setLD('Loading…');
-  await new Promise(r=>setTimeout(r,400));
+
+  await new Promise(r => setTimeout(r, 400));
 
   try {
 
-  await CFG.load();
+    await CFG.load();
 
-  await fetchFromSheets();
+    setLD('Connecting to Google Sheets…');
 
-}
-catch(e){
+    await fetchFromSheets();
 
-  console.error(e);
+    setLD('✓ Data loaded');
 
-  showScreen('screen-setup');
+    await new Promise(r => setTimeout(r, 500));
 
-  return;
-} {
+  }
+  catch(e) {
+
+    console.error(e);
+
     hideLoader();
+
     showScreen('screen-setup');
+
     return;
   }
 
-  setLD('Connecting to Google Sheets…');
-  try {
-    await fetchFromSheets();
-    setLD('✓ Data loaded');
-    await new Promise(r=>setTimeout(r,500));
-  } catch(e) {
-    setLD('⚠ Could not reach Sheets — check credentials');
-    await new Promise(r=>setTimeout(r,1500));
-  }
   hideLoader();
+
   applyOrgName();
+
   buildPinDots();
 
-  if(!restoreSession()){
+  if(!restoreSession()) {
     showScreen('screen-login');
   }
+
+  // AUTO SYNC
+  setInterval(async () => {
+
+    try {
+
+      await fetchFromSheets();
+
+      if(currentUser?.role === 'admin') {
+        initAdmin();
+      }
+
+      if(currentUser?.role === 'superadmin') {
+        initSA();
+      }
+
+    }
+    catch(e) {
+      console.error(e);
+    }
+
+  }, 15000);
+
 });
-
-function setLD(msg){ document.getElementById('ld-status').textContent=msg; }
-function hideLoader(){ document.getElementById('loader').style.display='none'; }
-function applyOrgName(){
-  const n=CFG.orgName;
-  ['login-org-name','voter-org-name','admin-org-name','sa-org-name'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.textContent=n;
-  });
-}
-
 // ═══════════════════════════════════════════════════════════
 // SETUP WIZARD
 // ═══════════════════════════════════════════════════════════
