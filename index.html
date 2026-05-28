@@ -115,14 +115,15 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .cat-num{width:24px;height:24px;border-radius:50%;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.2);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .cat-title{font-size:15px;font-weight:500;}
 .cat-count{font-size:11px;color:var(--text3);margin-left:auto;}
-.noms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:9px;}
-.nom-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .2s;position:relative;}
-.nom-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.noms-grid{display:flex;flex-direction:column;gap:5px;}
+.nom-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 14px;cursor:pointer;transition:all .2s;position:relative;display:flex;align-items:center;gap:12px;}
+.nom-card:hover{border-color:var(--border2);background:var(--bg3);}
 .nom-card.sel{border-color:var(--gold);background:var(--gold-dim);}
-.nom-card.sel::after{content:'✓';position:absolute;top:9px;right:11px;color:var(--gold);font-weight:700;font-size:15px;}
-.nom-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-bottom:9px;}
-.nom-name{font-size:13px;font-weight:500;}
-.nom-info{font-size:11px;color:var(--text2);margin-top:2px;}
+.nom-card.sel .nom-check{background:var(--gold);border-color:var(--gold);color:#0f0f10;}
+.nom-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;transition:all .2s;color:transparent;}
+.nom-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.nom-name{font-size:13px;font-weight:500;flex:1;}
+.nom-info{font-size:11px;color:var(--text2);margin-left:auto;white-space:nowrap;}
 .vote-footer{position:sticky;bottom:0;background:linear-gradient(to top,var(--bg) 55%,transparent);padding:16px 24px;}
 .vf-inner{max-width:920px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .vprog{font-size:13px;color:var(--text2);}
@@ -254,7 +255,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .nom-search-inp:focus{border-color:var(--gold);}
 .nom-search-inp::placeholder{color:var(--text3);}
 .nom-search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none;}
-.noms-collapsed .nom-card:nth-child(n+6){display:none;}
+.noms-collapsed .nom-card:nth-child(n+6){display:none !important;}
 .show-more-btn{width:100%;margin-top:8px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rs);padding:8px;font-size:12px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
 .show-more-btn:hover{border-color:var(--gold);color:var(--gold);}
 .nom-no-results{font-size:12px;color:var(--text3);padding:12px 0;text-align:center;}
@@ -753,9 +754,12 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     await new Promise(r=>setTimeout(r,2000));
   }
   hideLoader();
-  showScreen('screen-login');
   applyOrgName();
   buildPinDots();
+  // Try to restore previous session before showing login
+  if(!restoreSession()){
+    showScreen('screen-login');
+  }
 });
 
 function setLD(msg){ document.getElementById('ld-status').textContent=msg; }
@@ -784,6 +788,20 @@ async function setupStep0(){
     const r=await fetch(url);
     if(!r.ok){const j=await r.json();throw new Error(j.error?.message||`HTTP ${r.status}`);}
     CFG.sheetId=sid; CFG.apiKey=key; if(script) CFG.scriptUrl=script;
+    // Try loading config from sheet — auto-fills org name on new devices
+    try{
+      await fetchFromSheets();
+      // If org name already in sheet, skip steps 1+2 and go straight to login
+      if(CFG.orgName && DATA.admins.length){
+        err.textContent='✓ Connected and data loaded!';
+        await new Promise(r=>setTimeout(r,600));
+        hideLoader();
+        applyOrgName();
+        buildPinDots();
+        showScreen('screen-login');
+        return;
+      }
+    }catch(e2){ /* sheet may be empty first time — continue wizard */ }
     err.textContent='';
     advanceSetup(1);
   }catch(e){err.textContent='Connection failed: '+e.message;}
@@ -806,14 +824,14 @@ async function setupStep2(){
   const err=document.getElementById('sw-err-2');
   if(!org){err.textContent='Please enter an organisation name.';return;}
   CFG.orgName=org;
+  // Save org name to Config sheet so other devices pick it up
+  await writeToSheets('setConfig',{key:'orgName',value:org});
   err.textContent='Setting up…';
-  try{
-    await fetchFromSheets();
-  }catch(e){}
+  try{ await fetchFromSheets(); }catch(e){}
   hideLoader();
-  showScreen('screen-login');
   applyOrgName();
   buildPinDots();
+  if(!restoreSession()) showScreen('screen-login');
 }
 function advanceSetup(step){
   document.getElementById('sw-step-'+(step-1)).style.display='none';
@@ -850,21 +868,53 @@ function doLogin(){
   const pin=document.getElementById('pin-inp').value.trim();
   if(!pin){setLoginErr('Please enter your PIN');return;}
   const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
-  if(sa){currentUser={...sa};showScreen('screen-superadmin');initSA();return;}
+  if(sa){currentUser={...sa};saveSession(sa.pin);showScreen('screen-superadmin');initSA();return;}
   const admin=DATA.admins.find(a=>a.pin===pin&&a.role==='admin');
-  if(admin){currentUser={...admin};showScreen('screen-admin');initAdmin();return;}
+  if(admin){currentUser={...admin};saveSession(admin.pin);showScreen('screen-admin');initAdmin();return;}
   const voter=DATA.voters.find(v=>v.pin===pin);
   if(!voter){setLoginErr('Invalid PIN. Please try again.');return;}
   if(voter.hasVoted){setLoginErr('This PIN has already been used to vote.');return;}
   if(!CFG.votingOpen){setLoginErr('Voting is currently closed.');return;}
   currentUser={...voter,type:'voter'};
   selections={};
+  saveSession(voter.pin);
   showScreen('screen-voter');
   initVoter();
+}
+function saveSession(pin){
+  sessionStorage.setItem('session_pin', pin);
+  sessionStorage.setItem('session_ts', Date.now());
+}
+function clearSession(){
+  sessionStorage.removeItem('session_pin');
+  sessionStorage.removeItem('session_ts');
+}
+function restoreSession(){
+  const pin=sessionStorage.getItem('session_pin');
+  const ts=parseInt(sessionStorage.getItem('session_ts')||'0');
+  if(!pin) return false;
+  // 8 hour session timeout
+  const TIMEOUT_MS = 8 * 60 * 60 * 1000;
+  if(Date.now()-ts > TIMEOUT_MS){ clearSession(); return false; }
+  // Refresh timestamp
+  sessionStorage.setItem('session_ts', Date.now());
+  const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
+  if(sa){currentUser={...sa};showScreen('screen-superadmin');initSA();return true;}
+  const admin=DATA.admins.find(a=>a.pin===pin&&a.role==='admin');
+  if(admin){currentUser={...admin};showScreen('screen-admin');initAdmin();return true;}
+  const voter=DATA.voters.find(v=>v.pin===pin);
+  if(voter && !voter.hasVoted && CFG.votingOpen){
+    currentUser={...voter,type:'voter'};selections={};
+    showScreen('screen-voter');initVoter();return true;
+  }
+  // voter already voted or voting closed — just go to login
+  clearSession();
+  return false;
 }
 function setLoginErr(m){document.getElementById('login-err').textContent=m;}
 function doLogout(){
   currentUser=null;selections={};
+  clearSession();
   const p=document.getElementById('pin-inp');
   if(p){p.value='';for(let i=0;i<6;i++)document.getElementById('pd'+i)?.classList.remove('on');}
   setLoginErr('');
@@ -935,7 +985,8 @@ function initVoter(){
       card.className='nom-card';card.dataset.id=nom.id;card.dataset.cat=cat.id;card.dataset.name=nom.name.toLowerCase();
       const unitLabel=(() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===nom.unit);if(u)return u.name;} return nom.unit||''; })();
       const deptLabel=(DATA.departments.find(d=>d.id===nom.dept)||{name:nom.dept||''}).name;
-      card.innerHTML=`<div class="nom-avatar" style="background:${color}22;color:${color};">${initials}</div>
+      card.innerHTML=`<div class="nom-check">✓</div>
+        <div class="nom-avatar" style="background:${color}22;color:${color};">${initials}</div>
         <div class="nom-name">${nom.name}</div>
         <div class="nom-info">${deptLabel}${unitLabel?` · ${unitLabel}`:''}</div>`;
       card.onclick=()=>selectNom(cat.id,nom.id);
