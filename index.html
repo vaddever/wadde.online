@@ -549,9 +549,13 @@ const LS = {
   del: k => localStorage.removeItem(k)
 };
 
+// ── Baked-in defaults — work on any device without setup ──
+const DEFAULT_SHEET_ID = '1w46DEImiSb0xuqeMCk4DFn2QsDaZ8WB7FddzS5M16eE';
+const DEFAULT_API_KEY  = 'AIzaSyDc4WFYt4MiM3AXO6hN3G0H2hh4ONDS0Uc';
+
 const CFG = {
-  get sheetId()    { return LS.get('cfg_sheet_id')    || ''; },
-  get apiKey()     { return LS.get('cfg_api_key')     || ''; },
+  get sheetId()    { return LS.get('cfg_sheet_id')    || DEFAULT_SHEET_ID; },
+  get apiKey()     { return LS.get('cfg_api_key')     || DEFAULT_API_KEY;  },
   get scriptUrl()  { return LS.get('cfg_script_url')  || ''; },
   get votingOpen() { return LS.get('cfg_voting_open') !== false; },
   get orgName()    { return LS.get('cfg_org_name')    || ''; },
@@ -560,7 +564,8 @@ const CFG = {
   set scriptUrl(v) { LS.set('cfg_script_url', v);  },
   set votingOpen(v){ LS.set('cfg_voting_open', v); },
   set orgName(v)   { LS.set('cfg_org_name', v);    },
-  get isConfigured(){ return !!(this.sheetId && this.apiKey); }
+  // isConfigured is always true now — defaults are baked in
+  get isConfigured(){ return true; }
 };
 
 // ═══════════════════════════════════════════════════════════
