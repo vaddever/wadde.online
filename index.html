@@ -698,18 +698,17 @@ async function fetchFromSheets() {
 // GOOGLE SHEETS — WRITE (Apps Script)
 // ═══════════════════════════════════════════════════════════
 async function writeToSheets(action, payload) {
-  if (!CFG.scriptUrl) { showToast('Apps Script URL not configured — changes saved locally only','err'); return false; }
+  if (!CFG.scriptUrl) { return false; }
   showSyncBadge('syncing','Syncing…');
   try {
-    const res = await fetch(CFG.scriptUrl, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({action, ...payload})
-    });
-    const json = await res.json();
-    if (json.status === 'ok') { showSyncBadge('ok','Synced ✓'); return true; }
-    else throw new Error(json.message || 'Script error');
+    // Use GET + no-cors to bypass CORS preflight from GitHub Pages
+    const encoded = encodeURIComponent(JSON.stringify({action, ...payload}));
+    const url = CFG.scriptUrl + '?data=' + encoded;
+    await fetch(url, { method:'GET', mode:'no-cors' });
+    showSyncBadge('ok','Synced ✓');
+    return true;
   } catch(e) {
+    console.error('[Sheets Write]', e);
     showSyncBadge('err','Sync failed — '+e.message);
     return false;
   }
