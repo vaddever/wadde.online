@@ -660,34 +660,156 @@ async function fetchFromSheets() {
   const deptD= rows['Departments'] || [];
   const cfgD = rows['Config']      || [];
 
-  if (vD.length)   DATA.voters     = vD.map(r=>({pin:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',hasVoted:(r[4]||'').toUpperCase()==='TRUE'}));
-  if (nD.length)   DATA.nominees   = nD.map(r=>({id:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',category:r[4]||'',scope:r[5]||'global'}));
-  if (vtD.length)  DATA.votes      = vtD.map(r=>({pin:r[0]||'',nomineeId:r[1]||'',category:r[2]||'',timestamp:r[3]||''}));
-  if (adD.length)  DATA.admins     = adD.map(r=>({pin:r[0]||'',role:r[1]||'',name:r[2]||''}));
-  if (catD.length) DATA.categories = catD.map(r=>({id:r[0]||'',name:r[1]||'',scope:r[2]||'global'}));
+  // ── Helper: turn any string into a safe ID slug ──
+  const toId = str => (str||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
 
-  // Config tab — rows of [key, value] — optional, missing tab is fine
+  // ── VOTERS: PIN | Name | Dept | Unit | HasVoted ──
+  // Dept & Unit columns accept either an ID or a plain name — resolved after depts load
+  if (vD.length) DATA.voters = vD.map(r=>({
+    pin:     (r[0]||'').trim(),
+    name:    (r[1]||'').trim(),
+    dept:    (r[2]||'').trim(),   // may be ID or plain name — resolved below
+    unit:    (r[3]||'').trim(),   // may be ID or plain name — resolved below
+    hasVoted:(r[4]||'').toUpperCase()==='TRUE'
+  })).filter(v=>v.pin);
+
+  // ── ADMINS: PIN | Role | Name ──
+  if (adD.length) DATA.admins = adD.map(r=>({
+    pin:  (r[0]||'').trim(),
+    role: (r[1]||'').trim().toLowerCase() || 'admin',
+    name: (r[2]||'').trim()
+  })).filter(a=>a.pin);
+
+  // ── CATEGORIES: Flexible — accepts either:
+  //    ID | Name | Scope   (portal format)
+  //    Name | Scope        (human bulk entry — ID auto-generated from name)
+  //    Name                (just a name — scope defaults to global)
+  const VALID_SCOPES = ['dept','unit','global'];
+  if (catD.length) DATA.categories = catD.map(r=>{
+    const c0=(r[0]||'').trim(), c1=(r[1]||'').trim(), c2=(r[2]||'').trim();
+    // Detect if first column looks like a generated ID (contains underscore+digits) or a plain name
+    const looksLikeId = /^[a-z_]+\d{10,}$/.test(c0) || (c0.startsWith('cat_'));
+    if(looksLikeId){
+      // Portal format: ID | Name | Scope
+      return {id:c0, name:c1||c0, scope: VALID_SCOPES.includes(c2)?c2:'global'};
+    } else {
+      // Human format: Name | Scope  (no ID column)
+      const scope = VALID_SCOPES.includes(c1)?c1: VALID_SCOPES.includes(c2)?c2:'global';
+      return {id:'cat_'+toId(c0), name:c0, scope};
+    }
+  }).filter(c=>c.name);
+
+  // ── DEPARTMENTS: Flexible — accepts either:
+  //    DeptID | DeptName | Color | UnitName   (portal format)
+  //    DeptName | UnitName                    (simple human format)
+  //    DeptName | UnitName | Color            (human with color)
+  if (deptD.length) {
+    const dMap={};
+    let deptColorIdx=0;
+    deptD.forEach(r=>{
+      const c0=(r[0]||'').trim(), c1=(r[1]||'').trim(), c2=(r[2]||'').trim(), c3=(r[3]||'').trim();
+      if(!c0) return;
+      // Detect portal format: first col looks like generated ID
+      const looksLikeId = c0.startsWith('dept_') || /^[a-z_]+\d{8,}$/.test(c0);
+      let did, dname, dcolor, uname;
+      if(looksLikeId){
+        // Portal format: DeptID | DeptName | Color | UnitName
+        did=c0; dname=c1||c0; dcolor=c2||''; uname=c3;
+      } else {
+        // Human format: DeptName | UnitName | Color(optional)
+        dname=c0; did='dept_'+toId(c0);
+        uname=c1;
+        dcolor = c2.startsWith('#')?c2:'';
+      }
+      if(!dMap[did]){
+        dMap[did]={id:did,name:dname,color:dcolor||COLORS[deptColorIdx++%COLORS.length],units:[]};
+      }
+      // Update color if provided later
+      if(dcolor && !dMap[did].color.startsWith('#')) dMap[did].color=dcolor;
+      if(uname){
+        const uid = did+'_'+toId(uname);
+        if(!dMap[did].units.find(u=>u.id===uid)){
+          dMap[did].units.push({id:uid, name:uname});
+        }
+      }
+    });
+    DATA.departments = Object.values(dMap);
+  }
+
+  // ── NOMINEES: Flexible — accepts either:
+  //    ID | Name | DeptID | UnitID | CategoryID | Scope   (portal format)
+  //    Name | DeptName | UnitName | CategoryName | Scope  (human bulk entry)
+  if (nD.length) {
+    DATA.nominees = nD.map(r=>{
+      const c0=(r[0]||'').trim(),c1=(r[1]||'').trim(),c2=(r[2]||'').trim(),
+            c3=(r[3]||'').trim(),c4=(r[4]||'').trim(),c5=(r[5]||'').trim();
+      // Detect portal format: ID column looks like generated ID
+      const looksLikeId = c0.startsWith('nom_') || /^nom_\d+$/.test(c0) || /^[a-z_]+\d{10,}$/.test(c0);
+      if(looksLikeId){
+        return {id:c0, name:c1, dept:c2, unit:c3, category:c4, scope:c5||'global'};
+      } else {
+        // Human format: Name | DeptName | UnitName | CategoryName | Scope
+        // Resolve dept/unit/category names to IDs
+        const name=c0, deptRaw=c1, unitRaw=c2, catRaw=c3;
+        const scope=VALID_SCOPES.includes(c4)?c4:VALID_SCOPES.includes(c5)?c5:'global';
+        const deptId = 'dept_'+toId(deptRaw);
+        const unitId = deptId+'_'+toId(unitRaw);
+        const catId  = 'cat_'+toId(catRaw);
+        return {id:'nom_'+toId(name)+'_'+Date.now(), name, dept:deptId, unit:unitId, category:catId, scope};
+      }
+    }).filter(n=>n.name);
+  }
+
+  // ── VOTES: PIN | NomineeID | CategoryID | Timestamp ──
+  if (vtD.length) DATA.votes = vtD.map(r=>({
+    pin:(r[0]||'').trim(), nomineeId:(r[1]||'').trim(),
+    category:(r[2]||'').trim(), timestamp:(r[3]||'').trim()
+  })).filter(v=>v.pin);
+
+  // ── Config tab — rows of [key, value] ──
   if (cfgD.length) {
     cfgD.forEach(r=>{
       const key=(r[0]||'').trim().toLowerCase();
       const val=(r[1]||'').trim();
-      if (key==='votingopen')           CFG.votingOpen = (val.toUpperCase()!=='FALSE');
-      if (key==='orgname'   && val)     CFG.orgName   = val;
-      if (key==='scripturl' && val)     CFG.scriptUrl = val;
+      if (key==='votingopen')       CFG.votingOpen = (val.toUpperCase()!=='FALSE');
+      if (key==='orgname'   && val) CFG.orgName    = val;
+      if (key==='scripturl' && val) CFG.scriptUrl  = val;
     });
   }
 
-  // Departments — multiple rows per dept (DeptID, DeptName, DeptColor, UnitName)
-  if (deptD.length) {
-    const dMap={};
-    deptD.forEach(r=>{
-      const [did,dname,dcolor,uname]=r;
-      if (!did) return;
-      if (!dMap[did]) dMap[did]={id:did,name:dname||did,color:dcolor||COLORS[Object.keys(dMap).length%COLORS.length],units:[]};
-      if (uname) dMap[did].units.push({id:`${did}_${uname.replace(/\s+/g,'_')}`,name:uname});
-    });
-    DATA.departments = Object.values(dMap);
-  }
+  // ── RESOLVE plain names in Voters dept/unit to IDs ──
+  // After departments are parsed, match voter dept/unit fields to real IDs
+  DATA.voters.forEach(v=>{
+    // If dept doesn't match any known ID, try matching by name
+    if(!DATA.departments.find(d=>d.id===v.dept)){
+      const byName=DATA.departments.find(d=>d.name.toLowerCase()===v.dept.toLowerCase());
+      if(byName) v.dept=byName.id;
+    }
+    // Same for unit
+    let foundUnit=false;
+    for(const d of DATA.departments){
+      if(d.units.find(u=>u.id===v.unit)){ foundUnit=true; break; }
+    }
+    if(!foundUnit){
+      for(const d of DATA.departments){
+        const byName=d.units.find(u=>u.name.toLowerCase()===v.unit.toLowerCase());
+        if(byName){ v.unit=byName.id; break; }
+      }
+    }
+  });
+
+  // ── RESOLVE nominee dept/unit/category if entered as plain names ──
+  DATA.nominees.forEach(n=>{
+    if(!DATA.departments.find(d=>d.id===n.dept)){
+      const byName=DATA.departments.find(d=>d.name.toLowerCase()===n.dept.toLowerCase());
+      if(byName) n.dept=byName.id;
+    }
+    // Category: if catId not found, try matching by name
+    if(!DATA.categories.find(c=>c.id===n.category)){
+      const byName=DATA.categories.find(c=>c.name.toLowerCase()===n.category.toLowerCase());
+      if(byName) n.category=byName.id;
+    }
+  });
 
   console.log('[Sheets] Sync complete —',
     DATA.voters.length,'voters,',
