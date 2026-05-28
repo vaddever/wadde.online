@@ -248,6 +248,17 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .empty-state{text-align:center;padding:40px;color:var(--text3);font-size:13px;}
 .empty-state-icon{font-size:32px;margin-bottom:10px;}
 
+/* VOTER NOMINEE SEARCH + EXPAND */
+.nom-search-wrap{position:relative;margin-bottom:10px;}
+.nom-search-inp{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 12px 8px 34px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+.nom-search-inp:focus{border-color:var(--gold);}
+.nom-search-inp::placeholder{color:var(--text3);}
+.nom-search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none;}
+.noms-collapsed .nom-card:nth-child(n+6){display:none;}
+.show-more-btn{width:100%;margin-top:8px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rs);padding:8px;font-size:12px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.show-more-btn:hover{border-color:var(--gold);color:var(--gold);}
+.nom-no-results{font-size:12px;color:var(--text3);padding:12px 0;text-align:center;}
+
 /* TOAST */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:12px;padding:10px 18px;border-radius:var(--r);opacity:0;transition:all .3s;z-index:1000;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -565,70 +576,34 @@ const DATA = { voters:[], admins:[], nominees:[], votes:[], categories:[], depar
 const COLORS=['#c9a84c','#5b8ef0','#4caf7d','#e05555','#9b74db','#5bbef0','#e08a55','#e05599','#7db854'];
 let currentUser=null, selections={};
 
-function saveSession(){
-  if(currentUser){
-    sessionStorage.setItem('svp_session_user', JSON.stringify(currentUser));
-  }
-}
-
-function clearSession(){
-  sessionStorage.removeItem('svp_session_user');
-}
-
-function restoreSession(){
-  try{
-    const saved = sessionStorage.getItem('svp_session_user');
-    if(!saved) return false;
-
-    currentUser = JSON.parse(saved);
-
-    if(currentUser.role==='superadmin'){
-      showScreen('screen-superadmin');
-      initSA();
-      return true;
-    }
-
-    if(currentUser.role==='admin'){
-      showScreen('screen-admin');
-      initAdmin();
-      return true;
-    }
-
-    if(currentUser.type==='voter'){
-      const voter = DATA.voters.find(v=>v.pin===currentUser.pin);
-
-      if(voter && !voter.hasVoted){
-        currentUser = {...voter, type:'voter'};
-        showScreen('screen-voter');
-        initVoter();
-        return true;
-      }
-    }
-  }catch(e){
-    console.error('Session restore failed', e);
-  }
-
-  clearSession();
-  return false;
-}
-
 // ═══════════════════════════════════════════════════════════
 // GOOGLE SHEETS — READ (API key)
 // ═══════════════════════════════════════════════════════════
 async function fetchFromSheets() {
   if (!CFG.sheetId || !CFG.apiKey) return false;
-  const ranges = ['Voters!A2:E','Nominees!A2:F','Votes!A2:D','Admins!A2:C','Categories!A2:C','Departments!A2:D'];
+  const ranges = ['Voters!A2:E','Nominees!A2:F','Votes!A2:D','Admins!A2:C','Categories!A2:C','Departments!A2:D','Config!A1:B20'];
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values:batchGet?ranges=${ranges.map(encodeURIComponent).join('&ranges=')}&key=${CFG.apiKey}`;
   const res = await fetch(url);
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || `HTTP ${res.status}`);
-  const [vD,nD,vtD,adD,catD,deptD] = json.valueRanges;
+  const [vD,nD,vtD,adD,catD,deptD,cfgD] = json.valueRanges;
 
   if (vD.values)   DATA.voters     = vD.values.map(r=>({pin:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',hasVoted:r[4]==='TRUE'}));
   if (nD.values)   DATA.nominees   = nD.values.map(r=>({id:r[0]||'',name:r[1]||'',dept:r[2]||'',unit:r[3]||'',category:r[4]||'',scope:r[5]||'global'}));
   if (vtD.values)  DATA.votes      = vtD.values.map(r=>({pin:r[0]||'',nomineeId:r[1]||'',category:r[2]||'',timestamp:r[3]||''}));
   if (adD.values)  DATA.admins     = adD.values.map(r=>({pin:r[0]||'',role:r[1]||'',name:r[2]||''}));
   if (catD.values) DATA.categories = catD.values.map(r=>({id:r[0]||'',name:r[1]||'',scope:r[2]||'global'}));
+
+  // Read Config sheet — rows of [key, value]
+  if (cfgD && cfgD.values) {
+    cfgD.values.forEach(r=>{
+      const key=(r[0]||'').trim().toLowerCase();
+      const val=(r[1]||'').trim();
+      if (key==='votingopen')  CFG.votingOpen = (val.toUpperCase()!=='FALSE');
+      if (key==='orgname' && val) CFG.orgName = val;
+      if (key==='scripturl' && val) CFG.scriptUrl = val;
+    });
+  }
 
   // Parse departments (DeptID, DeptName, DeptColor, UnitName — multiple rows per dept)
   if (deptD.values) {
@@ -653,25 +628,12 @@ async function writeToSheets(action, payload) {
   try {
     const res = await fetch(CFG.scriptUrl, {
       method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({action, ...payload})
     });
-
-    const txt = await res.text();
-    let json = {};
-    try {
-      json = JSON.parse(txt);
-    } catch(e) {
-      console.error('Invalid Apps Script response:', txt);
-      throw new Error('Apps Script did not return valid JSON. Make sure the Web App is deployed with access set to "Anyone".');
-    }
-
-    if (json.status === 'ok') {
-      showSyncBadge('ok','Synced ✓');
-      return true;
-    } else {
-      throw new Error(json.message || 'Script error');
-    }
+    const json = await res.json();
+    if (json.status === 'ok') { showSyncBadge('ok','Synced ✓'); return true; }
+    else throw new Error(json.message || 'Script error');
   } catch(e) {
     showSyncBadge('err','Sync failed — '+e.message);
     return false;
@@ -716,12 +678,9 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     await new Promise(r=>setTimeout(r,1500));
   }
   hideLoader();
+  showScreen('screen-login');
   applyOrgName();
   buildPinDots();
-
-  if(!restoreSession()){
-    showScreen('screen-login');
-  }
 });
 
 function setLD(msg){ document.getElementById('ld-status').textContent=msg; }
@@ -816,21 +775,21 @@ function doLogin(){
   const pin=document.getElementById('pin-inp').value.trim();
   if(!pin){setLoginErr('Please enter your PIN');return;}
   const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
-  if(sa){currentUser={...sa};saveSession();showScreen('screen-superadmin');initSA();return;}
+  if(sa){currentUser={...sa};showScreen('screen-superadmin');initSA();return;}
   const admin=DATA.admins.find(a=>a.pin===pin&&a.role==='admin');
-  if(admin){currentUser={...admin};saveSession();showScreen('screen-admin');initAdmin();return;}
+  if(admin){currentUser={...admin};showScreen('screen-admin');initAdmin();return;}
   const voter=DATA.voters.find(v=>v.pin===pin);
   if(!voter){setLoginErr('Invalid PIN. Please try again.');return;}
   if(voter.hasVoted){setLoginErr('This PIN has already been used to vote.');return;}
   if(!CFG.votingOpen){setLoginErr('Voting is currently closed.');return;}
-  currentUser={...voter,type:'voter'};saveSession();
+  currentUser={...voter,type:'voter'};
   selections={};
   showScreen('screen-voter');
   initVoter();
 }
 function setLoginErr(m){document.getElementById('login-err').textContent=m;}
 function doLogout(){
-  clearSession();currentUser=null;selections={};
+  currentUser=null;selections={};
   const p=document.getElementById('pin-inp');
   if(p){p.value='';for(let i=0;i<6;i++)document.getElementById('pd'+i)?.classList.remove('on');}
   setLoginErr('');
@@ -875,20 +834,30 @@ function initVoter(){
     else noms=DATA.nominees.filter(n=>n.category===cat.id);
     if(!noms.length) return;
     idx++;
+    const hasMany = noms.length > 5;
     const sec=document.createElement('div');
     sec.className='cat-section';
     sec.innerHTML=`<div class="cat-hdr">
       <div class="cat-num">${idx}</div>
       <div class="cat-title">${cat.name}</div>
       <div class="cat-count">${noms.length} nominee${noms.length!==1?'s':''}</div>
-    </div><div class="noms-grid" id="ng-${cat.id}"></div>`;
+    </div>
+    <div class="nom-search-wrap">
+      <span class="nom-search-icon">🔍</span>
+      <input class="nom-search-inp" id="search-${cat.id}" placeholder="Search nominees…" oninput="filterNomSearch('${cat.id}')">
+    </div>
+    <div class="noms-grid ${hasMany?'noms-collapsed':''}" id="ng-${cat.id}"></div>
+    <div id="no-res-${cat.id}" class="nom-no-results" style="display:none;">No nominees match your search</div>
+    ${hasMany?`<button class="show-more-btn" id="showbtn-${cat.id}" onclick="toggleNomExpand('${cat.id}',${noms.length})">
+      <span id="showbtn-icon-${cat.id}">▼</span> Show all ${noms.length} nominees
+    </button>`:''}`;
     container.appendChild(sec);
     const grid=sec.querySelector(`#ng-${cat.id}`);
     noms.forEach((nom,ni)=>{
       const initials=nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
       const color=COLORS[ni%COLORS.length];
       const card=document.createElement('div');
-      card.className='nom-card';card.dataset.id=nom.id;card.dataset.cat=cat.id;
+      card.className='nom-card';card.dataset.id=nom.id;card.dataset.cat=cat.id;card.dataset.name=nom.name.toLowerCase();
       const unitLabel=(() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===nom.unit);if(u)return u.name;} return nom.unit||''; })();
       const deptLabel=(DATA.departments.find(d=>d.id===nom.dept)||{name:nom.dept||''}).name;
       card.innerHTML=`<div class="nom-avatar" style="background:${color}22;color:${color};">${initials}</div>
@@ -910,6 +879,55 @@ function selectNom(catId,nomId){
   document.querySelectorAll(`[data-cat="${catId}"]`).forEach(c=>c.classList.remove('sel'));
   document.querySelector(`[data-id="${nomId}"][data-cat="${catId}"]`)?.classList.add('sel');
   updateVProg();
+}
+
+function filterNomSearch(catId){
+  const q=(document.getElementById('search-'+catId)?.value||'').toLowerCase().trim();
+  const grid=document.getElementById('ng-'+catId);
+  const noRes=document.getElementById('no-res-'+catId);
+  const showBtn=document.getElementById('showbtn-'+catId);
+  if(!grid) return;
+  // When searching, always expand and show all
+  grid.classList.remove('noms-collapsed');
+  if(showBtn) showBtn.style.display='none';
+  let visible=0;
+  grid.querySelectorAll('.nom-card').forEach(card=>{
+    const match=!q || card.dataset.name.includes(q);
+    card.style.display=match?'':'none';
+    if(match) visible++;
+  });
+  if(noRes) noRes.style.display=visible===0?'block':'none';
+  // If search cleared, restore collapsed state if needed
+  if(!q){
+    const total=grid.querySelectorAll('.nom-card').length;
+    if(total>5){
+      grid.classList.add('noms-collapsed');
+      if(showBtn) showBtn.style.display='flex';
+    }
+    grid.querySelectorAll('.nom-card').forEach(c=>c.style.display='');
+    if(noRes) noRes.style.display='none';
+  }
+}
+
+function toggleNomExpand(catId, total){
+  const grid=document.getElementById('ng-'+catId);
+  const btn=document.getElementById('showbtn-'+catId);
+  const icon=document.getElementById('showbtn-icon-'+catId);
+  if(!grid) return;
+  const collapsed=grid.classList.contains('noms-collapsed');
+  if(collapsed){
+    grid.classList.remove('noms-collapsed');
+    if(icon) icon.textContent='▲';
+    if(btn) btn.querySelector('span+span') && (btn.lastChild.textContent=` Show less`);
+    if(btn){ btn.innerHTML=`<span id="showbtn-icon-${catId}">▲</span> Show less`; }
+  } else {
+    grid.classList.add('noms-collapsed');
+    if(btn){ btn.innerHTML=`<span id="showbtn-icon-${catId}">▼</span> Show all ${total} nominees`; }
+    // Clear search when collapsing
+    const inp=document.getElementById('search-'+catId);
+    if(inp) inp.value='';
+    grid.querySelectorAll('.nom-card').forEach(c=>c.style.display='');
+  }
 }
 
 function updateVProg(){
@@ -934,7 +952,7 @@ async function submitVotes(){
   newVotes.forEach(v=>DATA.votes.push(v));
   const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
   if(voter) voter.hasVoted=true;
-  clearSession();showScreen('screen-success');
+  showScreen('screen-success');
   // Write to Sheets
   await writeToSheets('submitVotes',{
     pin:currentUser.pin,
@@ -1114,13 +1132,19 @@ async function resetAllVotes(){
 }
 
 // ── NOMINEES ──
-function renderNominees(){
-  const catF=document.getElementById('nom-fcat')?.value||'';
-  const deptF=document.getElementById('nom-fdept')?.value||'';
+function populateNomFilters(){
   const catEl=document.getElementById('nom-fcat');
   const deptEl=document.getElementById('nom-fdept');
-  if(catEl) catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  if(deptEl) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  if(catEl){ catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');}
+  if(deptEl){ deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');}
+}
+function renderNominees(){
+  const catEl=document.getElementById('nom-fcat');
+  const deptEl=document.getElementById('nom-fdept');
+  // Only rebuild filter options if empty (first load) so selections are preserved
+  if(catEl && catEl.options.length<=1) populateNomFilters();
+  const catF=catEl?.value||'';
+  const deptF=deptEl?.value||'';
   const filtered=DATA.nominees.filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF));
   const grid=document.getElementById('nom-mgr-grid');
   if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏅</div>No nominees yet. Add nominees or sync from Sheets.</div>';return;}
@@ -1580,7 +1604,7 @@ function switchTab(scope,tab,btn){
   if(tab==='results'&&scope==='superadmin') renderResults('sa');
   if(tab==='departments') renderDeptDetail('admin-dept-detail');
   if(tab==='voters') renderVoterList();
-  if(tab==='nominees') renderNominees();
+  if(tab==='nominees'){ populateNomFilters(); renderNominees(); }
   if(tab==='categories') renderCatList();
   if(tab==='settings') initSA();
 }
