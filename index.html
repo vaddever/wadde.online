@@ -415,20 +415,35 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       <button class="tab-btn on" onclick="switchTab('admin','overview',this)">Overview</button>
       <button class="tab-btn" onclick="switchTab('admin','results',this)">Results</button>
       <button class="tab-btn" onclick="switchTab('admin','departments',this)">By Department</button>
+      <button class="tab-btn" onclick="switchTab('admin','units',this)">By Unit</button>
+      <button class="tab-btn" onclick="switchTab('admin','categories',this)">By Category</button>
     </div>
+
+    <!-- Overview -->
     <div class="tab-panel on" id="admin-overview">
       <div class="stats-row" id="admin-stats"></div>
       <div class="sect-title">Participation by department</div>
       <div id="admin-dept-bars"></div>
     </div>
+
+    <!-- Results -->
     <div class="tab-panel" id="admin-results">
       <div class="rf">
         <select class="fsel" id="a-fcat" onchange="renderResults('admin')"><option value="">All categories</option></select>
-        <select class="fsel" id="a-fdept" onchange="renderResults('admin')"><option value="">All departments</option></select>
+        <select class="fsel" id="a-fdept" onchange="adminDeptChanged()"><option value="">All departments</option></select>
+        <select class="fsel" id="a-funit" onchange="renderResults('admin')"><option value="">All units</option></select>
       </div>
-      <div class="tbl-wrap"><table class="rtbl"><thead><tr><th>Rank</th><th>Nominee</th><th>Department</th><th>Unit</th><th>Category</th><th>Votes</th></tr></thead><tbody id="admin-res-body"></tbody></table></div>
+      <div class="tbl-wrap"><table class="rtbl"><thead><tr><th>Rank</th><th>Nominee</th><th>Emp ID</th><th>Department</th><th>Unit</th><th>Category</th><th>Votes</th></tr></thead><tbody id="admin-res-body"></tbody></table></div>
     </div>
+
+    <!-- By Department -->
     <div class="tab-panel" id="admin-departments"><div id="admin-dept-detail"></div></div>
+
+    <!-- By Unit -->
+    <div class="tab-panel" id="admin-units"><div id="admin-unit-detail"></div></div>
+
+    <!-- By Category -->
+    <div class="tab-panel" id="admin-categories"><div id="admin-cat-detail"></div></div>
   </div>
 </div>
 
@@ -1242,11 +1257,18 @@ function initVoter(){
     if(!noms.length) return;
     idx++;
     const hasMany = noms.length > 3;
+    // Build scope label for header
+    const voterScopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
+    const voterLinked=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
+    const voterScopeTxt=voterScopeTag[cat.scope]||'';
     const sec=document.createElement('div');
     sec.className='cat-section';
     sec.innerHTML=`<div class="cat-hdr">
       <div class="cat-num">${idx}</div>
-      <div class="cat-title">${cat.name}</div>
+      <div style="flex:1;">
+        <div class="cat-title">${cat.name}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">(${voterScopeTxt}${voterLinked})</div>
+      </div>
       <div class="cat-count">${noms.length} nominee${noms.length!==1?'s':''}</div>
     </div>
     <div class="nom-search-wrap">
@@ -1267,10 +1289,13 @@ function initVoter(){
       card.className='nom-card';card.dataset.id=nom.id;card.dataset.cat=cat.id;card.dataset.name=nom.name.toLowerCase();
       const unitLabel=(() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===nom.unit);if(u)return u.name;} return nom.unit||''; })();
       const deptLabel=(DATA.departments.find(d=>d.id===nom.dept)||{name:nom.dept||''}).name;
+      const nomEmpId=getStaffId(nom.name);
       card.innerHTML=`<div class="nom-check">✓</div>
         <div class="nom-avatar" style="background:${color}22;color:${color};">${initials}</div>
-        <div class="nom-name">${nom.name}</div>
-        <div class="nom-info">${deptLabel}${unitLabel?` · ${unitLabel}`:''}</div>`;
+        <div style="flex:1;min-width:0;">
+          <div class="nom-name">${nom.name}${nomEmpId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${nomEmpId}</span>`:''}</div>
+          <div class="nom-info">${deptLabel}${unitLabel?` · ${unitLabel}`:''}</div>
+        </div>`;
       card.onclick=()=>selectNom(cat.id,nom.id);
       grid.appendChild(card);
     });
@@ -1493,25 +1518,44 @@ function fillResultFilters(prefix){
   if(catEl) catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   if(deptEl) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
 }
+function adminDeptChanged(){
+  const deptF=document.getElementById('a-fdept')?.value||'';
+  const unitEl=document.getElementById('a-funit');
+  if(unitEl){
+    let units=[];
+    if(deptF){ const d=DATA.departments.find(d=>d.id===deptF); units=d?d.units:[]; }
+    else DATA.departments.forEach(d=>units.push(...d.units));
+    unitEl.innerHTML=`<option value="">All units</option>`+units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  }
+  renderResults('admin');
+}
 
 function renderResults(who){
   const prefix=who==='admin'?'a':'sa';
   const catF=document.getElementById(`${prefix}-fcat`)?.value||'';
   const deptF=document.getElementById(`${prefix}-fdept`)?.value||'';
+  const unitF=document.getElementById(`${prefix}-funit`)?.value||'';
   const tbodyId=who==='admin'?'admin-res-body':'sa-res-body';
-  const ranked=getRanked(catF,deptF);
+  const ranked=DATA.nominees
+    .filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF)&&(!unitF||n.unit===unitF))
+    .map(n=>({...n,votes:getVotes(n.id,n.name)}))
+    .sort((a,b)=>b.votes-a.votes);
   const maxV=ranked[0]?.votes||1;
   const tbody=document.getElementById(tbodyId);
-  if(!ranked.length){tbody.innerHTML=`<tr><td colspan="6" class="empty-state">No results yet — votes will appear here once cast.</td></tr>`;return;}
+  const colSpan=who==='admin'?'7':'6';
+  if(!ranked.length){tbody.innerHTML=`<tr><td colspan="${colSpan}" class="empty-state">No results yet — votes will appear here once cast.</td></tr>`;return;}
   tbody.innerHTML=ranked.map((nom,i)=>{
     const rC=i===0?'r1':i===1?'r2':i===2?'r3':'';
     const rnk=i<3?`<span class="rnk ${rC}">${i+1}</span>`:`<span style="color:var(--text3);font-size:12px;">${i+1}</span>`;
     const bw=Math.round(nom.votes/maxV*90);
     const catName=getCat(nom.category).name;
     const empId=getStaffId(nom.name);
+    const empBadge=empId?`<span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;">${empId}</span>`:'—';
+    const adminCols=who==='admin'?`<td style="color:var(--gold);font-size:12px;font-family:monospace;">${empBadge}</td>`:'';
     return `<tr>
       <td>${rnk}</td>
-      <td style="font-weight:500;">${nom.name}${empId?`<span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;margin-left:6px;">${empId}</span>`:''}</td>
+      <td style="font-weight:500;">${nom.name}</td>
+      ${adminCols}
       <td style="color:var(--text2);">${getDeptName(nom.dept)}</td>
       <td style="color:var(--text3);">${getUnitName(nom.unit)}</td>
       <td><span style="font-size:11px;padding:2px 7px;border-radius:20px;background:var(--bg3);color:var(--text2);">${catName}</span></td>
@@ -1520,17 +1564,147 @@ function renderResults(who){
   }).join('');
 }
 
+function nomResultCard(nom, color){
+  const votes=nom.votes; const empId=getStaffId(nom.name);
+  const catName=getCat(nom.category).name;
+  return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);">
+    <div style="width:28px;height:28px;border-radius:50%;background:${color}22;color:${color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:500;">${nom.name}${empId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${empId}</span>`:''}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:1px;">${catName}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div style="width:${Math.round(votes/(votes||1)*60)}px;max-width:60px;height:4px;border-radius:2px;background:${color};min-width:4px;"></div>
+      <span style="font-size:12px;color:var(--text2);min-width:20px;text-align:right;">${votes}</span>
+    </div>
+  </div>`;
+}
+
 function renderDeptDetail(containerId){
   const el=document.getElementById(containerId);
   if(!el) return;
   if(!DATA.departments.length){el.innerHTML='<div class="empty-state">No departments configured.</div>';return;}
   el.innerHTML=DATA.departments.map((dept,di)=>{
-    const noms=DATA.nominees.filter(n=>n.dept===dept.id).map(n=>({...n,votes:getVotes(n.id)})).sort((a,b)=>b.votes-a.votes);
-    const maxV=noms[0]?.votes||1;
     const c=dept.color||COLORS[di%COLORS.length];
-    if(!noms.length) return `<div style="margin-bottom:20px;"><div style="font-size:13px;font-weight:500;color:${c};margin-bottom:8px;">${dept.name}</div><div style="font-size:12px;color:var(--text3);">No nominees</div></div>`;
-    const rows=noms.map(n=>{const pct=Math.round(n.votes/maxV*100);return `<div class="db-row"><div class="db-name" style="font-size:12px;">${n.name}</div><div class="db-track" style="height:22px;"><div class="db-fill" style="width:${Math.max(pct,5)}%;background:${c}33;color:${c};font-size:11px;">${n.votes}v</div></div></div>`;}).join('');
-    return `<div style="margin-bottom:22px;"><div style="font-size:13px;font-weight:500;color:${c};margin-bottom:8px;">${dept.name}</div>${rows}</div>`;
+    const noms=DATA.nominees.filter(n=>n.dept===dept.id)
+      .map(n=>({...n,votes:getVotes(n.id,n.name)})).sort((a,b)=>b.votes-a.votes);
+    const totalVoters=DATA.voters.filter(v=>v.dept===dept.id).length;
+    const voted=DATA.voters.filter(v=>v.dept===dept.id&&v.hasVoted).length;
+    const pct=totalVoters?Math.round(voted/totalVoters*100):0;
+    const maxV=noms[0]?.votes||1;
+    // Recalculate bar widths relative to max in this dept
+    const nomRows=noms.map(n=>{
+      const pctBar=Math.round(n.votes/maxV*100);
+      const empId=getStaffId(n.name); const catName=getCat(n.category).name;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);">
+        <div style="width:28px;height:28px;border-radius:50%;background:${c}22;color:${c};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${n.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;">${n.name}${empId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${empId}</span>`:''}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px;">${catName}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:${pctBar}px;max-width:80px;height:4px;border-radius:2px;background:${c};min-width:4px;"></div>
+          <span style="font-size:12px;font-weight:500;color:var(--text2);min-width:20px;text-align:right;">${n.votes}</span>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden;">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0;"></div>
+        <span style="font-size:14px;font-weight:500;flex:1;">${dept.name}</span>
+        <span style="font-size:11px;color:var(--text2);">${voted}/${totalVoters} voted (${pct}%)</span>
+      </div>
+      ${noms.length?nomRows:`<div style="padding:16px;font-size:12px;color:var(--text3);">No nominees in this department</div>`}
+    </div>`;
+  }).join('');
+}
+
+function renderUnitDetail(containerId){
+  const el=document.getElementById(containerId);
+  if(!el) return;
+  if(!DATA.departments.length){el.innerHTML='<div class="empty-state">No departments configured.</div>';return;}
+  el.innerHTML=DATA.departments.map((dept,di)=>{
+    const dc=dept.color||COLORS[di%COLORS.length];
+    if(!dept.units.length) return '';
+    const unitBlocks=dept.units.map(unit=>{
+      const noms=DATA.nominees.filter(n=>n.unit===unit.id)
+        .map(n=>({...n,votes:getVotes(n.id,n.name)})).sort((a,b)=>b.votes-a.votes);
+      const totalVoters=DATA.voters.filter(v=>v.unit===unit.id).length;
+      const voted=DATA.voters.filter(v=>v.unit===unit.id&&v.hasVoted).length;
+      const pct=totalVoters?Math.round(voted/totalVoters*100):0;
+      const maxV=noms[0]?.votes||1;
+      const nomRows=noms.map(n=>{
+        const pctBar=Math.round(n.votes/maxV*100);
+        const empId=getStaffId(n.name); const catName=getCat(n.category).name;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);">
+          <div style="width:26px;height:26px;border-radius:50%;background:${dc}22;color:${dc};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${n.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:500;">${n.name}${empId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${empId}</span>`:''}</div>
+            <div style="font-size:11px;color:var(--text3);">${catName}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:${pctBar}px;max-width:60px;height:3px;border-radius:2px;background:${dc};min-width:3px;"></div>
+            <span style="font-size:11px;color:var(--text2);">${n.votes}</span>
+          </div>
+        </div>`;
+      }).join('');
+      return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px;overflow:hidden;">
+        <div style="padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="font-size:13px;font-weight:500;flex:1;">📍 ${unit.name}</span>
+          <span style="font-size:11px;color:var(--text2);">${voted}/${totalVoters} voted (${pct}%)</span>
+        </div>
+        ${noms.length?nomRows:`<div style="padding:12px;font-size:11px;color:var(--text3);">No nominees in this unit</div>`}
+      </div>`;
+    }).join('');
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden;">
+      <div style="padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+        <div style="width:9px;height:9px;border-radius:50%;background:${dc};"></div>
+        <span style="font-size:14px;font-weight:500;color:${dc};">${dept.name}</span>
+      </div>
+      <div style="padding:10px;">${unitBlocks}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCategoryDetail(containerId){
+  const el=document.getElementById(containerId);
+  if(!el) return;
+  if(!DATA.categories.length){el.innerHTML='<div class="empty-state">No categories configured.</div>';return;}
+  const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
+  el.innerHTML=DATA.categories.map((cat,ci)=>{
+    const c=COLORS[ci%COLORS.length];
+    const noms=DATA.nominees.filter(n=>n.category===cat.id)
+      .map(n=>({...n,votes:getVotes(n.id,n.name)})).sort((a,b)=>b.votes-a.votes);
+    const totalVotes=noms.reduce((s,n)=>s+n.votes,0);
+    const maxV=noms[0]?.votes||1;
+    const scopeTxt=scopeTag[cat.scope]||cat.scope;
+    const linkedTxt=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
+    const nomRows=noms.map((n,rank)=>{
+      const pctBar=Math.round(n.votes/maxV*100);
+      const empId=getStaffId(n.name);
+      const isWinner=rank===0&&n.votes>0;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);${isWinner?'background:var(--gold-dim);':''}">
+        <span style="font-size:11px;font-weight:700;color:${isWinner?'var(--gold2)':'var(--text3)'};min-width:20px;text-align:center;">${isWinner?'🏆':rank+1}</span>
+        <div style="width:30px;height:30px;border-radius:50%;background:${c}22;color:${c};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${n.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;">${n.name}${empId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${empId}</span>`:''}</div>
+          <div style="font-size:11px;color:var(--text3);">${getDeptName(n.dept)} · ${getUnitName(n.unit)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:${pctBar}px;max-width:80px;height:5px;border-radius:3px;background:${c};min-width:4px;"></div>
+          <span style="font-size:13px;font-weight:600;color:var(--text2);min-width:24px;text-align:right;">${n.votes}</span>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden;">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:flex-start;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:500;">${cat.name}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px;">(${scopeTxt}${linkedTxt}) · ${noms.length} nominees · ${totalVotes} votes cast</div>
+        </div>
+      </div>
+      ${noms.length?nomRows:`<div style="padding:16px;font-size:12px;color:var(--text3);">No nominees in this category</div>`}
+    </div>`;
   }).join('');
 }
 
@@ -2607,6 +2781,7 @@ function buildResponse(text) {
 // TAB SWITCHING
 // ═══════════════════════════════════════════════════════════
 function switchTab(scope,tab,btn){
+  scope=scope||'admin';
   document.querySelectorAll(`#screen-${scope} .tab-btn`).forEach(b=>b.classList.remove('on'));
   if(btn)btn.classList.add('on');
   document.querySelectorAll(`#screen-${scope} .tab-panel`).forEach(p=>p.classList.remove('on'));
@@ -2616,6 +2791,8 @@ function switchTab(scope,tab,btn){
   if(tab==='results'&&scope==='admin') renderResults('admin');
   if(tab==='results'&&scope==='superadmin') renderResults('sa');
   if(tab==='departments') renderDeptDetail('admin-dept-detail');
+  if(tab==='units') renderUnitDetail('admin-unit-detail');
+  if(tab==='categories' && scope==='admin') renderCategoryDetail('admin-cat-detail');
   if(tab==='voters') renderVoterList();
   if(tab==='nominees'){ populateNomFilters(); renderNominees(); }
   if(tab==='staff') renderStaff();
