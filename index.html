@@ -607,7 +607,7 @@ const CFG = {
 // DATA — loaded entirely from Google Sheets
 // ═══════════════════════════════════════════════════════════
 const DATA = { voters:[], admins:[], nominees:[], votes:[], categories:[], departments:[], staff:[] };
-// staff = [{id, name, dept, unit}]
+// staff = [{id (=empId), empId, name, dept, unit}]  — empId is the unique Employee ID e.g. EMP001
 
 // Save DATA to localStorage so it survives refresh when Sheets sync hasn't happened
 function cacheData() {
@@ -887,21 +887,22 @@ async function fetchFromSheets() {
     }
   });
 
-  // ── STAFF: ID | Name | Dept | Unit ──
-  // Flexible: accepts ID|Name|Dept|Unit or Name|DeptName|UnitName
+  // ── STAFF: EmpID | Name | Dept | Unit ──
+  // Column A is always the Employee ID (e.g. EMP001) — the unique key.
+  // Dept & Unit accept either an ID slug or a plain name — resolved below.
   const stfD = rows['Staff'] || [];
   if (stfD.length) {
     DATA.staff = stfD.map(r=>{
-      const c0=(r[0]||'').trim(), c1=(r[1]||'').trim(), c2=(r[2]||'').trim(), c3=(r[3]||'').trim();
-      // Portal format: stf_xxx | Name | DeptID | UnitID
-      if(c0.startsWith('stf_')){
-        return {id:c0, name:c1, dept:c2, unit:c3};
-      }
-      // Human format: Name | DeptName | UnitName (no ID)
-      const did = 'dept_'+toId(c1||'');
-      const uid = did+'_'+toId(c2||'');
-      return {id:'stf_'+toId(c0), name:c0, dept:did, unit:uid};
-    }).filter(s=>s.name);
+      const empId=(r[0]||'').trim();
+      const name =(r[1]||'').trim();
+      const dept =(r[2]||'').trim();
+      const unit =(r[3]||'').trim();
+      if(!empId || !name) return null;
+      // Normalise dept/unit to ID slugs if plain names were entered
+      const deptId = dept.startsWith('dept_') ? dept : 'dept_'+toId(dept);
+      const unitId = unit.includes('_')       ? unit : deptId+'_'+toId(unit);
+      return {id:empId, empId, name, dept:deptId, unit:unitId};
+    }).filter(Boolean);
     // Resolve dept/unit names to IDs
     DATA.staff.forEach(s=>{
       if(!DATA.departments.find(d=>d.id===s.dept)){
@@ -1629,8 +1630,11 @@ function renderStaff(){
   el.innerHTML=`<div class="staff-list-wrap">`+filtered.map(s=>`
     <div class="staff-row">
       <div class="staff-avatar" style="background:${stringToColor(s.name)}22;color:${stringToColor(s.name)};">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
-      <span class="staff-name">${s.name}</span>
-      <span class="staff-dept">${getDeptName(s.dept)} · ${getUnitName(s.unit)}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="staff-name">${s.name}</div>
+        <div class="staff-dept">${getDeptName(s.dept)} · ${getUnitName(s.unit)}</div>
+      </div>
+      <span style="font-size:11px;color:var(--gold);font-family:monospace;font-weight:600;padding:2px 8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:5px;flex-shrink:0;" title="Employee ID">${s.empId||s.id}</span>
       <button class="btn-sm green" onclick="nomStaffFor('${s.id}')" style="margin-left:auto;">+ Nominate</button>
       <button class="btn-sm red" onclick="removeStaff('${s.id}')">✕</button>
     </div>`).join('')+`</div>`;
@@ -1660,7 +1664,15 @@ function nomStaffFor(staffId){
 function openAddStaffModal(){
   const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
   openModal(`<div class="modal-title">Add Staff Member</div>
-    <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="ms-name" placeholder="Staff full name"></div>
+    <div class="modal-field">
+      <label class="modal-lbl">Employee ID</label>
+      <input class="modal-inp" id="ms-empid" placeholder="e.g. EMP001" oninput="checkStaffDup()" style="text-transform:uppercase;letter-spacing:0.05em;">
+      <div id="ms-dup-warn" style="font-size:11px;margin-top:4px;display:none;"></div>
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Full Name</label>
+      <input class="modal-inp" id="ms-name" placeholder="Staff full name">
+    </div>
     <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="ms-dept" onchange="fillStaffUnits()">${dOpts}</select></div>
     <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="ms-unit"></select></div>
     <div class="modal-actions">
@@ -1669,6 +1681,20 @@ function openAddStaffModal(){
     </div>`);
   fillStaffUnits();
 }
+function checkStaffDup(){
+  const empId=(document.getElementById('ms-empid')?.value||'').trim().toUpperCase();
+  const warn=document.getElementById('ms-dup-warn');
+  if(!warn) return;
+  if(!empId){ warn.style.display='none'; return; }
+  const exists=DATA.staff.find(s=>s.id===empId||s.empId===empId);
+  if(exists){
+    warn.style.color='var(--red)';
+    warn.textContent=`⛔ Employee ID "${empId}" is already used by ${exists.name}`;
+    warn.style.display='block';
+  } else {
+    warn.style.display='none';
+  }
+}
 function fillStaffUnits(){
   const deptId=document.getElementById('ms-dept')?.value;
   const dept=DATA.departments.find(d=>d.id===deptId);
@@ -1676,17 +1702,21 @@ function fillStaffUnits(){
   if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
 }
 async function addStaff(){
-  const name=document.getElementById('ms-name').value.trim();
-  const dept=document.getElementById('ms-dept').value;
-  const unit=document.getElementById('ms-unit').value;
-  if(!name){showToast('Name required','err');return;}
-  if(DATA.staff.find(s=>s.name.toLowerCase()===name.toLowerCase())){showToast(`${name} already in staff list`,'err');return;}
-  const s={id:'stf_'+toId(name),name,dept,unit};
+  const empId=document.getElementById('ms-empid').value.trim().toUpperCase();
+  const name =document.getElementById('ms-name').value.trim();
+  const dept =document.getElementById('ms-dept').value;
+  const unit =document.getElementById('ms-unit').value;
+  if(!empId){ showToast('Employee ID required','err'); return; }
+  if(!name)  { showToast('Name required','err'); return; }
+  if(DATA.staff.find(s=>s.empId===empId||s.id===empId)){
+    showToast(`Employee ID "${empId}" already exists`,'err'); return;
+  }
+  const s={id:empId, empId, name, dept, unit};
   DATA.staff.push(s);
   cacheData();
-  closeModal();renderStaff();
+  closeModal(); renderStaff();
   await writeToSheets('addStaff',{staff:s});
-  showToast(`${name} added to staff`,'ok');
+  showToast(`${name} (${empId}) added to staff`,'ok');
 }
 async function removeStaff(id){
   const s=DATA.staff.find(x=>x.id===id);
@@ -1905,7 +1935,13 @@ function openAddNomModal(preCatId){
   const cOpts = DATA.categories.map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.name}</option>`).join('');
 
   if(hasStaff){
-    const staffOpts = DATA.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    // Sort staff alphabetically by name for easier picking
+  const sortedStaff = [...DATA.staff].sort((a,b)=>a.name.localeCompare(b.name));
+  const staffOpts = sortedStaff.map(s=>{
+    const deptName = getDeptName(s.dept);
+    const unitName = getUnitName(s.unit);
+    return `<option value="${s.id}">[${s.empId||s.id}] ${s.name} — ${deptName} · ${unitName}</option>`;
+  }).join('');
     openModal(`<div class="modal-title">Add Nominee</div>
       <div class="modal-field">
         <label class="modal-lbl">Staff Member</label>
@@ -1979,8 +2015,8 @@ function onNomStaffChange(){
   const dp=document.getElementById('mn-card-dept');
   const un=document.getElementById('mn-card-unit');
   if(nm) nm.textContent=s.name;
-  if(dp) dp.textContent='🏢 '+getDeptName(s.dept);
-  if(un) un.textContent='📍 '+getUnitName(s.unit);
+  if(dp) dp.textContent='🏢 '+getDeptName(s.dept)+' · 📍 '+getUnitName(s.unit);
+  if(un) un.textContent='🪪 Employee ID: '+(s.empId||s.id);
   card.style.display='block';
   checkNomDuplicate();
 }
