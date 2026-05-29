@@ -695,7 +695,7 @@ async function fetchFromSheets() {
     'Nominees!A2:F',
     'Votes!A2:D',
     'Admins!A2:C',
-    'Categories!A2:C',
+    'Categories!A2:E',
     'Departments!A2:D',
     'Config!A1:B20',
     'Staff!A2:D'
@@ -760,19 +760,36 @@ async function fetchFromSheets() {
   //    ID | Name | Scope   (portal format)
   //    Name | Scope        (human bulk entry — ID auto-generated from name)
   //    Name                (just a name — scope defaults to global)
-  const VALID_SCOPES = ['dept','unit','global'];
+  const VALID_SCOPES = ['dept','unit','global','deptcat'];
   if (catD.length) DATA.categories = catD.map(r=>{
     const c0=(r[0]||'').trim(), c1=(r[1]||'').trim(), c2=(r[2]||'').trim();
-    // Detect if first column looks like a generated ID (contains underscore+digits) or a plain name
-    const looksLikeId = /^[a-z_]+\d{10,}$/.test(c0) || (c0.startsWith('cat_'));
+    const c3=(r[3]||'').trim(), c4=(r[4]||'').trim();
+    // Detect if first column looks like a generated ID
+    const looksLikeId = /^[a-z_]+\d{10,}$/.test(c0) || c0.startsWith('cat_');
+    let id, name, scope, linkedDept='', linkedUnit='';
     if(looksLikeId){
-      // Portal format: ID | Name | Scope
-      return {id:c0, name:c1||c0, scope: VALID_SCOPES.includes(c2)?c2:'global'};
+      // Portal format: ID | Name | Scope | LinkedDept | LinkedUnit
+      id=c0; name=c1||c0;
+      scope=VALID_SCOPES.includes(c2)?c2:'global';
+      linkedDept=c3; linkedUnit=c4;
     } else {
-      // Human format: Name | Scope  (no ID column)
-      const scope = VALID_SCOPES.includes(c1)?c1: VALID_SCOPES.includes(c2)?c2:'global';
-      return {id:'cat_'+toId(c0), name:c0, scope};
+      // Human format: Name | Scope | LinkedDept | LinkedUnit
+      name=c0; id='cat_'+toId(c0);
+      scope=VALID_SCOPES.includes(c1)?c1:'global';
+      linkedDept=c2; linkedUnit=c3;
     }
+    // Resolve linkedDept/Unit names to IDs
+    if(linkedDept && !linkedDept.startsWith('dept_')){
+      const d=DATA.departments.find(d=>d.name.toLowerCase()===linkedDept.toLowerCase());
+      if(d) linkedDept=d.id;
+    }
+    if(linkedUnit){
+      for(const d of DATA.departments){
+        const u=d.units.find(u=>u.name.toLowerCase()===linkedUnit.toLowerCase());
+        if(u){ linkedUnit=u.id; break; }
+      }
+    }
+    return {id, name, scope, linkedDept, linkedUnit};
   }).filter(c=>c.name);
 
   // ── DEPARTMENTS: Flexible — accepts either:
@@ -1203,9 +1220,17 @@ function initVoter(){
 
   DATA.categories.forEach(cat=>{
     let noms=[];
-    if(cat.scope==='dept')   noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
-    else if(cat.scope==='unit') noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
-    else noms=DATA.nominees.filter(n=>n.category===cat.id);
+    if(cat.scope==='dept'){
+      noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
+    } else if(cat.scope==='unit'){
+      noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
+    } else if(cat.scope==='deptcat'){
+      if(cat.linkedDept && cat.linkedDept!==v.dept) return;
+      noms=DATA.nominees.filter(n=>n.category===cat.id);
+      if(cat.linkedUnit) noms=noms.filter(n=>n.unit===cat.linkedUnit);
+    } else {
+      noms=DATA.nominees.filter(n=>n.category===cat.id);
+    }
     if(!noms.length) return;
     idx++;
     const hasMany = noms.length > 3;
@@ -1310,14 +1335,30 @@ function updateVProg(){
   let total=0;
   DATA.categories.forEach(cat=>{
     let noms=[];
-    if(cat.scope==='dept')   noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
-    else if(cat.scope==='unit') noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
-    else noms=DATA.nominees.filter(n=>n.category===cat.id);
+    if(cat.scope==='dept'){
+      noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
+    } else if(cat.scope==='unit'){
+      noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
+    } else if(cat.scope==='deptcat'){
+      if(cat.linkedDept && cat.linkedDept!==v.dept){ noms=[]; }
+      else {
+        noms=DATA.nominees.filter(n=>n.category===cat.id);
+        if(cat.linkedUnit) noms=noms.filter(n=>n.unit===cat.linkedUnit);
+      }
+    } else {
+      noms=DATA.nominees.filter(n=>n.category===cat.id);
+    }
     if(noms.length) total++;
   });
   const sel=Object.keys(selections).length;
+  const btn=document.getElementById('btn-submit');
+  if(total===0){
+    document.getElementById('vprog').innerHTML='<span style="color:var(--text3);">No nominees available for your department</span>';
+    btn.disabled=true;
+    return;
+  }
   document.getElementById('vprog').innerHTML=`<b>${sel}/${total}</b> categories voted`;
-  document.getElementById('btn-submit').disabled=sel<total||!CFG.votingOpen;
+  btn.disabled=sel<total||!CFG.votingOpen;
 }
 
 async function submitVotes(){
@@ -1351,9 +1392,43 @@ const getVotes = (nomId, nomName) => {
     return false;
   }).length;
 };
-const getDeptName = id => (DATA.departments.find(d=>d.id===id)||{name:id||''}).name;
-const getUnitName = id => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===id);if(u)return u.name;} return id||''; };
-const getCat = id => DATA.categories.find(c=>c.id===id)||{name:id||''};
+const getDeptName = id => {
+  if(!id) return '';
+  const d = DATA.departments.find(d=>d.id===id);
+  if(d) return d.name;
+  // Try matching by name (if plain name was stored)
+  const byName = DATA.departments.find(d=>d.name.toLowerCase()===id.toLowerCase());
+  if(byName) return byName.name;
+  // Humanise slug: dept_cs_billing → Cs Billing
+  return id.replace(/^dept_/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+};
+const getUnitName = id => {
+  if(!id) return '';
+  for(const d of DATA.departments){ const u=d.units.find(u=>u.id===id); if(u) return u.name; }
+  const byName = DATA.departments.flatMap(d=>d.units).find(u=>u.name.toLowerCase()===id.toLowerCase());
+  if(byName) return byName.name;
+  // Humanise slug: dept_cs_billing_cs_billing → strip leading deptid
+  const parts = id.split('_');
+  // If last half repeats first half (dept_x_x pattern), de-dup
+  const half = Math.ceil(parts.length/2);
+  const first = parts.slice(0,half).join('_'), second = parts.slice(half).join('_');
+  const clean = first===second ? second : id.replace(/^dept_[^_]+_[^_]+_/,'');
+  return clean.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+};
+// Get staff member linked to a nominee (by name match)
+const getStaff = name => DATA.staff.find(s=>s.name.toLowerCase()===(name||'').toLowerCase());
+const getStaffId = name => { const s=getStaff(name); return s?s.empId||s.id:''; };
+
+const getCat = id => {
+  if(!id) return {id:'',name:'',scope:'global'};
+  const c = DATA.categories.find(c=>c.id===id);
+  if(c) return c;
+  const byName = DATA.categories.find(c=>c.name.toLowerCase()===id.toLowerCase());
+  if(byName) return byName;
+  // Humanise slug: cat_leadership_award → Leadership Award
+  const name = id.replace(/^cat_/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  return {id, name, scope:'global'};
+};
 
 function getRanked(catF,deptF){
   return DATA.nominees
@@ -1421,9 +1496,10 @@ function renderResults(who){
     const rnk=i<3?`<span class="rnk ${rC}">${i+1}</span>`:`<span style="color:var(--text3);font-size:12px;">${i+1}</span>`;
     const bw=Math.round(nom.votes/maxV*90);
     const catName=getCat(nom.category).name;
+    const empId=getStaffId(nom.name);
     return `<tr>
       <td>${rnk}</td>
-      <td style="font-weight:500;">${nom.name}</td>
+      <td style="font-weight:500;">${nom.name}${empId?`<span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;margin-left:6px;">${empId}</span>`:''}</td>
       <td style="color:var(--text2);">${getDeptName(nom.dept)}</td>
       <td style="color:var(--text3);">${getUnitName(nom.unit)}</td>
       <td><span style="font-size:11px;padding:2px 7px;border-radius:20px;background:var(--bg3);color:var(--text2);">${catName}</span></td>
@@ -1578,10 +1654,11 @@ function renderNominees(){
     const noms=grouped[catId];
     const rows=noms.map(nom=>{
       const votes=getVotes(nom.id,nom.name);
+      const empId=getStaffId(nom.name);
       return `<div class="nom-list-row">
         <div class="nom-list-avatar" style="background:${stringToColor(nom.name)}22;color:${stringToColor(nom.name)};">${nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
         <div class="nom-list-info">
-          <div class="nom-list-name">${nom.name}</div>
+          <div class="nom-list-name">${nom.name}${empId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${empId}</span>`:''}</div>
           <div class="nom-list-meta">${getDeptName(nom.dept)} · ${getUnitName(nom.unit)}</div>
         </div>
         <div class="nom-list-votes">${votes}v</div>
@@ -1730,7 +1807,7 @@ async function removeStaff(id){
 // ── CATEGORIES ──
 function renderCatList(){
   const el=document.getElementById('cat-list-container');
-  const scopeLabel={dept:'Dept-wise Best',unit:'Unit-wise Best',global:'Company-wide Overall'};
+  const scopeLabel={dept:'Dept-wise',unit:'Unit-wise',global:'Company-wide',deptcat:'Linked to Dept'};
   if(!DATA.categories.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏷</div>No categories yet. Add your voting categories.</div>';return;}
   el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">` +
   DATA.categories.map(cat=>{
@@ -1739,7 +1816,7 @@ function renderCatList(){
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;">
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:500;">${cat.name}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${scopeLabel[cat.scope]||cat.scope} · ${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${scopeLabel[cat.scope]||cat.scope}${cat.linkedDept?` → ${getDeptName(cat.linkedDept)}${cat.linkedUnit?' › '+getUnitName(cat.linkedUnit):''}`:''} · ${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</div>
       </div>
       <button class="btn-sm red" onclick="removeCat('${cat.id}')">✕</button>
     </div>`;
@@ -2093,24 +2170,55 @@ async function addNom(){
 }
 
 function openAddCatModal(){
+  const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const allUnitOpts=DATA.departments.flatMap(d=>d.units.map(u=>`<option value="${u.id}">${d.name} › ${u.name}</option>`)).join('');
   openModal(`<div class="modal-title">Add Voting Category</div>
-    <div class="modal-field"><label class="modal-lbl">Category Name</label><input class="modal-inp" id="mc-name" placeholder="e.g. Best Staff — Department"></div>
+    <div class="modal-field"><label class="modal-lbl">Category Name</label>
+      <input class="modal-inp" id="mc-name" placeholder="e.g. Best Staff — Leadership"></div>
     <div class="modal-field"><label class="modal-lbl">Scope</label>
-      <select class="modal-sel" id="mc-scope">
-        <option value="dept">Department-wise — voters see nominees from their own dept only</option>
-        <option value="unit">Unit-wise — voters see nominees from their own unit only</option>
+      <select class="modal-sel" id="mc-scope" onchange="catScopeChanged()">
         <option value="global">Company-wide — all voters see all nominees</option>
+        <option value="dept">Department-wise — each voter sees nominees from their own dept</option>
+        <option value="unit">Unit-wise — each voter sees nominees from their own unit</option>
+        <option value="deptcat">Linked to specific dept — only voters in that dept see this category</option>
       </select></div>
+    <div id="mc-dept-wrap" style="display:none;">
+      <div class="modal-field"><label class="modal-lbl">Link to Department</label>
+        <select class="modal-sel" id="mc-linked-dept" onchange="catLinkedDeptChanged()"><option value="">— select department —</option>${dOpts}</select></div>
+    </div>
+    <div id="mc-unit-wrap" style="display:none;">
+      <div class="modal-field"><label class="modal-lbl">Link to Unit (optional)</label>
+        <select class="modal-sel" id="mc-linked-unit"><option value="">— all units in dept —</option></select></div>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-confirm" onclick="addCat()">Add Category</button>
     </div>`);
 }
+function catScopeChanged(){
+  const scope=document.getElementById('mc-scope')?.value;
+  const dw=document.getElementById('mc-dept-wrap');
+  const uw=document.getElementById('mc-unit-wrap');
+  if(dw) dw.style.display=(scope==='deptcat')?'block':'none';
+  if(uw) uw.style.display='none';
+}
+function catLinkedDeptChanged(){
+  const deptId=document.getElementById('mc-linked-dept')?.value;
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const uw=document.getElementById('mc-unit-wrap');
+  const usel=document.getElementById('mc-linked-unit');
+  if(!dept||!usel){ if(uw) uw.style.display='none'; return; }
+  usel.innerHTML=`<option value="">— all units in ${dept.name} —</option>`+dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  if(uw) uw.style.display='block';
+}
 async function addCat(){
   const name=document.getElementById('mc-name').value.trim();
   const scope=document.getElementById('mc-scope').value;
+  const linkedDept=document.getElementById('mc-linked-dept')?.value||'';
+  const linkedUnit=document.getElementById('mc-linked-unit')?.value||'';
   if(!name){showToast('Enter a category name','err');return;}
-  const cat={id:`cat_${Date.now()}`,name,scope};
+  if(scope==='deptcat'&&!linkedDept){showToast('Select a department to link','err');return;}
+  const cat={id:'cat_'+toId(name), name, scope, linkedDept, linkedUnit};
   DATA.categories.push(cat);
   cacheData();
   closeModal();renderCatList();fillResultFilters('sa');fillResultFilters('a');
