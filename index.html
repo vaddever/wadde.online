@@ -660,8 +660,7 @@ async function fetchFromSheets() {
   const deptD= rows['Departments'] || [];
   const cfgD = rows['Config']      || [];
 
-  // ── Helper: turn any string into a safe ID slug ──
-  const toId = str => (str||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  // ── Helper: turn any string into a safe ID slug (uses global toId) ──
 
   // ── VOTERS: PIN | Name | Dept | Unit | HasVoted ──
   // Dept & Unit columns accept either an ID or a plain name — resolved after depts load
@@ -755,7 +754,7 @@ async function fetchFromSheets() {
         const deptId = 'dept_'+toId(deptRaw);
         const unitId = deptId+'_'+toId(unitRaw);
         const catId  = 'cat_'+toId(catRaw);
-        return {id:'nom_'+toId(name)+'_'+Date.now(), name, dept:deptId, unit:unitId, category:catId, scope};
+        return {id:'nom_'+toId(name)+'_'+toId(deptRaw)+'_'+toId(catRaw), name, dept:deptId, unit:unitId, category:catId, scope};
       }
     }).filter(n=>n.name);
   }
@@ -1216,7 +1215,19 @@ async function submitVotes(){
 // ═══════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════
-const getVotes = nomId => DATA.votes.filter(v=>v.nomineeId===nomId).length;
+// Slug helper — used everywhere for consistent ID generation
+const toId = str => (str||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+const getVotes = (nomId, nomName) => {
+  return DATA.votes.filter(v => {
+    if (v.nomineeId === nomId) return true;
+    // Fallback: match by name-based slug (handles sheet vs portal ID mismatch)
+    if (nomName) {
+      const nameSlug = 'nom_' + toId(nomName);
+      if (v.nomineeId.startsWith(nameSlug)) return true;
+    }
+    return false;
+  }).length;
+};
 const getDeptName = id => (DATA.departments.find(d=>d.id===id)||{name:id||''}).name;
 const getUnitName = id => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===id);if(u)return u.name;} return id||''; };
 const getCat = id => DATA.categories.find(c=>c.id===id)||{name:id||''};
@@ -1224,7 +1235,7 @@ const getCat = id => DATA.categories.find(c=>c.id===id)||{name:id||''};
 function getRanked(catF,deptF){
   return DATA.nominees
     .filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF))
-    .map(n=>({...n,votes:getVotes(n.id)}))
+    .map(n=>({...n,votes:getVotes(n.id, n.name)}))
     .sort((a,b)=>b.votes-a.votes);
 }
 
@@ -1402,7 +1413,7 @@ function renderNominees(){
   const grid=document.getElementById('nom-mgr-grid');
   if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏅</div>No nominees yet. Add nominees or sync from Sheets.</div>';return;}
   grid.innerHTML=filtered.map(nom=>{
-    const votes=getVotes(nom.id);
+    const votes=getVotes(nom.id, nom.name);
     const catName=getCat(nom.category).name;
     return `<div class="nom-mgr-card">
       <div class="nm-info">
