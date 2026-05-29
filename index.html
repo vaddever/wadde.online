@@ -468,6 +468,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <div style="font-size:14px;font-weight:500;">Voters</div>
         <div style="display:flex;gap:7px;">
           <button class="btn-sm green" onclick="openAddVoterModal()">+ Add voter</button>
+          <button class="btn-sm gold" onclick="syncStaffToVoters()">⟳ Sync staff to voters</button>
           <button class="btn-sm red" onclick="resetAllVotes()">Reset all votes</button>
         </div>
       </div>
@@ -691,7 +692,7 @@ async function fetchFromSheets() {
 
   // Fetch all tabs in one batch — tabs that don't exist are skipped gracefully
   const tabRanges = [
-    'Voters!A2:E',
+    'Voters!A2:F',
     'Nominees!A2:F',
     'Votes!A2:D',
     'Admins!A2:C',
@@ -744,9 +745,10 @@ async function fetchFromSheets() {
   if (vD.length) DATA.voters = vD.map(r=>({
     pin:     (r[0]||'').trim(),
     name:    (r[1]||'').trim(),
-    dept:    (r[2]||'').trim(),   // may be ID or plain name — resolved below
-    unit:    (r[3]||'').trim(),   // may be ID or plain name — resolved below
-    hasVoted:(r[4]||'').toUpperCase()==='TRUE'
+    dept:    (r[2]||'').trim(),
+    unit:    (r[3]||'').trim(),
+    hasVoted:(r[4]||'').toUpperCase()==='TRUE',
+    empId:   (r[5]||'').trim()   // column F — Employee ID
   })).filter(v=>v.pin);
 
   // ── ADMINS: PIN | Role | Name ──
@@ -1219,18 +1221,10 @@ function initVoter(){
   let idx=0;
 
   DATA.categories.forEach(cat=>{
-    let noms=[];
-    if(cat.scope==='dept'){
-      noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
-    } else if(cat.scope==='unit'){
-      noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
-    } else if(cat.scope==='deptcat'){
-      if(cat.linkedDept && cat.linkedDept!==v.dept) return;
-      noms=DATA.nominees.filter(n=>n.category===cat.id);
-      if(cat.linkedUnit) noms=noms.filter(n=>n.unit===cat.linkedUnit);
-    } else {
-      noms=DATA.nominees.filter(n=>n.category===cat.id);
-    }
+    // Check visibility for this voter
+    if(!voterCanSeeCategory(cat, v)) return;
+    // All nominees in this category are shown regardless of their dept/unit
+    const noms=DATA.nominees.filter(n=>n.category===cat.id);
     if(!noms.length) return;
     idx++;
     const hasMany = noms.length > 3;
@@ -1334,20 +1328,8 @@ function updateVProg(){
   const v=currentUser;
   let total=0;
   DATA.categories.forEach(cat=>{
-    let noms=[];
-    if(cat.scope==='dept'){
-      noms=DATA.nominees.filter(n=>n.category===cat.id&&n.dept===v.dept);
-    } else if(cat.scope==='unit'){
-      noms=DATA.nominees.filter(n=>n.category===cat.id&&n.unit===v.unit);
-    } else if(cat.scope==='deptcat'){
-      if(cat.linkedDept && cat.linkedDept!==v.dept){ noms=[]; }
-      else {
-        noms=DATA.nominees.filter(n=>n.category===cat.id);
-        if(cat.linkedUnit) noms=noms.filter(n=>n.unit===cat.linkedUnit);
-      }
-    } else {
-      noms=DATA.nominees.filter(n=>n.category===cat.id);
-    }
+    if(!voterCanSeeCategory(cat, v)) return;
+    const noms=DATA.nominees.filter(n=>n.category===cat.id);
     if(noms.length) total++;
   });
   const sel=Object.keys(selections).length;
@@ -1359,6 +1341,22 @@ function updateVProg(){
   }
   document.getElementById('vprog').innerHTML=`<b>${sel}/${total}</b> categories voted`;
   btn.disabled=sel<total||!CFG.votingOpen;
+}
+
+function voterCanSeeCategory(cat, voter){
+  // Returns true if this voter should see this category
+  if(!cat || !voter) return false;
+  const scope = cat.scope || 'global';
+  if(scope === 'global')  return true;
+  if(scope === 'dept' || scope === 'deptcat'){
+    if(!cat.linkedDept) return true; // no restriction set → show all
+    return voter.dept === cat.linkedDept;
+  }
+  if(scope === 'unit'){
+    if(!cat.linkedUnit) return true; // no restriction set → show all
+    return voter.unit === cat.linkedUnit;
+  }
+  return true;
 }
 
 async function submitVotes(){
@@ -1559,6 +1557,7 @@ function renderVoterList(){
   el.innerHTML=DATA.voters.map(v=>`
     <div class="vrow">
       <span class="vpin">${v.pin}</span>
+      ${v.empId?`<span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;">${v.empId}</span>`:''}
       <span class="vname">${v.name}</span>
       <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
       <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
@@ -1568,6 +1567,49 @@ function renderVoterList(){
       <button class="btn-sm" onclick="resetVoter('${v.pin}')">Reset</button>
       <button class="btn-sm red" onclick="removeVoter('${v.pin}')">✕</button>
     </div>`).join('');
+}
+
+// Generate a unique random 6-digit PIN not already in use
+function generatePin(){
+  const used=new Set([...DATA.voters.map(v=>v.pin), ...DATA.admins.map(a=>a.pin)]);
+  let pin;
+  do { pin=String(Math.floor(100000+Math.random()*900000)); } while(used.has(pin));
+  return pin;
+}
+
+async function syncStaffToVoters(){
+  if(!DATA.staff.length){
+    showToast('No staff found — add staff first','err'); return;
+  }
+  let added=0, skipped=0;
+  const newVoters=[];
+  DATA.staff.forEach(s=>{
+    // Skip if already a voter (match by empId or name+dept)
+    const exists=DATA.voters.find(v=>
+      (v.empId && v.empId===s.empId) ||
+      (v.name.toLowerCase()===s.name.toLowerCase() && v.dept===s.dept && v.unit===s.unit)
+    );
+    if(exists){ skipped++; return; }
+    const pin=generatePin();
+    const voter={pin, empId:s.empId||s.id, name:s.name, dept:s.dept, unit:s.unit, hasVoted:false};
+    DATA.voters.push(voter);
+    newVoters.push(voter);
+    added++;
+  });
+  if(!added){
+    showToast(`All staff already in voters list (${skipped} skipped)`,'ok'); return;
+  }
+  cacheData();
+  renderVoterList(); renderStats('sa');
+  // Write all new voters to sheet in batch
+  showSyncBadge('syncing','Syncing to Sheets…');
+  let allOk=true;
+  for(const voter of newVoters){
+    const ok=await writeToSheets('addVoter',{voter});
+    if(!ok) allOk=false;
+  }
+  showSyncBadge(allOk?'ok':'err', allOk?`Synced ✓`:'Some failed — check Script URL');
+  showToast(`${added} staff synced as voters${skipped?' ('+skipped+' already existed)':''}`, 'ok');
 }
 
 async function resetVoter(pin){
@@ -1807,7 +1849,7 @@ async function removeStaff(id){
 // ── CATEGORIES ──
 function renderCatList(){
   const el=document.getElementById('cat-list-container');
-  const scopeLabel={dept:'Dept-wise',unit:'Unit-wise',global:'Company-wide',deptcat:'Linked to Dept'};
+  const scopeLabel={global:'🌐 Company-wide',dept:'🏢 Department',unit:'📍 Unit',deptcat:'🏢 Department'};
   if(!DATA.categories.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏷</div>No categories yet. Add your voting categories.</div>';return;}
   el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">` +
   DATA.categories.map(cat=>{
@@ -1816,7 +1858,7 @@ function renderCatList(){
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;">
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:500;">${cat.name}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${scopeLabel[cat.scope]||cat.scope}${cat.linkedDept?` → ${getDeptName(cat.linkedDept)}${cat.linkedUnit?' › '+getUnitName(cat.linkedUnit):''}`:''} · ${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${scopeLabel[cat.scope]||cat.scope}${(cat.scope==='dept'&&cat.linkedDept)?' → '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' → '+getUnitName(cat.linkedUnit):''} · ${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</div>
       </div>
       <button class="btn-sm red" onclick="removeCat('${cat.id}')">✕</button>
     </div>`;
@@ -1975,9 +2017,20 @@ function closeModal(){document.getElementById('modal-ov')?.remove();}
 
 function openAddVoterModal(){
   const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const autoPin=generatePin();
   openModal(`<div class="modal-title">Add Voter</div>
+    <div class="modal-field">
+      <label class="modal-lbl">Employee ID <span style="color:var(--text3);font-weight:400;">(optional)</span></label>
+      <input class="modal-inp" id="mv-empid" placeholder="e.g. EMP001" style="text-transform:uppercase;">
+    </div>
     <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mv-name" placeholder="Staff full name"></div>
-    <div class="modal-field"><label class="modal-lbl">PIN</label><input class="modal-inp" id="mv-pin" placeholder="Unique PIN" inputmode="numeric"></div>
+    <div class="modal-field">
+      <label class="modal-lbl">Voter PIN</label>
+      <div style="display:flex;gap:7px;">
+        <input class="modal-inp" id="mv-pin" value="${autoPin}" placeholder="6-digit PIN" inputmode="numeric" style="flex:1;">
+        <button class="btn-sm" onclick="document.getElementById('mv-pin').value=generatePin()" style="flex-shrink:0;">New PIN</button>
+      </div>
+    </div>
     <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mv-dept" onchange="fillVoterUnits()">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
     <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mv-unit"></select></div>
     <div class="modal-actions">
@@ -1993,18 +2046,19 @@ function fillVoterUnits(){
   if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
 }
 async function addVoter(){
+  const empId=(document.getElementById('mv-empid')?.value||'').trim().toUpperCase();
   const name=document.getElementById('mv-name').value.trim();
   const pin=document.getElementById('mv-pin').value.trim();
   const dept=document.getElementById('mv-dept').value;
   const unit=document.getElementById('mv-unit').value;
   if(!name||!pin){showToast('Name and PIN required','err');return;}
-  if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){showToast('PIN already in use','err');return;}
-  const voter={pin,name,dept,unit,hasVoted:false};
+  if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){showToast('PIN already in use — click "New PIN"','err');return;}
+  const voter={pin, empId, name, dept, unit, hasVoted:false};
   DATA.voters.push(voter);
   cacheData();
   closeModal();renderVoterList();renderStats('sa');
   await writeToSheets('addVoter',{voter});
-  showToast(`${name} added`,'ok');
+  showToast(`${name} added as voter (PIN: ${pin})`,'ok');
 }
 
 function openAddNomModal(preCatId){
@@ -2171,24 +2225,35 @@ async function addNom(){
 
 function openAddCatModal(){
   const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  const allUnitOpts=DATA.departments.flatMap(d=>d.units.map(u=>`<option value="${u.id}">${d.name} › ${u.name}</option>`)).join('');
+  const allUnitOpts=DATA.departments.flatMap(d=>d.units.map(u=>
+    `<option value="${u.id}">${d.name} › ${u.name}</option>`)).join('');
   openModal(`<div class="modal-title">Add Voting Category</div>
-    <div class="modal-field"><label class="modal-lbl">Category Name</label>
-      <input class="modal-inp" id="mc-name" placeholder="e.g. Best Staff — Leadership"></div>
-    <div class="modal-field"><label class="modal-lbl">Scope</label>
+    <div class="modal-field">
+      <label class="modal-lbl">Category Name</label>
+      <input class="modal-inp" id="mc-name" placeholder="e.g. Best Staff — Leadership">
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Visibility</label>
       <select class="modal-sel" id="mc-scope" onchange="catScopeChanged()">
-        <option value="global">Company-wide — all voters see all nominees</option>
-        <option value="dept">Department-wise — each voter sees nominees from their own dept</option>
-        <option value="unit">Unit-wise — each voter sees nominees from their own unit</option>
-        <option value="deptcat">Linked to specific dept — only voters in that dept see this category</option>
-      </select></div>
+        <option value="global">🌐 Company-wide — all staff see this category</option>
+        <option value="dept">🏢 Department — only staff from a specific department</option>
+        <option value="unit">📍 Unit — only staff from a specific unit</option>
+      </select>
+    </div>
     <div id="mc-dept-wrap" style="display:none;">
-      <div class="modal-field"><label class="modal-lbl">Link to Department</label>
-        <select class="modal-sel" id="mc-linked-dept" onchange="catLinkedDeptChanged()"><option value="">— select department —</option>${dOpts}</select></div>
+      <div class="modal-field">
+        <label class="modal-lbl">Select Department</label>
+        <select class="modal-sel" id="mc-linked-dept"><option value="">— choose —</option>${dOpts}</select>
+      </div>
     </div>
     <div id="mc-unit-wrap" style="display:none;">
-      <div class="modal-field"><label class="modal-lbl">Link to Unit (optional)</label>
-        <select class="modal-sel" id="mc-linked-unit"><option value="">— all units in dept —</option></select></div>
+      <div class="modal-field">
+        <label class="modal-lbl">Select Unit</label>
+        <select class="modal-sel" id="mc-linked-unit"><option value="">— choose —</option>${allUnitOpts}</select>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6;" id="mc-scope-hint">
+      All staff can vote in this category.
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
@@ -2199,17 +2264,14 @@ function catScopeChanged(){
   const scope=document.getElementById('mc-scope')?.value;
   const dw=document.getElementById('mc-dept-wrap');
   const uw=document.getElementById('mc-unit-wrap');
-  if(dw) dw.style.display=(scope==='deptcat')?'block':'none';
-  if(uw) uw.style.display='none';
-}
-function catLinkedDeptChanged(){
-  const deptId=document.getElementById('mc-linked-dept')?.value;
-  const dept=DATA.departments.find(d=>d.id===deptId);
-  const uw=document.getElementById('mc-unit-wrap');
-  const usel=document.getElementById('mc-linked-unit');
-  if(!dept||!usel){ if(uw) uw.style.display='none'; return; }
-  usel.innerHTML=`<option value="">— all units in ${dept.name} —</option>`+dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
-  if(uw) uw.style.display='block';
+  const hint=document.getElementById('mc-scope-hint');
+  if(dw) dw.style.display=(scope==='dept')?'block':'none';
+  if(uw) uw.style.display=(scope==='unit')?'block':'none';
+  if(hint){
+    if(scope==='dept')   hint.textContent='Only staff belonging to the selected department will see and vote in this category.';
+    else if(scope==='unit') hint.textContent='Only staff belonging to the selected unit will see and vote in this category.';
+    else                    hint.textContent='All staff can vote in this category.';
+  }
 }
 async function addCat(){
   const name=document.getElementById('mc-name').value.trim();
@@ -2217,7 +2279,8 @@ async function addCat(){
   const linkedDept=document.getElementById('mc-linked-dept')?.value||'';
   const linkedUnit=document.getElementById('mc-linked-unit')?.value||'';
   if(!name){showToast('Enter a category name','err');return;}
-  if(scope==='deptcat'&&!linkedDept){showToast('Select a department to link','err');return;}
+  if(scope==='dept'&&!linkedDept){showToast('Please select a department','err');return;}
+  if(scope==='unit'&&!linkedUnit){showToast('Please select a unit','err');return;}
   const cat={id:'cat_'+toId(name), name, scope, linkedDept, linkedUnit};
   DATA.categories.push(cat);
   cacheData();
