@@ -505,6 +505,20 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <div style="font-size:14px;font-weight:500;">Voting Categories</div>
         <button class="btn-sm green" onclick="openAddCatModal()">+ Add category</button>
       </div>
+      <div class="rf" style="margin-bottom:14px;">
+        <select class="fsel" id="cat-fscope" onchange="renderCatList()">
+          <option value="">All scopes</option>
+          <option value="global">🌐 Company-wide</option>
+          <option value="dept">🏢 Department</option>
+          <option value="unit">📍 Unit</option>
+        </select>
+        <select class="fsel" id="cat-fdept" onchange="catFilterDeptChanged()">
+          <option value="">All departments</option>
+        </select>
+        <select class="fsel" id="cat-funit" onchange="renderCatList()">
+          <option value="">All units</option>
+        </select>
+      </div>
       <div id="cat-list-container"></div>
     </div>
 
@@ -1707,9 +1721,15 @@ function renderNominees(){
         <button class="btn-sm red" onclick="removeNom('${nom.id}')" style="padding:4px 9px;">✕</button>
       </div>`;
     }).join('');
+    const nomScopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
+    const nomScopeTxt=nomScopeTag[cat.scope]||cat.scope;
+    const nomLinkedTxt=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
     return `<div class="nom-cat-group">
       <div class="nom-cat-group-hdr">
-        <span class="nom-cat-group-title">${cat.name}</span>
+        <div style="flex:1;">
+          <span class="nom-cat-group-title">${cat.name}</span>
+          <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;">(${nomScopeTxt}${nomLinkedTxt})</span>
+        </div>
         <span class="nom-cat-group-count">${noms.length} nominee${noms.length!==1?'s':''}</span>
         <button class="btn-sm green" onclick="openAddNomModal('${catId}')" style="padding:4px 10px;font-size:10px;">+ Add</button>
       </div>
@@ -1847,18 +1867,65 @@ async function removeStaff(id){
   showToast(`${s.name} removed`,'ok');
 }
 // ── CATEGORIES ──
+function populateCatFilters(){
+  const deptEl=document.getElementById('cat-fdept');
+  if(deptEl && deptEl.options.length<=1){
+    deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  }
+}
+function catFilterDeptChanged(){
+  const deptF=document.getElementById('cat-fdept')?.value||'';
+  const unitEl=document.getElementById('cat-funit');
+  if(unitEl){
+    let units=[];
+    if(deptF){ const d=DATA.departments.find(d=>d.id===deptF); units=d?d.units:[]; }
+    else DATA.departments.forEach(d=>units.push(...d.units));
+    unitEl.innerHTML=`<option value="">All units</option>`+units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  }
+  renderCatList();
+}
 function renderCatList(){
+  populateCatFilters();
   const el=document.getElementById('cat-list-container');
+  const scopeF=document.getElementById('cat-fscope')?.value||'';
+  const deptF=document.getElementById('cat-fdept')?.value||'';
+  const unitF=document.getElementById('cat-funit')?.value||'';
   const scopeLabel={global:'🌐 Company-wide',dept:'🏢 Department',unit:'📍 Unit',deptcat:'🏢 Department'};
-  if(!DATA.categories.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏷</div>No categories yet. Add your voting categories.</div>';return;}
+  const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
+
+  let filtered=DATA.categories.filter(cat=>{
+    if(scopeF && cat.scope!==scopeF) return false;
+    if(deptF){
+      if(cat.scope==='dept' && cat.linkedDept!==deptF) return false;
+      if(cat.scope==='unit'){
+        // check if linked unit belongs to selected dept
+        const dept=DATA.departments.find(d=>d.id===deptF);
+        if(dept && !dept.units.find(u=>u.id===cat.linkedUnit)) return false;
+      }
+    }
+    if(unitF && cat.scope==='unit' && cat.linkedUnit!==unitF) return false;
+    return true;
+  });
+
+  if(!filtered.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏷</div>'+(DATA.categories.length?'No categories match the selected filters.':'No categories yet. Add your voting categories.')+'</div>';
+    return;
+  }
   el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">` +
-  DATA.categories.map(cat=>{
+  filtered.map(cat=>{
     const voteCount=DATA.votes.filter(v=>v.category===cat.id).length;
     const nomCount=DATA.nominees.filter(n=>n.category===cat.id).length;
+    const scopeTxt=scopeTag[cat.scope]||cat.scope;
+    const linkedTxt=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
+    const scopeColor={global:'var(--blue)',dept:'var(--purple)',unit:'var(--green)',deptcat:'var(--purple)'};
+    const scopeBg={global:'var(--blue-dim)',dept:'var(--purple-dim)',unit:'var(--green-dim)',deptcat:'var(--purple-dim)'};
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;">
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:500;">${cat.name}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${scopeLabel[cat.scope]||cat.scope}${(cat.scope==='dept'&&cat.linkedDept)?' → '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' → '+getUnitName(cat.linkedUnit):''} · ${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
+          <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${scopeBg[cat.scope]};color:${scopeColor[cat.scope]};border:1px solid ${scopeColor[cat.scope]}33;">${scopeLabel[cat.scope]}${linkedTxt}</span>
+          <span style="font-size:11px;color:var(--text3);">${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</span>
+        </div>
       </div>
       <button class="btn-sm red" onclick="removeCat('${cat.id}')">✕</button>
     </div>`;
@@ -2248,8 +2315,14 @@ function openAddCatModal(){
     </div>
     <div id="mc-unit-wrap" style="display:none;">
       <div class="modal-field">
+        <label class="modal-lbl">Filter by Department</label>
+        <select class="modal-sel" id="mc-unit-dept-filter" onchange="catUnitDeptChanged()">
+          <option value="">— select department first —</option>${dOpts}
+        </select>
+      </div>
+      <div class="modal-field" id="mc-unit-field" style="display:none;">
         <label class="modal-lbl">Select Unit</label>
-        <select class="modal-sel" id="mc-linked-unit"><option value="">— choose —</option>${allUnitOpts}</select>
+        <select class="modal-sel" id="mc-linked-unit"><option value="">— choose unit —</option></select>
       </div>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6;" id="mc-scope-hint">
@@ -2272,6 +2345,15 @@ function catScopeChanged(){
     else if(scope==='unit') hint.textContent='Only staff belonging to the selected unit will see and vote in this category.';
     else                    hint.textContent='All staff can vote in this category.';
   }
+}
+function catUnitDeptChanged(){
+  const deptId=document.getElementById('mc-unit-dept-filter')?.value;
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const unitSel=document.getElementById('mc-linked-unit');
+  const unitField=document.getElementById('mc-unit-field');
+  if(!dept||!unitSel){ if(unitField) unitField.style.display='none'; return; }
+  unitSel.innerHTML=`<option value="">— choose unit —</option>`+dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  if(unitField) unitField.style.display='block';
 }
 async function addCat(){
   const name=document.getElementById('mc-name').value.trim();
@@ -2537,7 +2619,7 @@ function switchTab(scope,tab,btn){
   if(tab==='voters') renderVoterList();
   if(tab==='nominees'){ populateNomFilters(); renderNominees(); }
   if(tab==='staff') renderStaff();
-  if(tab==='categories') renderCatList();
+  if(tab==='categories'){ populateCatFilters(); renderCatList(); }
   if(tab==='settings') initSA();
 }
 
