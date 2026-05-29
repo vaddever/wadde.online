@@ -608,6 +608,46 @@ const CFG = {
 // ═══════════════════════════════════════════════════════════
 const DATA = { voters:[], admins:[], nominees:[], votes:[], categories:[], departments:[], staff:[] };
 // staff = [{id, name, dept, unit}]
+
+// Save DATA to localStorage so it survives refresh when Sheets sync hasn't happened
+function cacheData() {
+  try {
+    LS.set('cached_staff',       DATA.staff);
+    LS.set('cached_nominees',    DATA.nominees);
+    LS.set('cached_categories',  DATA.categories);
+    LS.set('cached_departments', DATA.departments);
+    LS.set('cached_voters',      DATA.voters);
+    LS.set('cached_admins',      DATA.admins);
+    LS.set('cached_votes',       DATA.votes);
+    LS.set('cached_ts',          Date.now());
+  } catch(e) { console.warn('Cache write failed:', e); }
+}
+function loadCachedData() {
+  try {
+    const ts = LS.get('cached_ts');
+    if (!ts) return false;
+    // Use cache if less than 24 hours old
+    if (Date.now() - ts > 24 * 60 * 60 * 1000) return false;
+    const s  = LS.get('cached_staff');
+    const n  = LS.get('cached_nominees');
+    const c  = LS.get('cached_categories');
+    const d  = LS.get('cached_departments');
+    const v  = LS.get('cached_voters');
+    const a  = LS.get('cached_admins');
+    const vt = LS.get('cached_votes');
+    if (a && a.length) {
+      if (s)  DATA.staff       = s;
+      if (n)  DATA.nominees    = n;
+      if (c)  DATA.categories  = c;
+      if (d)  DATA.departments = d;
+      if (v)  DATA.voters      = v;
+      if (a)  DATA.admins      = a;
+      if (vt) DATA.votes       = vt;
+      return true;
+    }
+    return false;
+  } catch(e) { return false; }
+}
 // departments = [{id,name,color,units:[{id,name}]}]
 // categories  = [{id,name,scope}]  scope: 'dept'|'unit'|'global'
 // nominees    = [{id,name,dept,unit,category}]
@@ -938,15 +978,28 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     return;
   }
 
-  setLD('Connecting to Google Sheets…');
+  // Load cached data first so UI works immediately
+  const hadCache = loadCachedData();
+  if (hadCache) {
+    setLD('Loading from cache…');
+    await new Promise(r=>setTimeout(r,300));
+  }
+
+  setLD('Syncing with Google Sheets…');
   try {
     await fetchFromSheets();
-    setLD('✓ Data loaded successfully');
-    await new Promise(r=>setTimeout(r,600));
+    cacheData(); // Save fresh data to cache
+    setLD('✓ Synced successfully');
+    await new Promise(r=>setTimeout(r,500));
   } catch(e) {
     console.error('[Boot] Sync failed:', e);
-    setLD('⚠ ' + (e.message || 'Could not reach Google Sheets'));
-    await new Promise(r=>setTimeout(r,2000));
+    if (hadCache) {
+      setLD('⚠ Sheets unreachable — using cached data');
+      await new Promise(r=>setTimeout(r,1500));
+    } else {
+      setLD('⚠ ' + (e.message || 'Could not reach Google Sheets'));
+      await new Promise(r=>setTimeout(r,2000));
+    }
   }
   hideLoader();
   applyOrgName();
@@ -1594,23 +1647,15 @@ function populateStaffUnitFilter(){
 }
 function staffDeptChanged(){ populateStaffUnitFilter(); renderStaff(); }
 function nomStaffFor(staffId){
-  const s=DATA.staff.find(x=>x.id===staffId);
-  if(!s) return;
-  // Switch to nominees tab and open modal pre-filled with this staff member
-  const btn=document.querySelector('#screen-superadmin .tab-btn:nth-child(5)');
-  switchTab('superadmin','nominees',btn);
+  // Open nominee modal directly pre-selecting this staff member
+  openAddNomModal('');
   setTimeout(()=>{
-    openAddNomModal('');
-    setTimeout(()=>{
-      document.getElementById('mn-name').value=s.name;
-      const deptSel=document.getElementById('mn-dept');
-      if(deptSel){ for(let i=0;i<deptSel.options.length;i++){ if(deptSel.options[i].value===s.dept){deptSel.selectedIndex=i;break;} } fillNomUnits(); }
-      setTimeout(()=>{
-        const unitSel=document.getElementById('mn-unit');
-        if(unitSel){ for(let i=0;i<unitSel.options.length;i++){ if(unitSel.options[i].value===s.unit){unitSel.selectedIndex=i;break;} } }
-      },60);
-    },100);
-  },100);
+    const staffSel=document.getElementById('mn-staff');
+    if(staffSel){
+      staffSel.value=staffId;
+      onNomStaffChange();
+    }
+  },50);
 }
 function openAddStaffModal(){
   const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
@@ -1638,6 +1683,7 @@ async function addStaff(){
   if(DATA.staff.find(s=>s.name.toLowerCase()===name.toLowerCase())){showToast(`${name} already in staff list`,'err');return;}
   const s={id:'stf_'+toId(name),name,dept,unit};
   DATA.staff.push(s);
+  cacheData();
   closeModal();renderStaff();
   await writeToSheets('addStaff',{staff:s});
   showToast(`${name} added to staff`,'ok');
@@ -1646,6 +1692,7 @@ async function removeStaff(id){
   const s=DATA.staff.find(x=>x.id===id);
   if(!s||!confirm(`Remove ${s.name} from staff list?`)) return;
   DATA.staff=DATA.staff.filter(x=>x.id!==id);
+  cacheData();
   renderStaff();
   await writeToSheets('removeStaff',{id});
   showToast(`${s.name} removed`,'ok');
@@ -1717,6 +1764,7 @@ async function addUnit(deptId){
   if(dept.units.find(u=>u.name.toLowerCase()===name.toLowerCase())){showToast('Unit already exists','err');return;}
   const uid=`${deptId}_${Date.now()}`;
   dept.units.push({id:uid,name});
+  cacheData();
   if(inp)inp.value='';
   renderDeptUnitManager();
   await writeToSheets('addUnit',{deptId,unitId:uid,name});
@@ -1782,6 +1830,7 @@ async function manualSync(){
   showToast('Syncing from Sheets…');
   try{
     await fetchFromSheets();
+    cacheData();
     initSA();
     showToast('Sync complete!','ok');
   }catch(e){showToast('Sync failed: '+e.message,'err');}
@@ -1845,79 +1894,126 @@ async function addVoter(){
   if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){showToast('PIN already in use','err');return;}
   const voter={pin,name,dept,unit,hasVoted:false};
   DATA.voters.push(voter);
+  cacheData();
   closeModal();renderVoterList();renderStats('sa');
   await writeToSheets('addVoter',{voter});
   showToast(`${name} added`,'ok');
 }
 
 function openAddNomModal(preCatId){
-  const cOpts=DATA.categories.map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.name}</option>`).join('');
-  const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  // Staff picker options
   const hasStaff = DATA.staff.length > 0;
-  const staffOpts = hasStaff
-    ? DATA.staff.map(s=>`<option value="${s.id}" data-dept="${s.dept}" data-unit="${s.unit}">${s.name} (${getDeptName(s.dept)} · ${getUnitName(s.unit)})</option>`).join('')
-    : '';
-  openModal(`<div class="modal-title">Add Nominee</div>
-    ${hasStaff ? `
-    <div class="modal-field">
-      <label class="modal-lbl">Select from Staff</label>
-      <select class="modal-sel" id="mn-staff" onchange="fillNomFromStaff()">
-        <option value="">— type manually below —</option>
-        ${staffOpts}
-      </select>
-    </div>` : ''}
-    <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mn-name" placeholder="Or type nominee name manually"></div>
-    <div class="modal-field"><label class="modal-lbl">Category</label><select class="modal-sel" id="mn-cat">${cOpts||'<option value="">— add categories first —</option>'}</select></div>
-    <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" onchange="fillNomUnits()">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
-    <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mn-unit"></select></div>
-    <div id="mn-duplicate-warn" style="font-size:12px;color:var(--red);margin-top:4px;display:none;"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-confirm" onclick="addNom()">Add Nominee</button>
-    </div>`);
-  fillNomUnits();
-}
-function fillNomFromStaff(){
-  const sel=document.getElementById('mn-staff');
-  const opt=sel?.options[sel.selectedIndex];
-  if(!opt||!opt.value) return;
-  const staff=DATA.staff.find(s=>s.id===opt.value);
-  if(!staff) return;
-  document.getElementById('mn-name').value=staff.name;
-  // Set dept
-  const deptSel=document.getElementById('mn-dept');
-  if(deptSel){
-    for(let i=0;i<deptSel.options.length;i++){
-      if(deptSel.options[i].value===staff.dept){deptSel.selectedIndex=i;break;}
-    }
+  const cOpts = DATA.categories.map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.name}</option>`).join('');
+
+  if(hasStaff){
+    const staffOpts = DATA.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    openModal(`<div class="modal-title">Add Nominee</div>
+      <div class="modal-field">
+        <label class="modal-lbl">Staff Member</label>
+        <select class="modal-sel" id="mn-staff" onchange="onNomStaffChange()">
+          <option value="">— select a staff member —</option>
+          ${staffOpts}
+        </select>
+      </div>
+      <div id="mn-staff-card" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;margin-top:6px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="mn-card-avatar" style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div id="mn-card-name" style="font-size:13px;font-weight:500;"></div>
+            <div id="mn-card-dept" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
+            <div id="mn-card-unit" style="font-size:11px;color:var(--text3);margin-top:1px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-field" style="margin-top:12px;">
+        <label class="modal-lbl">Award / Category</label>
+        <select class="modal-sel" id="mn-cat" onchange="onNomCatChange()">${cOpts||'<option value="">— add categories first —</option>'}</select>
+      </div>
+      <div id="mn-duplicate-warn" style="font-size:12px;color:var(--red);margin-top:6px;padding:7px 10px;background:var(--red-dim);border-radius:var(--rs);display:none;"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-confirm" id="mn-confirm-btn" onclick="addNom()">Add Nominee</button>
+      </div>`);
+    if(preCatId){ const el=document.getElementById('mn-cat'); if(el) el.value=preCatId; }
+  } else {
+    // No staff list yet — simple manual entry with link to add staff first
+    const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+    openModal(`<div class="modal-title">Add Nominee</div>
+      <div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:var(--rs);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold2);">
+        💡 Add your staff in the <b>Staff tab</b> first — then nominees can be selected from the staff list automatically.
+        <span onclick="switchToStaffTab();closeModal();" style="cursor:pointer;text-decoration:underline;display:block;margin-top:4px;">Go to Staff tab →</span>
+      </div>
+      <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mn-name" placeholder="Nominee full name" oninput="checkNomDuplicate()"></div>
+      <div class="modal-field"><label class="modal-lbl">Category</label><select class="modal-sel" id="mn-cat" onchange="checkNomDuplicate()">${cOpts||'<option value="">— add categories first —</option>'}</select></div>
+      <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" onchange="fillNomUnits()">${dOpts}</select></div>
+      <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mn-unit"></select></div>
+      <div id="mn-duplicate-warn" style="font-size:12px;color:var(--red);margin-top:6px;padding:7px 10px;background:var(--red-dim);border-radius:var(--rs);display:none;"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-confirm" onclick="addNom()">Add Nominee</button>
+      </div>`);
+    if(preCatId){ const el=document.getElementById('mn-cat'); if(el) el.value=preCatId; }
     fillNomUnits();
-    // Set unit after units are populated
-    setTimeout(()=>{
-      const unitSel=document.getElementById('mn-unit');
-      if(unitSel){
-        for(let i=0;i<unitSel.options.length;i++){
-          if(unitSel.options[i].value===staff.unit){unitSel.selectedIndex=i;break;}
-        }
-      }
-    },50);
   }
+}
+
+function switchToStaffTab(){
+  closeModal();
+  const btn=Array.from(document.querySelectorAll('#screen-superadmin .tab-btn')).find(b=>b.textContent.trim()==='Staff');
+  switchTab('superadmin','staff',btn);
+}
+
+function onNomStaffChange(){
+  const staffId=document.getElementById('mn-staff')?.value;
+  const card=document.getElementById('mn-staff-card');
+  if(!staffId||!card){ if(card) card.style.display='none'; return; }
+  const s=DATA.staff.find(x=>x.id===staffId);
+  if(!s){ card.style.display='none'; return; }
+  const color=stringToColor(s.name);
+  const initials=s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const av=document.getElementById('mn-card-avatar');
+  if(av){
+    av.style.cssText=`width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;background:${color}22;color:${color};`;
+    av.textContent=initials;
+  }
+  const nm=document.getElementById('mn-card-name');
+  const dp=document.getElementById('mn-card-dept');
+  const un=document.getElementById('mn-card-unit');
+  if(nm) nm.textContent=s.name;
+  if(dp) dp.textContent='🏢 '+getDeptName(s.dept);
+  if(un) un.textContent='📍 '+getUnitName(s.unit);
+  card.style.display='block';
   checkNomDuplicate();
 }
+
+function onNomCatChange(){ checkNomDuplicate(); }
+
 function checkNomDuplicate(){
-  const name=(document.getElementById('mn-name')?.value||'').trim().toLowerCase();
+  let name='';
   const catId=document.getElementById('mn-cat')?.value||'';
+  // Staff mode
+  const staffSel=document.getElementById('mn-staff');
+  if(staffSel){
+    const s=DATA.staff.find(x=>x.id===staffSel.value);
+    name=s?s.name.toLowerCase():'';
+  } else {
+    name=(document.getElementById('mn-name')?.value||'').trim().toLowerCase();
+  }
   const warn=document.getElementById('mn-duplicate-warn');
-  if(!warn||!name||!catId) return;
+  const btn=document.getElementById('mn-confirm-btn');
+  if(!warn){ return; }
+  if(!name||!catId){ warn.style.display='none'; if(btn) btn.disabled=false; return; }
   const cat=getCat(catId);
   const dupe=DATA.nominees.find(n=>n.name.toLowerCase()===name&&n.category===catId);
   if(dupe){
     warn.textContent=`⚠ ${dupe.name} is already nominated for "${cat.name}"`;
     warn.style.display='block';
+    if(btn) btn.disabled=true;
   } else {
     warn.style.display='none';
+    if(btn) btn.disabled=false;
   }
 }
+
 function fillNomUnits(){
   const deptId=document.getElementById('mn-dept')?.value;
   const dept=DATA.departments.find(d=>d.id===deptId);
@@ -1925,12 +2021,25 @@ function fillNomUnits(){
   if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
 }
 async function addNom(){
-  const name=document.getElementById('mn-name').value.trim();
-  const catId=document.getElementById('mn-cat').value;
-  const dept=document.getElementById('mn-dept').value;
-  const unit=document.getElementById('mn-unit').value;
-  if(!name||!catId){showToast('Name and category required','err');return;}
-  // Duplicate check — same person, same category
+  const hasStaff = DATA.staff.length > 0;
+  let name='', dept='', unit='';
+  const catId=document.getElementById('mn-cat')?.value||'';
+
+  if(hasStaff){
+    const staffId=document.getElementById('mn-staff')?.value;
+    if(!staffId){ showToast('Please select a staff member','err'); return; }
+    const s=DATA.staff.find(x=>x.id===staffId);
+    if(!s){ showToast('Staff member not found','err'); return; }
+    name=s.name; dept=s.dept; unit=s.unit;
+  } else {
+    name=(document.getElementById('mn-name')?.value||'').trim();
+    dept=document.getElementById('mn-dept')?.value||'';
+    unit=document.getElementById('mn-unit')?.value||'';
+  }
+
+  if(!name||!catId){ showToast('Please select a staff member and category','err'); return; }
+
+  // Duplicate check
   const dupe=DATA.nominees.find(n=>n.name.toLowerCase()===name.toLowerCase()&&n.category===catId);
   if(dupe){
     const cat=getCat(catId);
@@ -1941,9 +2050,10 @@ async function addNom(){
   const nomId='nom_'+toId(name)+'_'+toId(dept)+'_'+catId;
   const nom={id:nomId, name, dept, unit, category:catId, scope:cat?.scope||'global'};
   DATA.nominees.push(nom);
-  closeModal();renderNominees();
+  cacheData();
+  closeModal(); renderNominees();
   await writeToSheets('addNominee',{nominee:nom});
-  showToast(`${name} added as nominee`,'ok');
+  showToast(`${name} added as nominee for "${cat?.name||catId}"`, 'ok');
 }
 
 function openAddCatModal(){
@@ -1966,6 +2076,7 @@ async function addCat(){
   if(!name){showToast('Enter a category name','err');return;}
   const cat={id:`cat_${Date.now()}`,name,scope};
   DATA.categories.push(cat);
+  cacheData();
   closeModal();renderCatList();fillResultFilters('sa');fillResultFilters('a');
   await writeToSheets('addCategory',{category:cat});
   showToast(`Category "${name}" added`,'ok');
@@ -1988,6 +2099,7 @@ async function addDept(){
   if(DATA.departments.find(d=>d.name.toLowerCase()===name.toLowerCase())){showToast('Department already exists','err');return;}
   const dept={id:`dept_${Date.now()}`,name,color,units:[]};
   DATA.departments.push(dept);
+  cacheData();
   closeModal();renderDeptUnitManager();renderStats('sa');
   await writeToSheets('addDept',{dept:{id:dept.id,name:dept.name,color:dept.color}});
   showToast(`Department "${name}" added`,'ok');
@@ -1997,138 +2109,210 @@ async function addDept(){
 // APPS SCRIPT HELP MODAL
 // ═══════════════════════════════════════════════════════════
 function showScriptHelp(){
-  const code = `// ── Paste this into Google Apps Script ──
-// Tools → Script editor in your Google Sheet
+  const code = `// ═══════════════════════════════════════════════════════
+// Staff Voting Portal — Google Apps Script
+//
+// Paste ALL of this into Extensions → Apps Script
+// Then: Deploy → New deployment → Web app
+//       Execute as: Me  |  Who has access: Anyone
+//       Copy the /exec URL → paste in Portal Settings → Script URL
+// ═══════════════════════════════════════════════════════
 
-function doPost(e) {
+// ── ID helper — matches the portal's toId() function ──
+function toId(str) {
+  return (str || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+function doOptions(e) { return buildResponse(''); }
+function doGet(e)  { return handleRequest(e.parameter && e.parameter.data ? e.parameter.data : '{}'); }
+function doPost(e) { return handleRequest(e.postData ? e.postData.contents : (e.parameter && e.parameter.data ? e.parameter.data : '{}')); }
+
+function handleRequest(raw) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const data = JSON.parse(e.postData.contents);
-  const action = data.action;
-  let result = {status:'ok'};
+  let result = { status: 'ok' };
+  try {
+    const data = JSON.parse(decodeURIComponent(raw));
+    const action = data.action;
+    Logger.log('Action: ' + action + ' | Data: ' + JSON.stringify(data));
 
-  if (action === 'submitVotes') {
-    const vSheet = ss.getSheetByName('Votes') || ss.insertSheet('Votes');
-    data.votes.forEach(v => vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]));
-    const voterSheet = ss.getSheetByName('Voters');
-    if (voterSheet) {
-      const rows = voterSheet.getDataRange().getValues();
-      for (let i=1;i<rows.length;i++) {
-        if (rows[i][0] == data.pin) { voterSheet.getRange(i+1,5).setValue('TRUE'); break; }
-      }
+    // ── VOTES ──
+    if (action === 'submitVotes') {
+      const vSheet = getOrCreate(ss, 'Votes');
+      data.votes.forEach(function(v) {
+        vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]);
+      });
+      markVoterDone(ss, data.pin);
     }
-  }
-  else if (action === 'addVoter') {
-    const s = ss.getSheetByName('Voters') || ss.insertSheet('Voters');
-    const v = data.voter;
-    s.appendRow([v.pin, v.name, v.dept, v.unit, 'FALSE']);
-  }
-  else if (action === 'removeVoter') {
-    deleteRowByValue(ss.getSheetByName('Voters'), data.pin, 0);
-    deleteRowsByValue(ss.getSheetByName('Votes'), data.pin, 0);
-  }
-  else if (action === 'resetVoter') {
-    const s = ss.getSheetByName('Voters');
-    if (s) {
-      const rows = s.getDataRange().getValues();
-      for (let i=1;i<rows.length;i++) {
-        if (rows[i][0] == data.pin) { s.getRange(i+1,5).setValue('FALSE'); break; }
-      }
-    }
-    deleteRowsByValue(ss.getSheetByName('Votes'), data.pin, 0);
-  }
-  else if (action === 'resetAllVotes') {
-    const vs = ss.getSheetByName('Votes');
-    if (vs && vs.getLastRow()>1) vs.deleteRows(2, vs.getLastRow()-1);
-    const voterSheet = ss.getSheetByName('Voters');
-    if (voterSheet && voterSheet.getLastRow()>1) {
-      voterSheet.getRange(2,5,voterSheet.getLastRow()-1,1).setValue('FALSE');
-    }
-  }
-  else if (action === 'addNominee') {
-    const s = ss.getSheetByName('Nominees') || ss.insertSheet('Nominees');
-    const n = data.nominee;
-    s.appendRow([n.id, n.name, n.dept, n.unit, n.category, n.scope]);
-  }
-  else if (action === 'removeNominee') {
-    deleteRowByValue(ss.getSheetByName('Nominees'), data.id, 0);
-  }
-  else if (action === 'addCategory') {
-    const s = ss.getSheetByName('Categories') || ss.insertSheet('Categories');
-    const c = data.category;
-    s.appendRow([c.id, c.name, c.scope]);
-  }
-  else if (action === 'removeCategory') {
-    deleteRowByValue(ss.getSheetByName('Categories'), data.id, 0);
-  }
-  else if (action === 'addDept') {
-    const s = ss.getSheetByName('Departments') || ss.insertSheet('Departments');
-    const d = data.dept;
-    s.appendRow([d.id, d.name, d.color, '']);
-  }
-  else if (action === 'addUnit') {
-    const s = ss.getSheetByName('Departments') || ss.insertSheet('Departments');
-    s.appendRow([data.deptId, '', '', data.name, data.unitId]);
-  }
-  else if (action === 'removeDept') {
-    deleteRowsByValue(ss.getSheetByName('Departments'), data.deptId, 0);
-  }
-  else if (action === 'removeUnit') {
-    const s = ss.getSheetByName('Departments');
-    if (s) {
-      const rows = s.getDataRange().getValues();
-      for (let i=rows.length-1;i>=1;i--) {
-        if (rows[i][0]==data.deptId && rows[i][4]==data.unitId) s.deleteRow(i+1);
-      }
-    }
-  }
-  else if (action === 'setAdmins') {
-    const s = ss.getSheetByName('Admins') || ss.insertSheet('Admins');
-    if (s.getLastRow()>1) s.deleteRows(2,s.getLastRow()-1);
-    data.admins.forEach(a => s.appendRow([a.pin, a.role, a.name]));
-  }
-  else if (action === 'setVotingStatus') {
-    const s = ss.getSheetByName('Config') || ss.insertSheet('Config');
-    s.getRange(1,1).setValue('votingOpen');
-    s.getRange(1,2).setValue(data.open ? 'TRUE' : 'FALSE');
-  }
 
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
+    // ── VOTERS ──
+    else if (action === 'addVoter') {
+      var v = data.voter;
+      getOrCreate(ss, 'Voters').appendRow([v.pin, v.name, v.dept, v.unit, 'FALSE']);
+    }
+    else if (action === 'removeVoter') {
+      deleteRowByValue(ss.getSheetByName('Voters'), data.pin, 0);
+      deleteRowsByValue(ss.getSheetByName('Votes'),  data.pin, 0);
+    }
+    else if (action === 'resetVoter') {
+      markVoterDone(ss, data.pin, false);
+      deleteRowsByValue(ss.getSheetByName('Votes'), data.pin, 0);
+    }
+    else if (action === 'resetAllVotes') {
+      var vs = ss.getSheetByName('Votes');
+      if (vs && vs.getLastRow() > 1) vs.deleteRows(2, vs.getLastRow() - 1);
+      var voterSheet = ss.getSheetByName('Voters');
+      if (voterSheet && voterSheet.getLastRow() > 1) {
+        voterSheet.getRange(2, 5, voterSheet.getLastRow() - 1, 1).setValue('FALSE');
+      }
+    }
+
+    // ── NOMINEES ──
+    else if (action === 'addNominee') {
+      var n = data.nominee;
+      getOrCreate(ss, 'Nominees').appendRow([n.id, n.name, n.dept, n.unit, n.category, n.scope]);
+    }
+    else if (action === 'removeNominee') {
+      deleteRowByValue(ss.getSheetByName('Nominees'), data.id, 0);
+    }
+
+    // ── CATEGORIES ──
+    else if (action === 'addCategory') {
+      var c = data.category;
+      getOrCreate(ss, 'Categories').appendRow([c.id, c.name, c.scope]);
+    }
+    else if (action === 'removeCategory') {
+      deleteRowByValue(ss.getSheetByName('Categories'), data.id, 0);
+    }
+
+    // ── DEPARTMENTS & UNITS ──
+    else if (action === 'addDept') {
+      var d = data.dept;
+      getOrCreate(ss, 'Departments').appendRow([d.id, d.name, d.color, '']);
+    }
+    else if (action === 'addUnit') {
+      getOrCreate(ss, 'Departments').appendRow([data.deptId, '', '', data.name, data.unitId]);
+    }
+    else if (action === 'removeDept') {
+      deleteRowsByValue(ss.getSheetByName('Departments'), data.deptId, 0);
+    }
+    else if (action === 'removeUnit') {
+      var s = ss.getSheetByName('Departments');
+      if (s && s.getLastRow() > 1) {
+        var rows = s.getDataRange().getValues();
+        for (var i = rows.length - 1; i >= 1; i--) {
+          if (String(rows[i][0]) === String(data.deptId) &&
+              String(rows[i][4]) === String(data.unitId)) {
+            s.deleteRow(i + 1);
+          }
+        }
+      }
+    }
+
+    // ── ADMINS ──
+    else if (action === 'setAdmins') {
+      var s = getOrCreate(ss, 'Admins');
+      if (s.getLastRow() > 1) s.deleteRows(2, s.getLastRow() - 1);
+      data.admins.forEach(function(a) { s.appendRow([a.pin, a.role, a.name]); });
+    }
+
+    // ── CONFIG ──
+    else if (action === 'setVotingStatus') {
+      setConfigValue(ss, 'votingOpen', data.open ? 'TRUE' : 'FALSE');
+    }
+    else if (action === 'setConfig') {
+      setConfigValue(ss, data.key, data.value);
+    }
+
+    else if (action === 'addStaff') {
+      var s = data.staff;
+      getOrCreate(ss, 'Staff').appendRow([s.id, s.name, s.dept, s.unit]);
+    }
+    else if (action === 'removeStaff') {
+      deleteRowByValue(ss.getSheetByName('Staff'), data.id, 0);
+    }
+    else {
+      result = { status: 'error', message: 'Unknown action: ' + action };
+    }
+
+  } catch (err) {
+    Logger.log('Error: ' + err.message);
+    result = { status: 'error', message: err.message };
+  }
+  return buildResponse(JSON.stringify(result));
+}
+
+// ── Helpers ──────────────────────────────────────────────
+
+function markVoterDone(ss, pin, done) {
+  if (done === undefined) done = true;
+  var s = ss.getSheetByName('Voters');
+  if (!s || s.getLastRow() < 2) return;
+  var rows = s.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim() === String(pin).trim()) {
+      s.getRange(i + 1, 5).setValue(done ? 'TRUE' : 'FALSE');
+      break;
+    }
+  }
+}
+
+function setConfigValue(ss, key, value) {
+  var s = getOrCreate(ss, 'Config');
+  if (s.getLastRow() > 0) {
+    var rows = s.getDataRange().getValues();
+    for (var i = 0; i < rows.length; i++) {
+      if (String(rows[i][0]).toLowerCase() === String(key).toLowerCase()) {
+        s.getRange(i + 1, 2).setValue(value);
+        return;
+      }
+    }
+  }
+  s.appendRow([key, value]);
+}
+
+function getOrCreate(ss, name) {
+  return ss.getSheetByName(name) || ss.insertSheet(name);
 }
 
 function deleteRowByValue(sheet, value, col) {
-  if (!sheet) return;
-  const rows = sheet.getDataRange().getValues();
-  for (let i=rows.length-1;i>=1;i--) {
-    if (rows[i][col] == value) { sheet.deleteRow(i+1); break; }
+  if (!sheet || sheet.getLastRow() < 2) return;
+  var rows = sheet.getDataRange().getValues();
+  for (var i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][col]).trim() === String(value).trim()) {
+      sheet.deleteRow(i + 1); break;
+    }
   }
 }
+
 function deleteRowsByValue(sheet, value, col) {
-  if (!sheet) return;
-  const rows = sheet.getDataRange().getValues();
-  for (let i=rows.length-1;i>=1;i--) {
-    if (rows[i][col] == value) sheet.deleteRow(i+1);
+  if (!sheet || sheet.getLastRow() < 2) return;
+  var rows = sheet.getDataRange().getValues();
+  for (var i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][col]).trim() === String(value).trim()) {
+      sheet.deleteRow(i + 1);
+    }
   }
 }
 
-// After pasting: click Deploy → New deployment
-// Type: Web app · Execute as: Me · Who has access: Anyone
-// Copy the /exec URL and paste it as the Script URL in the portal Settings`;
-
+function buildResponse(text) {
+  return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
+}
+`;
   openModal(`<div class="modal-title">📋 Google Apps Script — Copy &amp; Paste</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
       1. Open your Google Sheet → <b>Extensions → Apps Script</b><br>
-      2. Delete any existing code, paste everything below<br>
+      2. Delete all existing code and paste everything below<br>
       3. Click <b>Deploy → New deployment → Web app</b><br>
-      4. Set <i>Execute as: Me</i>, <i>Who has access: Anyone</i><br>
-      5. Copy the <code>/exec</code> URL → paste it as <b>Script URL</b> in Settings
+      4. Set <i>Execute as: Me</i> · <i>Who has access: Anyone</i><br>
+      5. Copy the <code>/exec</code> URL → paste as <b>Script URL</b> in Settings
     </div>
-    <textarea style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px;color:var(--text);font-family:monospace;font-size:10px;outline:none;resize:vertical;" onclick="this.select()" readonly>${code}</textarea>
+    <textarea style="width:100%;height:220px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px;color:var(--text);font-family:monospace;font-size:10px;outline:none;resize:vertical;" onclick="this.select()" readonly>${code}</textarea>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Close</button>
       <button class="btn-confirm" onclick="navigator.clipboard.writeText(document.querySelector('textarea').value);showToast('Copied!','ok');">Copy Code</button>
     </div>`);
 }
+
 
 // ═══════════════════════════════════════════════════════════
 // TAB SWITCHING
