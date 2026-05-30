@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voting Portal</title>
+<title>Staff Voting Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -667,10 +667,13 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     </div>
 
     <div class="tab-panel" id="superadmin-results">
-      <div class="rf" style="margin-bottom:16px;">
-        <select class="fsel" id="sa-fcat" onchange="renderSAResults()"><option value="">All categories</option></select>
-        <select class="fsel" id="sa-fdept" onchange="saDeptChanged()"><option value="">All departments</option></select>
-        <select class="fsel" id="sa-funit" onchange="renderSAResults()"><option value="">All units</option></select>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <div class="rf" style="margin-bottom:0;flex:1;">
+          <select class="fsel" id="sa-fcat" onchange="renderSAResults()"><option value="">All categories</option></select>
+          <select class="fsel" id="sa-fdept" onchange="saDeptChanged()"><option value="">All departments</option></select>
+          <select class="fsel" id="sa-funit" onchange="renderSAResults()"><option value="">All units</option></select>
+        </div>
+        <button class="btn-sm gold" onclick="exportResultsPDF()" style="white-space:nowrap;">📄 Export PDF</button>
       </div>
       <div id="sa-results-container"></div>
     </div>
@@ -848,8 +851,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       <div class="ss-section">
         <div class="ss-title">Export</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-sm gold" onclick="exportCSV('results')">Export results CSV</button>
-          <button class="btn-sm" onclick="exportCSV('voters')">Export voter list</button>
+          <button class="btn-sm gold" onclick="exportResultsPDF()">📄 Results PDF</button>
+          <button class="btn-sm" onclick="exportCSV('results')">Results CSV</button>
+          <button class="btn-sm" onclick="exportCSV('voters')">Voter list CSV</button>
           <button class="btn-sm" onclick="exportCSV('full')">Full export</button>
         </div>
       </div>
@@ -2268,6 +2272,144 @@ function renderResults(who){
       <td style="text-align:right;font-size:14px;font-weight:600;color:var(--text2);">${nom.votes}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Export results as a print-ready PDF (layout document) ──
+function exportResultsPDF(){
+  const catF  = document.getElementById('sa-fcat')?.value||'';
+  const deptF = document.getElementById('sa-fdept')?.value||'';
+  const unitF = document.getElementById('sa-funit')?.value||'';
+
+  const orgName = CFG.orgName || 'Staff Awards';
+  const now = new Date();
+  const dateStr = now.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+  const timeStr = now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+
+  const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
+  const cats = catF ? DATA.categories.filter(c=>c.id===catF) : DATA.categories;
+
+  // Build filter description line
+  let filterDesc = 'All categories';
+  if(catF) filterDesc = getCat(catF).name;
+  const parts = [];
+  if(deptF) parts.push('Department: '+getDeptName(deptF));
+  if(unitF) parts.push('Unit: '+getUnitName(unitF));
+  const filterLine = parts.length ? filterDesc+' — '+parts.join(' · ') : filterDesc;
+
+  // Totals
+  const totalVoters = DATA.voters.length;
+  const totalVoted  = DATA.voters.filter(v=>v.hasVoted).length;
+  const turnout = totalVoters ? Math.round(totalVoted/totalVoters*100) : 0;
+
+  let body = '';
+
+  cats.forEach(cat=>{
+    let noms = DATA.nominees
+      .filter(n=>n.category===cat.id && (!deptF||n.dept===deptF) && (!unitF||n.unit===unitF))
+      .map(n=>({...n, votes:getVotes(n.id,n.name)}))
+      .sort((a,b)=>b.votes-a.votes);
+    if(!noms.length) return;
+
+    const totalVotes = noms.reduce((s,n)=>s+n.votes,0);
+    const maxV = noms[0]?.votes || 1;
+    const scopeTxt = scopeTag[cat.scope]||'';
+    const linkedTxt = (cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept)
+                    : (cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
+
+    const rows = noms.map((n,i)=>{
+      const empId = getStaffId(n.name);
+      const isWinner = i===0 && n.votes>0;
+      const pct = Math.round(n.votes/maxV*100);
+      return `<tr class="${isWinner?'winner':''}">
+        <td class="rank">${isWinner?'★':(i+1)}</td>
+        <td class="nominee">
+          <span class="nom-name">${n.name}</span>
+          ${empId?`<span class="emp">${empId}</span>`:''}
+        </td>
+        <td class="loc">${getDeptName(n.dept)}${getUnitName(n.unit)?' · '+getUnitName(n.unit):''}</td>
+        <td class="bar-cell"><span class="bar" style="width:${pct}%;"></span></td>
+        <td class="votes">${n.votes}</td>
+      </tr>`;
+    }).join('');
+
+    body += `<section class="cat-block">
+      <div class="cat-head">
+        <h2>${cat.name}</h2>
+        <div class="cat-meta">${scopeTxt}${linkedTxt} &nbsp;·&nbsp; ${noms.length} nominee${noms.length!==1?'s':''} &nbsp;·&nbsp; ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
+      </div>
+      <table>
+        <thead><tr><th class="rank">#</th><th>Nominee</th><th>Department · Unit</th><th>Share</th><th class="votes">Votes</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </section>`;
+  });
+
+  if(!body) body = '<p style="text-align:center;color:#999;padding:40px;">No results to display for the selected filters.</p>';
+
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${orgName} — Results</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; color:#1a1a1a; font-size:12px; line-height:1.5; }
+    .doc-header { text-align:center; border-bottom:2px solid #c9a84c; padding-bottom:16px; margin-bottom:6px; }
+    .doc-header .crest { font-size:30px; }
+    .doc-header h1 { font-size:22px; font-weight:600; letter-spacing:-.01em; margin:6px 0 2px; }
+    .doc-header .sub { font-size:11px; color:#888; letter-spacing:.1em; text-transform:uppercase; }
+    .doc-meta { display:flex; justify-content:space-between; font-size:10px; color:#777; margin:14px 0 4px; padding-bottom:8px; }
+    .summary { display:flex; gap:0; margin:14px 0 22px; border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; }
+    .summary .box { flex:1; text-align:center; padding:12px; border-right:1px solid #e0e0e0; }
+    .summary .box:last-child { border-right:none; }
+    .summary .num { font-size:22px; font-weight:700; color:#9a6e1e; }
+    .summary .lbl { font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:#888; margin-top:2px; }
+    .cat-block { margin-bottom:22px; page-break-inside:avoid; }
+    .cat-head { border-left:3px solid #c9a84c; padding-left:10px; margin-bottom:8px; }
+    .cat-head h2 { font-size:15px; font-weight:600; }
+    .cat-head .cat-meta { font-size:10px; color:#888; margin-top:2px; }
+    table { width:100%; border-collapse:collapse; }
+    th { text-align:left; font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:#999; padding:6px 8px; border-bottom:1.5px solid #ddd; }
+    td { padding:7px 8px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+    th.rank, td.rank { width:28px; text-align:center; color:#999; font-weight:600; }
+    th.votes, td.votes { width:50px; text-align:right; font-weight:700; font-size:14px; }
+    .nom-name { font-weight:600; }
+    .emp { display:inline-block; font-family:monospace; font-size:9px; color:#9a6e1e; background:#faf5e8; border:1px solid #e8dcc0; border-radius:3px; padding:1px 5px; margin-left:6px; }
+    .loc { color:#777; font-size:11px; }
+    .bar-cell { width:100px; }
+    .bar { display:block; height:6px; background:#c9a84c; border-radius:3px; min-width:3px; }
+    tr.winner td { background:#fdf9ef; }
+    tr.winner .rank { color:#c9a84c; font-size:14px; }
+    .doc-footer { text-align:center; font-size:9px; color:#aaa; margin-top:24px; padding-top:10px; border-top:1px solid #eee; }
+    @media print { .no-print { display:none; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+    .print-btn { position:fixed; top:16px; right:16px; background:#c9a84c; color:#fff; border:none; padding:12px 22px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 2px 12px rgba(0,0,0,.15); }
+  </style></head>
+  <body>
+    <button class="print-btn no-print" onclick="window.print()">📄 Save as PDF / Print</button>
+    <div class="doc-header">
+      <div class="crest">🏆</div>
+      <h1>${orgName}</h1>
+      <div class="sub">Voting Results</div>
+    </div>
+    <div class="doc-meta">
+      <span>${filterLine}</span>
+      <span>Generated ${dateStr} at ${timeStr}</span>
+    </div>
+    <div class="summary">
+      <div class="box"><div class="num">${totalVoters}</div><div class="lbl">Total Voters</div></div>
+      <div class="box"><div class="num">${totalVoted}</div><div class="lbl">Voted</div></div>
+      <div class="box"><div class="num">${totalVoters-totalVoted}</div><div class="lbl">Pending</div></div>
+      <div class="box"><div class="num">${turnout}%</div><div class="lbl">Turnout</div></div>
+    </div>
+    ${body}
+    <div class="doc-footer">Generated by ${orgName} Voting Portal &nbsp;·&nbsp; Confidential</div>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if(!w){ showToast('Please allow pop-ups to export PDF','err'); return; }
+  w.document.open();
+  w.document.write(doc);
+  w.document.close();
+  // Give it a moment to render, then open print dialog
+  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} }, 500);
+  showToast('Opening printable results — choose "Save as PDF"','ok');
 }
 
 // ── SA results (category-grouped card view) ──
