@@ -509,9 +509,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div class="tb-right"><span class="tbadge tbadge-admin">Admin</span><button class="btn-logout" onclick="doLogout()">Sign out</button></div>
   </div>
   <div class="dash-wrap">
-    <div class="dash-tabs">
+    <div class="dash-tabs" id="admin-dash-tabs">
       <button class="tab-btn on" onclick="switchTab('admin','overview',this)">Overview</button>
       <button class="tab-btn" onclick="switchTab('admin','results',this)">Results</button>
+      <button class="tab-btn" id="admin-tab-btn-voters" onclick="switchTab('admin','voters',this)" style="display:none;">Voters</button>
+      <button class="tab-btn" id="admin-tab-btn-staff"  onclick="switchTab('admin','staff',this)"  style="display:none;">Staff</button>
+      <button class="tab-btn" id="admin-tab-btn-noms"   onclick="switchTab('admin','noms',this)"   style="display:none;">Nominees</button>
     </div>
 
     <!-- Overview -->
@@ -569,6 +572,50 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <span class="ar-section-title">📍 By Unit</span>
       </div>
       <div id="ar-by-unit"></div>
+    </div>
+
+    <!-- Admin: Voters (read-only) -->
+    <div class="tab-panel" id="admin-voters">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:500;">Voters</div>
+        <div style="display:flex;gap:7px;">
+          <button class="btn-sm gold" onclick="openBulkUploadModal('voters')">⬆ Bulk upload</button>
+        </div>
+      </div>
+      <div class="voter-tbl" id="admin-voter-list"></div>
+    </div>
+
+    <!-- Admin: Staff (read-only + bulk upload) -->
+    <div class="tab-panel" id="admin-staff">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:500;">Staff Directory</div>
+        <div style="display:flex;gap:7px;">
+          <button class="btn-sm gold" onclick="openBulkUploadModal('staff')">⬆ Bulk upload</button>
+          <button class="btn-sm green" onclick="openAddStaffModal()">+ Add staff</button>
+        </div>
+      </div>
+      <div class="rf">
+        <select class="fsel" id="admin-staff-fdept" onchange="adminStaffDeptChanged()"><option value="">All departments</option></select>
+        <select class="fsel" id="admin-staff-funit" onchange="renderAdminStaff()"><option value="">All units</option></select>
+      </div>
+      <div style="margin-top:12px;" id="admin-staff-list-container"></div>
+    </div>
+
+    <!-- Admin: Nominees (read-only + bulk upload) -->
+    <div class="tab-panel" id="admin-noms">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:500;">Nominees</div>
+        <div style="display:flex;gap:7px;">
+          <button class="btn-sm gold" onclick="openBulkUploadModal('nominees')">⬆ Bulk upload</button>
+          <button class="btn-sm green" onclick="openAddNomModal()">+ Add nominee</button>
+        </div>
+      </div>
+      <div class="rf">
+        <select class="fsel" id="admin-nom-fcat" onchange="renderAdminNominees()"><option value="">All categories</option></select>
+        <select class="fsel" id="admin-nom-fdept" onchange="adminNomDeptChanged()"><option value="">All departments</option></select>
+        <select class="fsel" id="admin-nom-funit" onchange="renderAdminNominees()"><option value="">All units</option></select>
+      </div>
+      <div style="margin-top:12px;" id="admin-nom-list"></div>
     </div>
   </div>
 </div>
@@ -710,6 +757,38 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         </div>
       </div>
       <div class="ss-section">
+        <div class="ss-title">Admin Page Visibility</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;">
+          <p style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6;">
+            Choose which management pages are visible to Admins. SuperAdmin always sees all pages.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+              <input type="checkbox" id="cfg-admin-voters" onchange="saveAdminPageSettings()" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer;">
+              <div>
+                <div style="font-size:13px;font-weight:500;">Voters page</div>
+                <div style="font-size:11px;color:var(--text3);">Admins can view and bulk-upload voters</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+              <input type="checkbox" id="cfg-admin-staff" onchange="saveAdminPageSettings()" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer;">
+              <div>
+                <div style="font-size:13px;font-weight:500;">Staff page</div>
+                <div style="font-size:11px;color:var(--text3);">Admins can view and bulk-upload staff</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+              <input type="checkbox" id="cfg-admin-noms" onchange="saveAdminPageSettings()" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer;">
+              <div>
+                <div style="font-size:13px;font-weight:500;">Nominees page</div>
+                <div style="font-size:11px;color:var(--text3);">Admins can view, add, and bulk-upload nominees</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="ss-section">
         <div class="ss-title">Voter Stats Dashboard — Display Settings</div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;">
           <p style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6;">
@@ -814,12 +893,19 @@ const CFG = {
   // isConfigured is always true now — defaults are baked in
   get isConfigured(){ return true; },
   // Display settings — which views show the voter stats dashboard
-  get showStatsVoter()  { return LS.get('cfg_show_stats_voter')  !== false; },
-  get showStatsAdmin()  { return LS.get('cfg_show_stats_admin')  !== false; },
-  get showStatsSA()     { return LS.get('cfg_show_stats_sa')     !== false; },
-  set showStatsVoter(v) { LS.set('cfg_show_stats_voter', v); },
-  set showStatsAdmin(v) { LS.set('cfg_show_stats_admin', v); },
-  set showStatsSA(v)    { LS.set('cfg_show_stats_sa', v); },
+  get showStatsVoter()   { return LS.get('cfg_show_stats_voter')  !== false; },
+  get showStatsAdmin()   { return LS.get('cfg_show_stats_admin')  !== false; },
+  get showStatsSA()      { return LS.get('cfg_show_stats_sa')     !== false; },
+  set showStatsVoter(v)  { LS.set('cfg_show_stats_voter', v); },
+  set showStatsAdmin(v)  { LS.set('cfg_show_stats_admin', v); },
+  set showStatsSA(v)     { LS.set('cfg_show_stats_sa', v); },
+  // Admin page visibility
+  get adminShowVoters()  { return LS.get('cfg_admin_voters')  !== false; },
+  get adminShowStaff()   { return LS.get('cfg_admin_staff')   !== false; },
+  get adminShowNoms()    { return LS.get('cfg_admin_noms')    !== false; },
+  set adminShowVoters(v) { LS.set('cfg_admin_voters', v); },
+  set adminShowStaff(v)  { LS.set('cfg_admin_staff', v); },
+  set adminShowNoms(v)   { LS.set('cfg_admin_noms', v); },
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1607,6 +1693,149 @@ function loadDisplaySettings(){
   if(v) v.checked = CFG.showStatsVoter;
   if(a) a.checked = CFG.showStatsAdmin;
   if(s) s.checked = CFG.showStatsSA;
+  loadAdminPageSettings();
+}
+
+function saveAdminPageSettings(){
+  CFG.adminShowVoters = document.getElementById('cfg-admin-voters')?.checked ?? true;
+  CFG.adminShowStaff  = document.getElementById('cfg-admin-staff')?.checked  ?? true;
+  CFG.adminShowNoms   = document.getElementById('cfg-admin-noms')?.checked   ?? true;
+  applyAdminPageVisibility();
+  showToast('Admin page settings saved','ok');
+}
+
+function loadAdminPageSettings(){
+  const v = document.getElementById('cfg-admin-voters');
+  const s = document.getElementById('cfg-admin-staff');
+  const n = document.getElementById('cfg-admin-noms');
+  if(v) v.checked = CFG.adminShowVoters;
+  if(s) s.checked = CFG.adminShowStaff;
+  if(n) n.checked = CFG.adminShowNoms;
+  applyAdminPageVisibility();
+}
+
+function applyAdminPageVisibility(){
+  // Show/hide tab buttons in admin view
+  const vBtn = document.getElementById('admin-tab-btn-voters');
+  const sBtn = document.getElementById('admin-tab-btn-staff');
+  const nBtn = document.getElementById('admin-tab-btn-noms');
+  if(vBtn) vBtn.style.display = CFG.adminShowVoters ? '' : 'none';
+  if(sBtn) sBtn.style.display = CFG.adminShowStaff  ? '' : 'none';
+  if(nBtn) nBtn.style.display = CFG.adminShowNoms   ? '' : 'none';
+}
+
+// ── Admin Voters render (read-only list) ──
+function renderAdminVoterList(){
+  const el = document.getElementById('admin-voter-list');
+  if(!el) return;
+  if(!DATA.voters.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👥</div>No voters yet. Add voters in SuperAdmin or bulk upload below.</div>';
+    return;
+  }
+  el.innerHTML = DATA.voters.map(v=>`
+    <div class="vrow">
+      <span class="vpin">${v.pin}</span>
+      ${v.empId?`<span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;">${v.empId}</span>`:''}
+      <span class="vname">${v.name}</span>
+      <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
+      <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
+        <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
+        <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
+      </div>
+    </div>`).join('');
+}
+
+// ── Admin Staff render ──
+function adminStaffDeptChanged(){
+  const deptF = document.getElementById('admin-staff-fdept')?.value||'';
+  const unitEl = document.getElementById('admin-staff-funit');
+  if(unitEl){
+    let units=[];
+    if(deptF){ const d=DATA.departments.find(d=>d.id===deptF); units=d?d.units:[]; }
+    else DATA.departments.forEach(d=>units.push(...d.units));
+    unitEl.innerHTML=`<option value="">All units</option>`+units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  }
+  renderAdminStaff();
+}
+function renderAdminStaff(){
+  const deptF = document.getElementById('admin-staff-fdept')?.value||'';
+  const unitF = document.getElementById('admin-staff-funit')?.value||'';
+  const dEl = document.getElementById('admin-staff-fdept');
+  if(dEl&&dEl.options.length<=1) dEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const filtered = DATA.staff.filter(s=>(!deptF||s.dept===deptF)&&(!unitF||s.unit===unitF));
+  const el = document.getElementById('admin-staff-list-container');
+  if(!el) return;
+  if(!filtered.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👤</div>No staff found. Add staff in SuperAdmin or bulk upload.</div>';
+    return;
+  }
+  el.innerHTML=`<div class="staff-list-wrap">`+filtered.map(s=>`
+    <div class="staff-row">
+      <div class="staff-avatar" style="background:${stringToColor(s.name)}22;color:${stringToColor(s.name)};">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="staff-name">${s.name}</div>
+        <div class="staff-dept">${getDeptName(s.dept)} · ${getUnitName(s.unit)}</div>
+      </div>
+      <span style="font-size:11px;color:var(--gold);font-family:monospace;font-weight:600;padding:2px 8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:5px;flex-shrink:0;">${s.empId||s.id}</span>
+    </div>`).join('')+`</div>`;
+}
+
+// ── Admin Nominees render ──
+function adminNomDeptChanged(){
+  const deptF = document.getElementById('admin-nom-fdept')?.value||'';
+  const unitEl = document.getElementById('admin-nom-funit');
+  if(unitEl){
+    let units=[];
+    if(deptF){ const d=DATA.departments.find(d=>d.id===deptF); units=d?d.units:[]; }
+    else DATA.departments.forEach(d=>units.push(...d.units));
+    unitEl.innerHTML=`<option value="">All units</option>`+units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  }
+  renderAdminNominees();
+}
+function renderAdminNominees(){
+  const catF  = document.getElementById('admin-nom-fcat')?.value||'';
+  const deptF = document.getElementById('admin-nom-fdept')?.value||'';
+  const unitF = document.getElementById('admin-nom-funit')?.value||'';
+  const catEl = document.getElementById('admin-nom-fcat');
+  const deptEl= document.getElementById('admin-nom-fdept');
+  if(catEl&&catEl.options.length<=1) catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if(deptEl&&deptEl.options.length<=1) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const filtered = DATA.nominees.filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF)&&(!unitF||n.unit===unitF));
+  const container = document.getElementById('admin-nom-list');
+  if(!container) return;
+  if(!filtered.length){
+    container.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏅</div>No nominees found.</div>';
+    return;
+  }
+  // Group by category
+  const grouped={};
+  filtered.forEach(n=>{ const k=n.category||'__none__'; if(!grouped[k])grouped[k]=[]; grouped[k].push(n); });
+  const catOrder = DATA.categories.map(c=>c.id);
+  const sortedKeys = Object.keys(grouped).sort((a,b)=>catOrder.indexOf(a)-catOrder.indexOf(b));
+  container.innerHTML = sortedKeys.map(catId=>{
+    const cat=getCat(catId); const noms=grouped[catId];
+    const rows=noms.map(nom=>{
+      const votes=getVotes(nom.id,nom.name); const empId=getStaffId(nom.name);
+      return `<div class="nom-list-row">
+        <div class="nom-list-avatar" style="background:${stringToColor(nom.name)}22;color:${stringToColor(nom.name)};">${nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <div class="nom-list-info">
+          <div class="nom-list-name">${nom.name}${empId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${empId}</span>`:''}</div>
+          <div class="nom-list-meta">${getDeptName(nom.dept)} · ${getUnitName(nom.unit)}</div>
+        </div>
+        <div class="nom-list-votes">${votes}v</div>
+      </div>`;
+    }).join('');
+    const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
+    return `<div class="nom-cat-group">
+      <div class="nom-cat-group-hdr">
+        <div style="flex:1;">
+          <span class="nom-cat-group-title">${cat.name}</span>
+          <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;">(${scopeTag[cat.scope]||cat.scope})</span>
+        </div>
+        <span class="nom-cat-group-count">${noms.length} nominee${noms.length!==1?'s':''}</span>
+      </div>${rows}
+    </div>`;
+  }).join('');
 }
 
 function selectNom(catId,nomId){
@@ -1784,6 +2013,7 @@ function initAdmin(){
   renderDeptBars('admin-dept-bars');
   renderUnitBars('admin-unit-bars');
   renderVoterStats();
+  applyAdminPageVisibility();
   applyOrgName();
 }
 
@@ -3398,6 +3628,162 @@ function buildResponse(text) {
 
 
 // ═══════════════════════════════════════════════════════════
+// BULK UPLOAD
+// ═══════════════════════════════════════════════════════════
+function openBulkUploadModal(type){
+  const templates = {
+    staff:   'EmpID,Name,Department,Unit
+EMP001,Ahmed Ali,Finance,Accounts
+EMP002,Sara Noor,HR,Recruitment',
+    voters:  'PIN,EmpID,Name,Department,Unit
+100001,EMP001,Ahmed Ali,Finance,Accounts
+100002,EMP002,Sara Noor,HR,Recruitment',
+    nominees:'Name,Department,Unit,Category,Scope
+Ahmed Ali,Finance,Accounts,Leadership Award,global
+Sara Noor,HR,Recruitment,Best Staff Award,dept',
+  };
+  const labels = {staff:'Staff',voters:'Voters',nominees:'Nominees'};
+  openModal(`<div class="modal-title">⬆ Bulk Upload — ${labels[type]}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
+      Paste CSV data below or upload a <code>.csv</code> file.<br>
+      <span style="color:var(--text3);">First row must be the header. Existing records with the same ID/PIN are skipped.</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input type="file" id="bulk-file-inp" accept=".csv,.txt" onchange="bulkLoadFile()" style="font-size:12px;color:var(--text2);flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:6px 10px;">
+      <button class="btn-sm" onclick="document.getElementById('bulk-csv').value=templates_${type}()">Load template</button>
+    </div>
+    <textarea id="bulk-csv" style="width:100%;height:180px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px;color:var(--text);font-family:monospace;font-size:11px;outline:none;resize:vertical;" placeholder="Paste CSV here…">${templates[type]}</textarea>
+    <div id="bulk-preview" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="processBulkUpload('${type}')">Upload</button>
+    </div>`);
+  // wire template button properly
+  document.querySelector('[onclick*="templates_"]')?.setAttribute('onclick',`document.getElementById('bulk-csv').value=\`${templates[type]}\``);
+  // live preview
+  document.getElementById('bulk-csv').addEventListener('input', ()=>previewBulkCSV(type));
+  previewBulkCSV(type);
+}
+
+function bulkLoadFile(){
+  const file = document.getElementById('bulk-file-inp')?.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('bulk-csv').value = e.target.result;
+    previewBulkCSV();
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text){
+  const lines = text.trim().split(/
+?
+/).filter(l=>l.trim());
+  if(lines.length<2) return {headers:[], rows:[]};
+  const headers = lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  const rows = lines.slice(1).map(line=>{
+    // Handle quoted fields
+    const cols=[]; let cur='', inQ=false;
+    for(const ch of line){
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=ch;
+    }
+    cols.push(cur.trim());
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=cols[i]||'');
+    return obj;
+  }).filter(r=>Object.values(r).some(v=>v));
+  return {headers, rows};
+}
+
+function previewBulkCSV(type){
+  const text = document.getElementById('bulk-csv')?.value||'';
+  const {rows} = parseCSV(text);
+  const el = document.getElementById('bulk-preview');
+  if(el) el.textContent = rows.length ? `✓ ${rows.length} row${rows.length!==1?'s':''} detected` : '';
+}
+
+async function processBulkUpload(type){
+  const text = document.getElementById('bulk-csv')?.value||'';
+  const {rows} = parseCSV(text);
+  if(!rows.length){showToast('No data found in CSV','err');return;}
+  let added=0, skipped=0;
+  const newItems=[];
+
+  if(type==='staff'){
+    rows.forEach(r=>{
+      const empId=(r['EmpID']||r['empid']||r['emp_id']||'').trim().toUpperCase();
+      const name=(r['Name']||r['name']||'').trim();
+      const deptRaw=(r['Department']||r['dept']||'').trim();
+      const unitRaw=(r['Unit']||r['unit']||'').trim();
+      if(!empId||!name){skipped++;return;}
+      if(DATA.staff.find(s=>s.id===empId||s.empId===empId)){skipped++;return;}
+      const deptId=DATA.departments.find(d=>d.name.toLowerCase()===deptRaw.toLowerCase())?.id||'dept_'+toId(deptRaw);
+      const dept=DATA.departments.find(d=>d.id===deptId);
+      const unitId=dept?.units.find(u=>u.name.toLowerCase()===unitRaw.toLowerCase())?.id||(deptId+'_'+toId(unitRaw));
+      const s={id:empId,empId,name,dept:deptId,unit:unitId};
+      DATA.staff.push(s); newItems.push({action:'addStaff',data:{staff:s}}); added++;
+    });
+  }
+  else if(type==='voters'){
+    rows.forEach(r=>{
+      const pin=(r['PIN']||r['pin']||'').trim();
+      const empId=(r['EmpID']||r['empid']||'').trim().toUpperCase();
+      const name=(r['Name']||r['name']||'').trim();
+      const deptRaw=(r['Department']||r['dept']||'').trim();
+      const unitRaw=(r['Unit']||r['unit']||'').trim();
+      if(!pin||!name){skipped++;return;}
+      if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){skipped++;return;}
+      const deptId=DATA.departments.find(d=>d.name.toLowerCase()===deptRaw.toLowerCase())?.id||'dept_'+toId(deptRaw);
+      const dept=DATA.departments.find(d=>d.id===deptId);
+      const unitId=dept?.units.find(u=>u.name.toLowerCase()===unitRaw.toLowerCase())?.id||(deptId+'_'+toId(unitRaw));
+      const voter={pin,empId,name,dept:deptId,unit:unitId,hasVoted:false};
+      DATA.voters.push(voter); newItems.push({action:'addVoter',data:{voter}}); added++;
+    });
+  }
+  else if(type==='nominees'){
+    rows.forEach(r=>{
+      const name=(r['Name']||r['name']||'').trim();
+      const deptRaw=(r['Department']||r['dept']||'').trim();
+      const unitRaw=(r['Unit']||r['unit']||'').trim();
+      const catRaw=(r['Category']||r['category']||'').trim();
+      const scopeRaw=(r['Scope']||r['scope']||'global').trim();
+      if(!name||!catRaw){skipped++;return;}
+      const deptId=DATA.departments.find(d=>d.name.toLowerCase()===deptRaw.toLowerCase())?.id||'dept_'+toId(deptRaw);
+      const dept=DATA.departments.find(d=>d.id===deptId);
+      const unitId=dept?.units.find(u=>u.name.toLowerCase()===unitRaw.toLowerCase())?.id||(deptId+'_'+toId(unitRaw));
+      const catId=DATA.categories.find(c=>c.name.toLowerCase()===catRaw.toLowerCase())?.id||'cat_'+toId(catRaw);
+      const nomId='nom_'+toId(name)+'_'+toId(deptRaw)+'_'+catId;
+      if(DATA.nominees.find(n=>n.id===nomId)){skipped++;return;}
+      const nom={id:nomId,name,dept:deptId,unit:unitId,category:catId,scope:scopeRaw};
+      DATA.nominees.push(nom); newItems.push({action:'addNominee',data:{nominee:nom}}); added++;
+    });
+  }
+
+  cacheData();
+  closeModal();
+
+  // Refresh relevant panels
+  renderVoterList(); renderStaff(); renderNominees();
+  renderAdminVoterList(); renderAdminStaff(); renderAdminNominees();
+  renderStats('sa'); renderStats('admin');
+
+  // Write to Sheets
+  if(newItems.length && CFG.scriptUrl){
+    showSyncBadge('syncing',`Syncing ${added} records…`);
+    let ok=0;
+    for(const item of newItems){
+      const res=await writeToSheets(item.action, item.data);
+      if(res!==false) ok++;
+    }
+    showSyncBadge(ok===added?'ok':'err', ok===added?`${added} records synced ✓`:`${ok}/${added} synced`);
+  }
+  showToast(`${added} added · ${skipped} skipped (duplicates)`, 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════
 // TAB SWITCHING
 // ═══════════════════════════════════════════════════════════
 function switchTab(scope,tab,btn){
@@ -3409,6 +3795,9 @@ function switchTab(scope,tab,btn){
   if(tab==='overview'&&scope==='admin'){renderStats('admin');renderDeptBars('admin-dept-bars');renderUnitBars('admin-unit-bars');renderVoterStats();}
   if(tab==='overview'&&scope==='superadmin'){renderStats('sa');renderDeptBars('sa-dept-bars');renderUnitBars('sa-unit-bars');renderVoterStats();}
   if(tab==='results'&&scope==='admin') renderAdminResults();
+  if(tab==='voters'&&scope==='admin') renderAdminVoterList();
+  if(tab==='staff'&&scope==='admin') renderAdminStaff();
+  if(tab==='noms'&&scope==='admin') renderAdminNominees();
   if(tab==='results'&&scope==='superadmin') renderSAResults();
   if(tab==='departments') renderDeptDetail('admin-dept-detail');
   if(tab==='units') renderUnitDetail('admin-unit-detail');
@@ -3417,7 +3806,7 @@ function switchTab(scope,tab,btn){
   if(tab==='nominees'){ populateNomFilters(); renderNominees(); }
   if(tab==='staff') renderStaff();
   if(tab==='categories'){ populateCatFilters(); renderCatList(); }
-  if(tab==='settings'){ initSA(); loadDisplaySettings(); }
+  if(tab==='settings'){ initSA(); loadDisplaySettings(); loadAdminPageSettings(); }
 }
 
 // ═══════════════════════════════════════════════════════════
