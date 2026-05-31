@@ -65,20 +65,20 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 
 /* ---------- App shell ---------- */
 #app{display:none;min-height:100vh}
-.layout{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
-.side{background:#13241f;color:#cfe3db;padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
-.side .wm{font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:#fff;display:flex;align-items:center;gap:9px;padding:6px 8px 16px}
+.layout{display:grid;grid-template-columns:218px 1fr;min-height:100vh}
+.side{background:#13241f;color:#cfe3db;padding:14px 11px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh}
+.side .wm{font-family:'Fraunces',serif;font-size:17px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px;padding:4px 7px 12px}
 .side .wm .brandmark{background:var(--accent)}
-.nav-group{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6f9286;margin:14px 8px 6px;font-weight:700}
-.nav a{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;color:#cfe3db;font-weight:500;font-size:14px;cursor:pointer;transition:.12s;text-decoration:none;position:relative}
+.nav-group{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6f9286;margin:11px 8px 4px;font-weight:700}
+.nav a{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:8px;color:#cfe3db;font-weight:500;font-size:13px;cursor:pointer;transition:.12s;text-decoration:none;position:relative}
 .nav a:hover{background:rgba(255,255,255,.06);color:#fff}
 .nav a.active{background:var(--accent);color:#fff}
-.nav a svg{width:18px;height:18px;flex:none;opacity:.9}
+.nav a svg{width:16px;height:16px;flex:none;opacity:.9}
 .nav a .lock{margin-left:auto;font-size:10px;background:rgba(255,255,255,.12);padding:2px 6px;border-radius:20px;letter-spacing:.04em}
-.side-foot{margin-top:auto;padding:10px 8px}
-.plan-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px}
+.side-foot{margin-top:auto;padding:8px 6px}
+.plan-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:10px}
 .plan-card .pt{font-size:12px;color:#9fc0b6}
-.plan-card .pn{font-weight:700;color:#fff;font-size:15px;margin:2px 0 9px}
+.plan-card .pn{font-weight:700;color:#fff;font-size:14px;margin:2px 0 8px}
 
 .main{display:flex;flex-direction:column;min-height:100vh}
 .topbar{height:62px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;padding:0 26px;gap:14px;position:sticky;top:0;z-index:20}
@@ -272,6 +272,7 @@ table{width:100%;border-collapse:collapse}
         <div class="nav-group">Workspace</div>
         <a data-view="dashboard"><span class="ic" data-i="grid"></span> Dashboard</a>
         <a data-view="items"><span class="ic" data-i="box"></span> Items</a>
+        <a data-view="customers"><span class="ic" data-i="users"></span> Customers</a>
         <div class="nav-group">Sales</div>
         <a data-view="quotations"><span class="ic" data-i="doc"></span> Quotations</a>
         <a data-view="invoices"><span class="ic" data-i="receipt"></span> Invoices</a>
@@ -340,7 +341,8 @@ const ICONS={
  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
  check:'<path d="M20 6 9 17l-5-5"/>',
  empty:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
- shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+ shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+ users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>'
 };
 function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`});}
 function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
@@ -487,6 +489,7 @@ async function doAuth(){
   launchApp();
 }
 function launchApp(){
+  if(State.db && !Array.isArray(State.db.customers)) State.db.customers=[];
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='block';
   renderIcons();
@@ -523,7 +526,7 @@ document.getElementById('upgradeBtn').onclick=openUpgrade;
    ROUTER
    ============================================================ */
 const PRO_VIEWS=['deliveries','email'];
-const TITLES={dashboard:'Dashboard',items:'Items',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',settings:'Settings',admin:'Portal Admin'};
+const TITLES={dashboard:'Dashboard',items:'Items',customers:'Customers',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',settings:'Settings',admin:'Portal Admin'};
 function go(view){
   if(view==='admin'&&!State.isAdmin){view='dashboard';}
   State.view=view;
@@ -531,7 +534,7 @@ function go(view){
   document.getElementById('pageTitle').textContent=TITLES[view];
   const c=document.getElementById('content');
   if(PRO_VIEWS.includes(view)&&!isPro()){c.innerHTML=lockedView(view);renderIcons(c);return;}
-  ({dashboard:viewDashboard,items:viewItems,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,settings:viewSettings,admin:viewAdmin}[view])();
+  ({dashboard:viewDashboard,items:viewItems,customers:viewCustomers,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,settings:viewSettings,admin:viewAdmin}[view])();
   renderIcons(c);
 }
 document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(a)go(a.dataset.view);});
@@ -615,6 +618,60 @@ function openItemEditor(id){
 function delItem(id){confirmDel('Delete this item?',()=>{State.db.items=State.db.items.filter(i=>i.id!==id);persist();viewItems();toast('Item deleted');});}
 
 /* ============================================================
+   CUSTOMERS
+   ============================================================ */
+let custSearch='';
+function viewCustomers(){
+  const all=State.db.customers||(State.db.customers=[]);
+  const docsOf=name=>State.db.quotations.concat(State.db.invoices).filter(d=>d.customer&&d.customer.name===name).length;
+  const list=all.filter(c=>((c.name||'')+(c.email||'')+(c.phone||'')).toLowerCase().includes(custSearch.toLowerCase()))
+    .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  document.getElementById('content').innerHTML=`
+   <div class="toolbar">
+     <div class="search">${svg('search')}<input placeholder="Search customers…" value="${esc(custSearch)}" oninput="custSearch=this.value;viewCustomers()"></div>
+     <button class="btn accent" onclick="openCustomerEditor()">${svg('plus')} New customer</button>
+   </div>
+   ${list.length?`<div class="tbl"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th class="right">Documents</th><th></th></tr></thead><tbody>
+     ${list.map(c=>`<tr>
+        <td style="font-weight:600">${esc(c.name)}${c.notes?`<div class="muted" style="font-size:12px">${esc(c.notes)}</div>`:''}</td>
+        <td class="muted">${esc(c.email||'—')}</td><td class="muted">${esc(c.phone||'—')}</td>
+        <td class="muted" style="font-size:12.5px;white-space:pre-line">${esc((c.address||'—').split('\n')[0])}</td>
+        <td class="right mono">${docsOf(c.name)}</td>
+        <td><div class="rowacts">
+          <button class="iconbtn" title="New quotation" onclick='quoteForCustomer("${c.id}")'>${svg('doc')}</button>
+          <button class="iconbtn" onclick='openCustomerEditor("${c.id}")'>${svg('edit')}</button>
+          <button class="iconbtn" onclick='delCustomer("${c.id}")'>${svg('trash')}</button>
+        </div></td></tr>`).join('')}
+   </tbody></table></div>`:emptyBox('No customers yet','Add customers once and reuse their details on every quotation and invoice.')}`;
+  renderIcons(document.getElementById('content'));
+}
+function openCustomerEditor(id){
+  const c=id?(State.db.customers||[]).find(x=>x.id===id):{name:'',email:'',phone:'',address:'',notes:''};
+  openModal(`${id?'Edit':'New'} customer`,`
+    <div class="fgrid">
+      <div class="field full"><label>Customer / company name *</label><input id="cu_name" value="${esc(c.name)}" placeholder="e.g. Reef Hotels Pvt Ltd"></div>
+      <div class="field"><label>Email</label><input id="cu_email" value="${esc(c.email||'')}"></div>
+      <div class="field"><label>Phone</label><input id="cu_phone" value="${esc(c.phone||'')}"></div>
+      <div class="field full"><label>Address</label><textarea id="cu_addr" rows="2">${esc(c.address||'')}</textarea></div>
+      <div class="field full"><label>Notes (internal)</label><textarea id="cu_notes" rows="2" placeholder="Tax ID, contact person, payment terms…">${esc(c.notes||'')}</textarea></div>
+    </div>`,
+    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:id?'Save changes':'Add customer',cls:'accent',fn:()=>{
+      const name=val('cu_name');if(!name)return toast('Customer name is required');
+      if(!State.db.customers)State.db.customers=[];
+      const rec={id:id||uid(),name,email:val('cu_email'),phone:val('cu_phone'),address:val('cu_addr'),notes:val('cu_notes')};
+      if(id){const ix=State.db.customers.findIndex(x=>x.id===id);State.db.customers[ix]=rec;}else State.db.customers.push(rec);
+      persist();closeModal();viewCustomers();toast(id?'Customer updated':'Customer added');
+    }}]);
+}
+function delCustomer(id){confirmDel('Delete this customer? Existing documents are not affected.',()=>{State.db.customers=(State.db.customers||[]).filter(c=>c.id!==id);persist();viewCustomers();toast('Customer deleted');});}
+function quoteForCustomer(id){
+  const c=(State.db.customers||[]).find(x=>x.id===id);if(!c)return;
+  go('quotations');
+  setTimeout(()=>{ openDocEditor('quote'); editing.doc.customer={name:c.name||'',email:c.email||'',phone:c.phone||'',address:c.address||''};
+    ['c_name','c_email','c_phone','c_addr'].forEach((fid,i)=>{const el=document.getElementById(fid);if(el)el.value=[c.name,c.email,c.phone,c.address][i]||'';}); },60);
+}
+
+/* ============================================================
    QUOTATIONS / INVOICES (shared)
    ============================================================ */
 let docSearch={quote:'',invoice:''};
@@ -667,17 +724,25 @@ function openDocEditor(type,id){
 }
 function docEditorBody(){
   const d=editing.doc,isQ=editing.type==='quote';
+  const custOpts=(State.db.customers||[]).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   return `<div class="fgrid">
+    <div class="field full"><label>Use a saved customer (optional)</label><select onchange="pickCustomer(this.value)"><option value="">— new / manual entry —</option>${custOpts}</select></div>
     <div class="field"><label>Customer name *</label><input id="c_name" value="${esc(d.customer.name)}" oninput="editing.doc.customer.name=this.value"></div>
     <div class="field"><label>Customer email</label><input id="c_email" value="${esc(d.customer.email||'')}" oninput="editing.doc.customer.email=this.value"></div>
-    <div class="field"><label>Phone</label><input value="${esc(d.customer.phone||'')}" oninput="editing.doc.customer.phone=this.value"></div>
+    <div class="field"><label>Phone</label><input id="c_phone" value="${esc(d.customer.phone||'')}" oninput="editing.doc.customer.phone=this.value"></div>
     <div class="field"><label>${isQ?'Quote date':'Invoice date'}</label><input type="date" value="${d.date}" oninput="editing.doc.date=this.value"></div>
     <div class="field"><label>${isQ?'Valid until':'Due date'}</label><input type="date" value="${isQ?d.validUntil:d.dueDate}" oninput="editing.doc.${isQ?'validUntil':'dueDate'}=this.value"></div>
-    <div class="field full"><label>Customer address</label><textarea rows="2" oninput="editing.doc.customer.address=this.value">${esc(d.customer.address||'')}</textarea></div>
+    <div class="field full"><label>Customer address</label><textarea id="c_addr" rows="2" oninput="editing.doc.customer.address=this.value">${esc(d.customer.address||'')}</textarea></div>
   </div>
   <h3 style="margin:8px 0 8px;font-size:14px">Line items</h3>
   <div id="lineEditor"></div>
   <div class="field full" style="margin-top:14px"><label>Notes</label><textarea rows="2" oninput="editing.doc.notes=this.value" placeholder="Optional note shown on the document">${esc(d.notes||'')}</textarea></div>`;
+}
+function pickCustomer(id){
+  if(!id)return;
+  const c=(State.db.customers||[]).find(x=>x.id===id);if(!c)return;
+  editing.doc.customer={name:c.name||'',email:c.email||'',phone:c.phone||'',address:c.address||''};
+  ['c_name','c_email','c_phone','c_addr'].forEach((fid,i)=>{const el=document.getElementById(fid);if(el)el.value=[c.name,c.email,c.phone,c.address][i]||'';});
 }
 function renderLineEditor(){
   const d=editing.doc;calcDoc(d,State.db);
