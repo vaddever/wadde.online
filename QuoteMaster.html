@@ -73,7 +73,10 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .nav a{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:8px;color:#cfe3db;font-weight:500;font-size:13px;cursor:pointer;transition:.12s;text-decoration:none;position:relative}
 .nav a:hover{background:rgba(255,255,255,.06);color:#fff}
 .nav a.active{background:var(--accent);color:#fff}
-.nav a svg{width:16px;height:16px;flex:none;opacity:.9}
+.nav a svg{width:16px !important;height:16px !important;flex:none;opacity:.9}
+.nav a .ic{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;flex:none;flex-shrink:0}
+.iconbtn .ic{width:15px;height:15px;display:inline-flex;align-items:center;justify-content:center}
+.iconbtn svg{width:15px !important;height:15px !important;display:block}
 .nav a .lock{margin-left:auto;font-size:10px;background:rgba(255,255,255,.12);padding:2px 6px;border-radius:20px;letter-spacing:.04em}
 .side-foot{margin-top:auto;padding:8px 6px}
 .plan-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:10px}
@@ -226,7 +229,8 @@ table{width:100%;border-collapse:collapse}
   .layout{grid-template-columns:1fr}
   /* sidebar becomes a slide-in drawer */
   .side{position:fixed;top:0;left:0;bottom:0;height:100vh;width:236px;z-index:70;
-        transform:translateX(-100%);transition:transform .25s ease;box-shadow:0 0 50px rgba(0,0,0,.45)}
+        transform:translateX(-100%);transition:transform .25s ease;
+        box-shadow:0 0 50px rgba(0,0,0,.45);overflow-y:auto}
   .side.open{transform:translateX(0)}
   #navScrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:65}
   #navScrim.show{display:block}
@@ -235,18 +239,21 @@ table{width:100%;border-collapse:collapse}
   .page-title{font-size:16px}
   .biz-chip{padding:4px 8px 4px 5px}
   .biz-chip #topBiz{display:none}
-  .content{padding:16px 13px}
+  .content{padding:14px 12px}
   .kpis{grid-template-columns:1fr 1fr}
+  .kpi{padding:12px 14px}
   .kpi .val{font-size:22px}
-  .auth-art{display:none}.auth-form{max-width:100vw;width:100vw;padding:26px 22px}
+  .auth-art{display:none}
+  .auth-form{max-width:100vw;width:100vw;padding:28px 22px}
   .fgrid,.set-grid,.plans{grid-template-columns:1fr}
-  /* wide tables scroll sideways instead of squashing */
-  .tbl{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .tbl table{min-width:600px}
-  .scrim{padding:14px 8px}
-  .modal-body{max-height:74vh}
-  .li-tbl{min-width:520px}
-  .toolbar .btn{flex:1}
+  /* tables: no wrapping, horizontal swipe */
+  .tbl{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px}
+  .tbl th,.tbl td{white-space:nowrap}
+  /* modals fit the screen */
+  .scrim{padding:14px 8px;align-items:flex-start}
+  .modal,.modal.sm,.modal.lg{width:100%}
+  .modal-body{max-height:72vh}
+  .toolbar{gap:8px}
 }
 </style>
 </head>
@@ -368,7 +375,7 @@ const ICONS={
  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
  menu:'<path d="M3 12h18M3 6h18M3 18h18"/>'
 };
-function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`});}
+function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`;});}
 function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
 
 /* ============================================================
