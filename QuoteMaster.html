@@ -345,23 +345,31 @@ function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${
 /* ============================================================
    DATA LAYER  (swap this block for real backend calls)
    ============================================================ */
-const Store={
-  mem:{},
-  key(){return 'qm_'+(State.user?State.user.email:'_')},
-  load(){
-    let raw=null;
-    try{raw=localStorage.getItem(this.key());}catch(e){raw=this.mem[this.key()]||null;}
-    return raw?JSON.parse(raw):null;
-  },
-  save(db){
-    const raw=JSON.stringify(db);
-    try{localStorage.setItem(this.key(),raw);}catch(e){this.mem[this.key()]=raw;}
-  },
-  users(){
-    try{return JSON.parse(localStorage.getItem('qm_users')||'{}');}catch(e){return JSON.parse(this.mem['qm_users']||'{}');}
-  },
-  saveUsers(u){const raw=JSON.stringify(u);try{localStorage.setItem('qm_users',raw);}catch(e){this.mem['qm_users']=raw;}}
-};
+/* ============================================================
+   BACKEND CONNECTION  (Google Apps Script web app)
+   >>> PASTE YOUR DEPLOYED /exec URL BELOW <<<
+   ============================================================ */
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE";
+
+let TOKEN = null;
+async function call(action, payload={}){
+  try{
+    const res = await fetch(API_URL, {
+      method:'POST',
+      // text/plain body avoids a CORS preflight that Apps Script can't answer
+      body: JSON.stringify(Object.assign({action, token:TOKEN}, payload))
+    });
+    const text = await res.text();
+    try{ return JSON.parse(text); }
+    catch(e){ return { ok:false, error:'Server did not return JSON. Check the API URL & deployment access.' }; }
+  }catch(e){ return { ok:false, error:'Could not reach the server.' }; }
+}
+// debounced autosave so rapid edits don't spam the backend
+let _saveT=null;
+function queueSave(){
+  clearTimeout(_saveT);
+  _saveT=setTimeout(()=>{ if(TOKEN&&State.db) call('saveDb',{db:JSON.stringify(State.db)}); }, 700);
+}
 
 let State={user:null,db:null,view:'dashboard'};
 
@@ -448,32 +456,26 @@ function setAuthMode(m){
 }
 document.getElementById('authToggle').onclick=()=>setAuthMode(authMode==='register'?'login':'register');
 document.getElementById('demoLink').onclick=()=>{
-  document.getElementById('a_email').value='demo@atollsupplies.mv';
-  document.getElementById('a_pass').value='demo1234';
-  document.getElementById('r_biz').value='Atoll Supplies Co.';
-  const users=Store.users();
-  if(!users['demo@atollsupplies.mv']){users['demo@atollsupplies.mv']={pass:hash('demo1234'),biz:'Atoll Supplies Co.',seed:true};Store.saveUsers(users);}
-  setAuthMode('login'); doAuth();
+  setAuthMode('register');
+  document.getElementById('r_biz').focus();
 };
 document.getElementById('authBtn').onclick=doAuth;
-function doAuth(){
+async function doAuth(){
   const email=document.getElementById('a_email').value.trim().toLowerCase();
   const pass=document.getElementById('a_pass').value;
   const biz=document.getElementById('r_biz').value.trim();
   const err=document.getElementById('authErr');
   if(!email||!pass){err.textContent='Email and password are required.';return;}
-  const users=Store.users();
-  if(authMode==='register'){
-    if(!biz){err.textContent='Please enter your business name.';return;}
-    if(users[email]){err.textContent='That email is already registered.';return;}
-    users[email]={pass:hash(pass),biz};Store.saveUsers(users);
-    State.user={email}; State.db=blankDB(biz); Store.save(State.db);
-  }else{
-    if(!users[email]||users[email].pass!==hash(pass)){err.textContent='Invalid email or password.';return;}
-    State.user={email};
-    State.db=Store.load();
-    if(!State.db){State.db=blankDB(users[email].biz);if(users[email].seed)seedDemo(State.db);Store.save(State.db);}
-  }
+  if(authMode==='register'&&!biz){err.textContent='Please enter your business name.';return;}
+  const btn=document.getElementById('authBtn'); const orig=btn.textContent;
+  btn.disabled=true; btn.textContent='Please wait…'; err.textContent='';
+  const r = authMode==='register'
+    ? await call('register',{email,password:pass,businessName:biz})
+    : await call('login',{email,password:pass});
+  btn.disabled=false; btn.textContent=orig;
+  if(!r.ok){ err.textContent=r.error||'Something went wrong'; return; }
+  TOKEN=r.token; State.user={email}; State.db=r.db;
+  try{ localStorage.setItem('qm_token',TOKEN); }catch(e){}
   launchApp();
 }
 function launchApp(){
@@ -484,7 +486,9 @@ function launchApp(){
   go('dashboard');
 }
 document.getElementById('logoutBtn').onclick=()=>{
-  Store.save(State.db);State.user=null;State.db=null;
+  if(TOKEN&&State.db) call('saveDb',{db:JSON.stringify(State.db)});
+  try{ localStorage.removeItem('qm_token'); }catch(e){}
+  TOKEN=null;State.user=null;State.db=null;
   document.getElementById('app').style.display='none';
   document.getElementById('auth').style.display='flex';
 };
@@ -718,12 +722,16 @@ function convertToInvoice(qid){
    ============================================================ */
 function printDoc(type,id){const coll=type==='quote'?State.db.quotations:State.db.invoices;printDocObj(type,coll.find(d=>d.id===id));}
 function printDocObj(type,d){
+  document.getElementById('printRoot').innerHTML=buildDocHtml(type,d);
+  setTimeout(()=>window.print(),120);
+}
+function buildDocHtml(type,d){
   const s=State.db.settings,isQ=type==='quote';
   calcDoc(d,State.db);
   const logo=s.logo?`<img src="${s.logo}" class="d-logo">`:`<div class="d-logo">${esc(s.businessName[0]||'B')}</div>`;
   const rows=d.lineItems.map((li,i)=>`<tr><td>${i+1}</td><td><b>${esc(li.name)}</b>${li.desc?`<div style="color:#777;font-size:11px">${esc(li.desc)}</div>`:''}</td><td class="r mono">${li.qty}</td><td class="r mono">${money(li.unitPrice)}</td><td class="r mono">${money(li.amount)}</td></tr>`).join('');
   const stamp=(d.status==='paid')?'<span class="d-stamp">Paid</span>':(d.status==='accepted'?'<span class="d-stamp">Accepted</span>':'');
-  document.getElementById('printRoot').innerHTML=`<div class="doc">
+  return `<div class="doc">
     <div class="d-head">
       <div class="d-biz">${logo}<div><div class="d-bizname">${esc(s.businessName)}</div><div class="d-bizmeta">${esc(s.address)}${s.phone?'\n'+esc(s.phone):''}${s.email?'\n'+esc(s.email):''}</div></div></div>
       <div class="d-type"><h1>${isQ?'Quotation':'Invoice'}</h1><div class="num mono">${esc(d.number)}</div><div style="margin-top:8px">${stamp}</div></div>
@@ -746,7 +754,6 @@ function printDocObj(type,d){
     ${!isQ?`<div class="d-notes"><b>Payment details</b><br>${esc(s.bankDetails)}<br><br>${esc(s.paymentTerms)}</div>`:`<div class="d-notes">${esc(s.paymentTerms)}</div>`}
     <div class="d-foot">${esc(isQ?s.quoteFooter:s.invoiceFooter)}</div>
   </div>`;
-  setTimeout(()=>window.print(),120);
 }
 
 /* ============================================================
@@ -857,7 +864,7 @@ function emailDoc(type,id){
   const coll=type==='quote'?State.db.quotations:State.db.invoices;const d=coll.find(x=>x.id===id);
   composeEmail({to:d.customer.email||'',subject:`${type==='quote'?'Quotation':'Invoice'} ${d.number} from ${State.db.settings.businessName}`,
     body:`Dear ${d.customer.name||'Customer'},\n\nPlease find attached ${type==='quote'?'our quotation':'invoice'} ${d.number} for ${money(d.totals.total)}.\n\n${type==='quote'?State.db.settings.quoteFooter:State.db.settings.invoiceFooter}\n\nRegards,\n${State.db.settings.businessName}`,
-    attach:d.number+'.pdf'});
+    attach:d.number+'.pdf', docHtml:buildDocHtml(type,d)});
 }
 function composeEmail(pre={}){
   if(!isPro()){openUpgrade();return;}
@@ -866,10 +873,13 @@ function composeEmail(pre={}){
     <div class="field"><label>Subject</label><input id="em_subj" value="${esc(pre.subject||'')}"></div>
     <div class="field"><label>Message</label><textarea id="em_body" rows="8">${esc(pre.body||'')}</textarea></div>
     ${pre.attach?`<div class="muted" style="font-size:13px">📎 Attachment: <span class="mono">${esc(pre.attach)}</span> (PDF generated on send)</div>`:''}`,
-    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:'Send',cls:'accent',fn:()=>{
+    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:'Send',cls:'accent',fn:async ()=>{
       const to=val('em_to');if(!to)return toast('Recipient required');
+      toast('Sending…');
+      const r=await call('sendEmail',{to,subject:val('em_subj'),body:val('em_body'),docHtml:pre.docHtml||'',fileName:(pre.attach||'document').replace(/\.pdf$/,'')});
+      if(!r.ok)return toast(r.error||'Send failed');
       State.db.emails.push({id:uid(),to,subject:val('em_subj'),body:val('em_body'),attach:pre.attach||'',date:todayISO()});
-      persist();closeModal();toast('Email queued (demo). Connect backend to deliver.');if(State.view==='email')viewEmail();
+      persist();closeModal();toast('Email sent');if(State.view==='email')viewEmail();
     }}]);
 }
 
@@ -946,18 +956,19 @@ function openUpgrade(){
    <p class="muted" style="font-size:12px;margin-top:14px;text-align:center">In production this opens Stripe Checkout. Here it unlocks Pro instantly so you can explore the features.</p>`,
    [{label:'Close',cls:'ghost',fn:closeModal}],'lg');
 }
-function startCheckout(){
-  // PRODUCTION: window.location = backend `/createCheckout` -> Stripe Checkout URL
-  State.db.settings.plan='pro';persist();refreshChrome();closeModal();
-  toast('🎉 Pro unlocked — delivery, email & more are now available');
-  if(PRO_VIEWS.includes(State.view))go(State.view);
+async function startCheckout(){
+  if(isPro()){closeModal();return;}
+  toast('Opening secure checkout…');
+  const r=await call('createCheckout');
+  if(r.ok&&r.url){ window.location.href=r.url; }
+  else { toast(r.error||'Could not start checkout'); }
 }
 
 /* ============================================================
    UI utils
    ============================================================ */
 function val(id){const el=document.getElementById(id);return el?el.value.trim():'';}
-function persist(){Store.save(State.db);}
+function persist(){queueSave();}
 function openModal(title,body,actions=[],size=''){
   const m=document.getElementById('modal');m.className='modal '+size;
   m.innerHTML=`<div class="modal-head"><h3>${title}</h3><button class="iconbtn" onclick="closeModal()">✕</button></div>
@@ -974,6 +985,18 @@ let toastT;function toast(msg){const t=document.getElementById('toast');t.textCo
 
 setAuthMode('register');
 renderIcons();
+
+/* auto-login with a stored token; also handles the return from Stripe checkout */
+(async function(){
+  let t=null; try{ t=localStorage.getItem('qm_token'); }catch(e){}
+  if(!t) return;
+  TOKEN=t;
+  const r=await call('loadDb');
+  if(r&&r.ok){
+    State.user={email:''}; State.db=r.db; launchApp();
+    if(location.search.indexOf('paid=1')>-1) toast('🎉 Pro is now active');
+  }else{ try{ localStorage.removeItem('qm_token'); }catch(e){} }
+})();
 </script>
 </body>
 </html>
