@@ -216,6 +216,27 @@ table{width:100%;border-collapse:collapse}
 .doc .d-foot{margin-top:40px;text-align:center;font-size:11px;color:#9a9ca3}
 .doc .d-stamp{display:inline-block;border:2px solid var(--accent);color:var(--accent-ink);font-family:'Fraunces',serif;font-weight:700;padding:4px 14px;border-radius:8px;transform:rotate(-4deg);font-size:15px;text-transform:uppercase;letter-spacing:.05em}
 
+/* ---- mobile card lists ---- */
+.mob-cards{display:flex;flex-direction:column;gap:10px}
+.mob-card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 15px;box-shadow:var(--shadow)}
+.mob-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
+.mob-card-id{font-family:'Spline Sans Mono',monospace;font-size:12px;font-weight:600;color:var(--ink-soft)}
+.mob-card-name{font-size:15px;font-weight:700;margin-bottom:5px;line-height:1.3}
+.mob-card-meta{font-size:12.5px;color:var(--ink-soft);display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.mob-card-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:10px;gap:8px}
+.mob-card-amount{font-family:'Spline Sans Mono',monospace;font-size:15px;font-weight:700}
+.mob-card-actions{display:flex;gap:6px}
+/* touch-friendly icon buttons everywhere */
+@media(max-width:900px){
+  .iconbtn{width:36px;height:36px;border-radius:9px}
+  /* CRITICAL: prevents iOS Safari from zooming on input focus */
+  .field input,.field select,.field textarea,
+  .li-tbl input,.li-tbl select{font-size:16px !important}
+  .search input{font-size:16px !important}
+  .btn{padding:10px 14px}
+  .btn.sm{padding:8px 12px}
+}
+
 @media print{
   body *{visibility:hidden}
   #printRoot,#printRoot *{visibility:visible}
@@ -587,6 +608,102 @@ function lockedView(view){
 /* ============================================================
    DASHBOARD
    ============================================================ */
+/* ============================================================
+   MOBILE HELPERS
+   ============================================================ */
+function isMob(){return window.innerWidth<768;}
+
+function recentCards(recent){
+  if(!recent.length)return emptyBox('No documents yet','Create your first quotation or invoice to get started.');
+  return `<div class="mob-cards">${recent.map(d=>`
+    <div class="mob-card">
+      <div class="mob-card-top">
+        <div><span class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">${d._t}</span><br><span class="mob-card-id">${esc(d.number)}</span></div>
+        <span class="pill ${d.status}">${d.status}</span>
+      </div>
+      <div class="mob-card-name">${esc(d.customer.name||'—')}</div>
+      <div class="mob-card-foot">
+        <span class="muted" style="font-size:12.5px">${fmtDate(d.date)}</span>
+        <span class="mob-card-amount">${money(d.totals.total||0)}</span>
+      </div>
+    </div>`).join('')}</div>`;
+}
+function docCards(list,type){
+  const isQ=type==='quote';
+  if(!list.length)return emptyBox(`No ${isQ?'quotations':'invoices'} yet`,`Create your first — it only takes a minute.`);
+  return `<div class="mob-cards">${list.map(d=>`
+    <div class="mob-card">
+      <div class="mob-card-top">
+        <span class="mob-card-id">${esc(d.number)}</span>
+        ${statusSelect(type,d)}
+      </div>
+      <div class="mob-card-name" onclick="openDocEditor('${type}','${d.id}')" style="cursor:pointer">${esc(d.customer.name||'—')}</div>
+      <div class="mob-card-meta">
+        <span>${isQ?'Issued':'Date'}: ${fmtDate(d.date)}</span>
+        <span>${isQ?'Valid until':'Due'}: <strong style="color:var(--ink)">${fmtDate(isQ?d.validUntil:d.dueDate)}</strong></span>
+      </div>
+      <div class="mob-card-foot">
+        <div class="mob-card-actions">
+          <button class="iconbtn" title="Edit" onclick="openDocEditor('${type}','${d.id}')">${svg('edit')}</button>
+          <button class="iconbtn" title="PDF" onclick="printDoc('${type}','${d.id}')">${svg('pdf')}</button>
+          ${isQ?`<button class="iconbtn" title="Convert to invoice" onclick="convertToInvoice('${d.id}')">${svg('receipt')}</button>`
+               :`<button class="iconbtn" title="Delivery note" onclick="deliveryFromInvoice('${d.id}')">${svg('truck')}</button>`}
+          <button class="iconbtn" title="Email" onclick="emailDoc('${type}','${d.id}')">${svg('send')}</button>
+          <button class="iconbtn" title="Delete" onclick="delDoc('${type}','${d.id}')">${svg('trash')}</button>
+        </div>
+        <span class="mob-card-amount">${money(d.totals.total||0)}</span>
+      </div>
+    </div>`).join('')}</div>`;
+}
+function itemCards(items){
+  if(!items.length)return emptyBox('No items yet','Add products or services to reuse on quotes and invoices.');
+  return `<div class="mob-cards">${items.map(i=>`
+    <div class="mob-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div class="mob-card-name" style="margin-bottom:3px">${esc(i.name)}</div>
+          <div class="mob-card-meta" style="margin-bottom:0">
+            <span>${esc(i.sku||'—')}</span><span>${esc(i.unit||'pc')}</span>
+            ${i.desc?`<span style="color:var(--ink-soft)">${esc(i.desc)}</span>`:''}
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="mob-card-amount">${money(i.unitPrice)}</div>
+          <div style="margin-top:4px">${i.taxable!==false
+            ?`<span class="pill paid" style="font-size:11px">${esc(State.db.settings.taxLabel)}</span>`
+            :'<span class="muted" style="font-size:12px">No tax</span>'}</div>
+        </div>
+      </div>
+      <div class="mob-card-foot" style="justify-content:flex-end;border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
+        <div class="mob-card-actions">
+          <button class="iconbtn" onclick='openItemEditor("${i.id}")'>${svg('edit')}</button>
+          <button class="iconbtn" onclick='delItem("${i.id}")'>${svg('trash')}</button>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+function custCards(list,docsOf){
+  if(!list.length)return emptyBox('No customers yet','Add customers once and reuse their details on every quote and invoice.');
+  return `<div class="mob-cards">${list.map(c=>`
+    <div class="mob-card">
+      <div class="mob-card-name">${esc(c.name)}</div>
+      <div class="mob-card-meta">
+        ${c.email?`<span>✉ ${esc(c.email)}</span>`:''}
+        ${c.phone?`<span>📞 ${esc(c.phone)}</span>`:''}
+        ${c.address?`<span>📍 ${esc(c.address.split('\n')[0])}</span>`:''}
+        ${c.notes?`<span style="color:var(--amber)">📋 ${esc(c.notes)}</span>`:''}
+      </div>
+      <div class="mob-card-foot">
+        <div class="mob-card-actions">
+          <button class="iconbtn" title="New quotation" onclick='quoteForCustomer("${c.id}")'>${svg('doc')}</button>
+          <button class="iconbtn" title="Edit" onclick='openCustomerEditor("${c.id}")'>${svg('edit')}</button>
+          <button class="iconbtn" title="Delete" onclick='delCustomer("${c.id}")'>${svg('trash')}</button>
+        </div>
+        <span class="muted" style="font-size:12.5px">${docsOf(c.name)} doc${docsOf(c.name)!==1?'s':''}</span>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
 function viewDashboard(){
   const db=State.db;
   const unpaid=db.invoices.filter(i=>i.status!=='paid');
@@ -597,17 +714,21 @@ function viewDashboard(){
      .sort((a,b)=>(b.date>a.date?1:-1)).slice(0,6);
   document.getElementById('content').innerHTML=`
    <div class="grid kpis" style="margin-bottom:18px">
-     <div class="card kpi"><div class="lbl">Outstanding</div><div class="val">${money(outstanding)}</div><div class="sub muted">${unpaid.length} unpaid invoice(s)</div></div>
+     <div class="card kpi"><div class="lbl">Outstanding</div><div class="val">${money(outstanding)}</div><div class="sub muted">${unpaid.length} unpaid</div></div>
      <div class="card kpi"><div class="lbl">Collected</div><div class="val">${money(paid)}</div><div class="sub up">Paid to date</div></div>
-     <div class="card kpi"><div class="lbl">Open quotations</div><div class="val">${openQuotes}</div><div class="sub muted">awaiting response</div></div>
+     <div class="card kpi"><div class="lbl">Open quotes</div><div class="val">${openQuotes}</div><div class="sub muted">awaiting</div></div>
      <div class="card kpi"><div class="lbl">Catalogue</div><div class="val">${db.items.length}</div><div class="sub muted">items</div></div>
    </div>
-   <div class="between" style="margin-bottom:14px"><h3>Recent activity</h3>
-     <div class="row"><button class="btn ghost sm" onclick="go('quotations');setTimeout(()=>openDocEditor('quote'),50)">New quotation</button>
-     <button class="btn accent sm" onclick="go('invoices');setTimeout(()=>openDocEditor('invoice'),50)">New invoice</button></div></div>
-   ${recent.length?`<div class="tbl"><table><thead><tr><th>Type</th><th>Number</th><th>Customer</th><th>Date</th><th>Status</th><th class="right">Total</th></tr></thead><tbody>
+   <div class="between" style="margin-bottom:14px">
+     <h3>Recent activity</h3>
+     <div class="row" style="gap:8px">
+       <button class="btn ghost sm" onclick="go('quotations');setTimeout(()=>openDocEditor('quote'),50)">+ Quote</button>
+       <button class="btn accent sm" onclick="go('invoices');setTimeout(()=>openDocEditor('invoice'),50)">+ Invoice</button>
+     </div>
+   </div>
+   ${isMob()?recentCards(recent):`<div class="tbl"><table><thead><tr><th>Type</th><th>Number</th><th>Customer</th><th>Date</th><th>Status</th><th class="right">Total</th></tr></thead><tbody>
      ${recent.map(d=>`<tr><td class="muted">${d._t}</td><td class="mono">${esc(d.number)}</td><td>${esc(d.customer.name||'—')}</td><td>${fmtDate(d.date)}</td><td><span class="pill ${d.status}">${d.status}</span></td><td class="right mono">${money(d.totals.total)}</td></tr>`).join('')}
-   </tbody></table></div>`:emptyBox('No documents yet','Create your first quotation or invoice to get started.')}`;
+   </tbody></table></div>`}`;
 }
 function emptyBox(t,s){return `<div class="card empty"><div class="ic" data-i="empty" style="margin:0 auto 10px;width:42px;height:42px;opacity:.4">${svg('empty',42)}</div><h3>${t}</h3><p class="muted">${s}</p></div>`;}
 
@@ -620,9 +741,9 @@ function viewItems(){
   document.getElementById('content').innerHTML=`
    <div class="toolbar">
      <div class="search">${svg('search')}<input placeholder="Search items…" value="${esc(itemSearch)}" oninput="itemSearch=this.value;viewItems()"></div>
-     <button class="btn accent" onclick="openItemEditor()">${svg('plus')} New item</button>
+     <button class="btn accent" onclick="openItemEditor()">${svg('plus')} New</button>
    </div>
-   ${items.length?`<div class="tbl"><table><thead><tr><th>Name</th><th>SKU</th><th>Unit</th><th class="right">Unit price</th><th>Tax</th><th></th></tr></thead><tbody>
+   ${isMob()?itemCards(items):`<div class="tbl"><table><thead><tr><th>Name</th><th>SKU</th><th>Unit</th><th class="right">Unit price</th><th>Tax</th><th></th></tr></thead><tbody>
      ${items.map(i=>`<tr>
         <td><div style="font-weight:600">${esc(i.name)}</div>${i.desc?`<div class="muted" style="font-size:12.5px">${esc(i.desc)}</div>`:''}</td>
         <td class="mono muted">${esc(i.sku||'—')}</td><td>${esc(i.unit||'pc')}</td>
@@ -632,7 +753,7 @@ function viewItems(){
           <button class="iconbtn" onclick='openItemEditor("${i.id}")'>${svg('edit')}</button>
           <button class="iconbtn" onclick='delItem("${i.id}")'>${svg('trash')}</button>
         </div></td></tr>`).join('')}
-   </tbody></table></div>`:emptyBox('No items yet','Add products or services you sell to reuse them on quotes and invoices.')}`;
+   </tbody></table></div>`}`;
   renderIcons(document.getElementById('content'));
 }
 function openItemEditor(id){
@@ -667,20 +788,20 @@ function viewCustomers(){
   document.getElementById('content').innerHTML=`
    <div class="toolbar">
      <div class="search">${svg('search')}<input placeholder="Search customers…" value="${esc(custSearch)}" oninput="custSearch=this.value;viewCustomers()"></div>
-     <button class="btn accent" onclick="openCustomerEditor()">${svg('plus')} New customer</button>
+     <button class="btn accent" onclick="openCustomerEditor()">${svg('plus')} New</button>
    </div>
-   ${list.length?`<div class="tbl"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th class="right">Documents</th><th></th></tr></thead><tbody>
+   ${isMob()?custCards(list,docsOf):`<div class="tbl"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th class="right">Docs</th><th></th></tr></thead><tbody>
      ${list.map(c=>`<tr>
         <td style="font-weight:600">${esc(c.name)}${c.notes?`<div class="muted" style="font-size:12px">${esc(c.notes)}</div>`:''}</td>
         <td class="muted">${esc(c.email||'—')}</td><td class="muted">${esc(c.phone||'—')}</td>
-        <td class="muted" style="font-size:12.5px;white-space:pre-line">${esc((c.address||'—').split('\n')[0])}</td>
+        <td class="muted" style="font-size:12.5px">${esc((c.address||'—').split('\n')[0])}</td>
         <td class="right mono">${docsOf(c.name)}</td>
         <td><div class="rowacts">
           <button class="iconbtn" title="New quotation" onclick='quoteForCustomer("${c.id}")'>${svg('doc')}</button>
           <button class="iconbtn" onclick='openCustomerEditor("${c.id}")'>${svg('edit')}</button>
           <button class="iconbtn" onclick='delCustomer("${c.id}")'>${svg('trash')}</button>
         </div></td></tr>`).join('')}
-   </tbody></table></div>`:emptyBox('No customers yet','Add customers once and reuse their details on every quotation and invoice.')}`;
+   </tbody></table></div>`}`;
   renderIcons(document.getElementById('content'));
 }
 function openCustomerEditor(id){
@@ -721,9 +842,9 @@ function viewDocs(type){
   document.getElementById('content').innerHTML=`
    <div class="toolbar">
      <div class="search">${svg('search')}<input placeholder="Search ${isQ?'quotations':'invoices'}…" value="${esc(docSearch[type])}" oninput="docSearch['${type}']=this.value;viewDocs('${type}')"></div>
-     <button class="btn accent" onclick="openDocEditor('${type}')">${svg('plus')} New ${isQ?'quotation':'invoice'}</button>
+     <button class="btn accent" onclick="openDocEditor('${type}')">${svg('plus')} New</button>
    </div>
-   ${list.length?`<div class="tbl"><table><thead><tr><th>Number</th><th>Customer</th><th>Date</th><th>${isQ?'Valid until':'Due'}</th><th>Status</th><th class="right">Total</th><th></th></tr></thead><tbody>
+   ${isMob()?docCards(list,type):`<div class="tbl"><table><thead><tr><th>Number</th><th>Customer</th><th>Date</th><th>${isQ?'Valid until':'Due'}</th><th>Status</th><th class="right">Total</th><th></th></tr></thead><tbody>
      ${list.map(d=>`<tr>
        <td class="mono linkish" onclick="openDocEditor('${type}','${d.id}')">${esc(d.number)}</td>
        <td>${esc(d.customer.name||'—')}</td><td>${fmtDate(d.date)}</td><td>${fmtDate(isQ?d.validUntil:d.dueDate)}</td>
@@ -736,7 +857,7 @@ function viewDocs(type){
          <button class="iconbtn" title="Email" onclick="emailDoc('${type}','${d.id}')">${svg('send')}</button>
          <button class="iconbtn" onclick="delDoc('${type}','${d.id}')">${svg('trash')}</button>
        </div></td></tr>`).join('')}
-   </tbody></table></div>`:emptyBox(`No ${isQ?'quotations':'invoices'} yet`,`Create your first ${isQ?'quotation':'invoice'} — it only takes a minute.`)}`;
+   </tbody></table></div>`}`;
   renderIcons(document.getElementById('content'));
 }
 function statusSelect(type,d){
