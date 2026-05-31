@@ -280,6 +280,8 @@ table{width:100%;border-collapse:collapse}
         <a data-view="email"><span class="ic" data-i="mail"></span> Email <span class="lock" data-lock>PRO</span></a>
         <div class="nav-group">Account</div>
         <a data-view="settings"><span class="ic" data-i="gear"></span> Settings</a>
+        <div class="nav-group" id="adminGroup" style="display:none">Superadmin</div>
+        <a data-view="admin" id="adminLink" style="display:none"><span class="ic" data-i="shield"></span> Portal Admin</a>
       </nav>
       <div class="side-foot">
         <div class="plan-card" id="planCard">
@@ -337,7 +339,8 @@ const ICONS={
  send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
  check:'<path d="M20 6 9 17l-5-5"/>',
- empty:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'
+ empty:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+ shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
 };
 function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`});}
 function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
@@ -349,7 +352,7 @@ function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${
    BACKEND CONNECTION  (Google Apps Script web app)
    >>> PASTE YOUR DEPLOYED /exec URL BELOW <<<
    ============================================================ */
-const API_URL = "https://script.google.com/macros/s/AKfycbydWO2O8_AxoF2s_2pAnX2M8ZYAT3G8nCxLnF-xe9SQMUM7ZDHkzgC0aPQnA6-WONc/exec";
+const API_URL = https://script.google.com/macros/s/AKfycbxGX_YC1jObKKPllt08xWwLDLk5b9-nVpMpBdh0nA9QURKlQE55zt1iasLxn0U9_N3t/exec;
 
 let TOKEN = null;
 async function call(action, payload={}){
@@ -361,7 +364,12 @@ async function call(action, payload={}){
     });
     const text = await res.text();
     try{ return JSON.parse(text); }
-    catch(e){ return { ok:false, error:'Server did not return JSON. Check the API URL & deployment access.' }; }
+    catch(e){
+      const login=/<html|accounts\.google|sign ?in|authoriz|requires permission/i.test(text);
+      return { ok:false, error: login
+        ? 'The server returned a Google login page. In Apps Script, set the deployment to "Anyone" access and deploy a NEW version, then use the /exec URL.'
+        : 'Server did not return JSON. Check the API URL and that you deployed a new version.' };
+    }
   }catch(e){ return { ok:false, error:'Could not reach the server.' }; }
 }
 // debounced autosave so rapid edits don't spam the backend
@@ -371,7 +379,7 @@ function queueSave(){
   _saveT=setTimeout(()=>{ if(TOKEN&&State.db) call('saveDb',{db:JSON.stringify(State.db)}); }, 700);
 }
 
-let State={user:null,db:null,view:'dashboard'};
+let State={user:null,db:null,view:'dashboard',isAdmin:false};
 
 function blankDB(biz){
   return {
@@ -474,7 +482,7 @@ async function doAuth(){
     : await call('login',{email,password:pass});
   btn.disabled=false; btn.textContent=orig;
   if(!r.ok){ err.textContent=r.error||'Something went wrong'; return; }
-  TOKEN=r.token; State.user={email}; State.db=r.db;
+  TOKEN=r.token; State.user={email}; State.db=r.db; State.isAdmin=!!r.isAdmin;
   try{ localStorage.setItem('qm_token',TOKEN); }catch(e){}
   launchApp();
 }
@@ -506,6 +514,8 @@ function refreshChrome(){
   document.getElementById('planName').textContent=pro?'Pro':'Free';
   document.getElementById('upgradeBtn').style.display=pro?'none':'block';
   document.querySelectorAll('[data-lock]').forEach(l=>l.style.display=pro?'none':'inline-block');
+  document.getElementById('adminGroup').style.display=State.isAdmin?'block':'none';
+  document.getElementById('adminLink').style.display=State.isAdmin?'flex':'none';
 }
 document.getElementById('upgradeBtn').onclick=openUpgrade;
 
@@ -513,14 +523,15 @@ document.getElementById('upgradeBtn').onclick=openUpgrade;
    ROUTER
    ============================================================ */
 const PRO_VIEWS=['deliveries','email'];
-const TITLES={dashboard:'Dashboard',items:'Items',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',settings:'Settings'};
+const TITLES={dashboard:'Dashboard',items:'Items',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',settings:'Settings',admin:'Portal Admin'};
 function go(view){
+  if(view==='admin'&&!State.isAdmin){view='dashboard';}
   State.view=view;
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.view===view));
   document.getElementById('pageTitle').textContent=TITLES[view];
   const c=document.getElementById('content');
   if(PRO_VIEWS.includes(view)&&!isPro()){c.innerHTML=lockedView(view);renderIcons(c);return;}
-  ({dashboard:viewDashboard,items:viewItems,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,settings:viewSettings}[view])();
+  ({dashboard:viewDashboard,items:viewItems,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,settings:viewSettings,admin:viewAdmin}[view])();
   renderIcons(c);
 }
 document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(a)go(a.dataset.view);});
@@ -941,6 +952,63 @@ function saveSettings(){
 }
 
 /* ============================================================
+   SUPERADMIN PORTAL
+   ============================================================ */
+function num(n){return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+let _adminUsers=[];
+async function viewAdmin(){
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="card pad muted">Loading portal data…</div>';
+  const r=await call('adminList');
+  if(!r||!r.ok){c.innerHTML=`<div class="card pad">${esc((r&&r.error)||'Failed to load portal data')}</div>`;return;}
+  _adminUsers=r.users||[];
+  renderAdmin('');
+}
+function renderAdmin(q){
+  const all=_adminUsers;
+  const us=all.filter(u=>((u.businessName||'')+(u.email||'')).toLowerCase().includes(q.toLowerCase()));
+  const proCount=all.filter(u=>u.plan==='pro').length;
+  const totalInv=all.reduce((s,u)=>s+u.invoices,0);
+  const collected=all.reduce((s,u)=>s+u.collected,0);
+  const c=document.getElementById('content');
+  c.innerHTML=`
+   <div class="grid kpis" style="margin-bottom:18px">
+     <div class="card kpi"><div class="lbl">Businesses</div><div class="val">${all.length}</div><div class="sub muted">registered tenants</div></div>
+     <div class="card kpi"><div class="lbl">Pro accounts</div><div class="val">${proCount}</div><div class="sub up">${all.length?Math.round(proCount/all.length*100):0}% on Pro</div></div>
+     <div class="card kpi"><div class="lbl">Invoices (all)</div><div class="val">${totalInv}</div><div class="sub muted">portal-wide</div></div>
+     <div class="card kpi"><div class="lbl">Collected (all)</div><div class="val" style="font-size:21px">${num(collected)}</div><div class="sub muted">mixed currencies</div></div>
+   </div>
+   <div class="toolbar"><div class="search">${svg('search')}<input placeholder="Search businesses…" value="${esc(q)}" oninput="renderAdmin(this.value)"></div></div>
+   ${us.length?`<div class="tbl"><table><thead><tr><th>Business</th><th>Email</th><th>Plan</th><th class="right">Items</th><th class="right">Quotes</th><th class="right">Invoices</th><th class="right">Outstanding</th><th></th></tr></thead><tbody>
+     ${us.map(u=>`<tr>
+       <td style="font-weight:600">${esc(u.businessName||'—')}<div class="muted" style="font-size:11px">${u.created?fmtDate(u.created):''}</div></td>
+       <td class="muted">${esc(u.email)}</td>
+       <td><select class="pill ${u.plan==='pro'?'paid':'draft'}" style="border:none;font-weight:600;cursor:pointer" onchange="adminSetPlan('${u.userId}',this.value)">
+         <option value="free" ${u.plan!=='pro'?'selected':''}>free</option><option value="pro" ${u.plan==='pro'?'selected':''}>pro</option></select></td>
+       <td class="right mono">${u.items}</td><td class="right mono">${u.quotes}</td><td class="right mono">${u.invoices}</td>
+       <td class="right mono">${num(u.outstanding)}</td>
+       <td><div class="rowacts"><button class="iconbtn" title="Delete business" onclick="adminDelete('${u.userId}')">${svg('trash')}</button></div></td>
+     </tr>`).join('')}
+   </tbody></table></div>`:emptyBox('No businesses found','No tenants match your search.')}`;
+  renderIcons(c);
+}
+async function adminSetPlan(userId,plan){
+  const r=await call('adminSetPlan',{userId,plan});
+  if(!r.ok)return toast(r.error||'Failed');
+  const u=_adminUsers.find(x=>x.userId===userId); if(u)u.plan=plan;
+  toast('Plan set to '+plan);
+}
+function adminDelete(userId){
+  const u=_adminUsers.find(x=>x.userId===userId);
+  confirmDel('Delete "'+esc(u?u.businessName||u.email:'this business')+'" and all of its data? This cannot be undone.',async()=>{
+    const r=await call('adminDelete',{userId});
+    if(!r.ok)return toast(r.error||'Failed');
+    _adminUsers=_adminUsers.filter(x=>x.userId!==userId);
+    renderAdmin('');toast('Business deleted');
+  });
+}
+
+/* ============================================================
    UPGRADE / PAYMENT (demo unlock; production -> Stripe checkout)
    ============================================================ */
 function openUpgrade(){
@@ -993,7 +1061,7 @@ renderIcons();
   TOKEN=t;
   const r=await call('loadDb');
   if(r&&r.ok){
-    State.user={email:''}; State.db=r.db; launchApp();
+    State.user={email:''}; State.db=r.db; State.isAdmin=!!r.isAdmin; launchApp();
     if(location.search.indexOf('paid=1')>-1) toast('🎉 Pro is now active');
   }else{ try{ localStorage.removeItem('qm_token'); }catch(e){} }
 })();
