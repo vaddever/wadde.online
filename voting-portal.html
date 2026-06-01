@@ -1573,7 +1573,7 @@ function initVoter(){
     sec.innerHTML=`<div class="cat-hdr">
       <div class="cat-num">${idx}</div>
       <div style="flex:1;">
-        <div class="cat-title">${cat.name}</div>
+        <div class="cat-title">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px;">(${voterScopeTxt}${voterLinked})</div>
       </div>
       <div class="cat-count">${noms.length} nominee${noms.length!==1?'s':''}</div>
@@ -2391,7 +2391,7 @@ function exportResultsPDF(){
 
     body += `<section class="cat-block">
       <div class="cat-head">
-        <h2>${cat.name}</h2>
+        <h2>${cat.name} ${cat.year||''}</h2>
         <div class="cat-meta">${scopeTxt}${linkedTxt} &nbsp;·&nbsp; ${noms.length} nominee${noms.length!==1?'s':''} &nbsp;·&nbsp; ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
       </div>
       <table>
@@ -3155,7 +3155,7 @@ function renderCatList(){
     const scopeBg={global:'var(--blue-dim)',dept:'var(--purple-dim)',unit:'var(--green-dim)',deptcat:'var(--purple-dim)'};
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;">
       <div style="flex:1;">
-        <div style="font-size:13px;font-weight:500;">${cat.name}</div>
+        <div style="font-size:13px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
           <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${scopeBg[cat.scope]};color:${scopeColor[cat.scope]};border:1px solid ${scopeColor[cat.scope]}33;">${scopeLabel[cat.scope]}${linkedTxt}</span>
           <span style="font-size:11px;color:var(--text3);">${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</span>
