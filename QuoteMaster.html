@@ -226,6 +226,51 @@ table{width:100%;border-collapse:collapse}
 .mob-card-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:10px;gap:8px}
 .mob-card-amount{font-family:'Spline Sans Mono',monospace;font-size:15px;font-weight:700}
 .mob-card-actions{display:flex;gap:6px}
+/* ---- POS system ---- */
+.pos-wrap{display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 62px);overflow:hidden;margin:-26px -26px 0}
+.pos-items-panel{padding:14px;overflow-y:auto;background:var(--paper)}
+.pos-cart-panel{background:var(--card);border-left:1px solid var(--line);display:flex;flex-direction:column;padding:14px;overflow:hidden;min-height:0}
+.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:9px;margin-top:10px}
+.pos-tile{background:var(--card);border:1.5px solid var(--line);border-radius:11px;padding:12px 10px;cursor:pointer;transition:.12s;position:relative;user-select:none;-webkit-tap-highlight-color:transparent}
+.pos-tile:hover,.pos-tile:active{background:var(--accent-soft);border-color:var(--accent)}
+.pos-tile .pt-name{font-weight:600;font-size:12.5px;line-height:1.3;margin-bottom:4px}
+.pos-tile .pt-sku{font-size:11px;color:var(--ink-soft);margin-bottom:5px}
+.pos-tile .pt-price{font-size:13px;font-weight:700;color:var(--accent-ink);font-family:'Spline Sans Mono',monospace}
+.pos-tile .pt-badge{position:absolute;top:-7px;right:-7px;background:var(--accent);color:#fff;border-radius:20px;font-size:11px;font-weight:700;padding:1px 7px;min-width:22px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.cart-rows{flex:1;overflow-y:auto;min-height:0;margin:8px -4px 0}
+.cart-row{display:flex;align-items:center;gap:7px;padding:7px 4px;border-bottom:1px solid var(--line)}
+.cart-row-name{flex:1;font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cart-row-amt{font-size:12.5px;font-family:'Spline Sans Mono',monospace;color:var(--ink-soft);flex-shrink:0}
+.qty-ctrl{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.qty-btn{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--paper);font-size:16px;cursor:pointer;display:grid;place-items:center;font-weight:700;flex-shrink:0}
+.pos-totals{border-top:2px solid var(--line);padding-top:10px;margin-top:6px;font-size:13.5px}
+.pos-totals .tr{display:flex;justify-content:space-between;margin-bottom:4px}
+.pos-totals .grand{font-size:16px;font-weight:700;margin-top:4px;color:var(--accent-ink)}
+.pay-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:10px 0 8px}
+.pay-btn{padding:9px 4px;border-radius:9px;border:2px solid var(--line);background:transparent;font-size:12.5px;font-weight:600;cursor:pointer;text-align:center;transition:.12s}
+.pay-btn.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+/* PIN pad */
+.pinpad{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;max-width:210px;margin:10px auto 0}
+.pin-key{padding:13px;border-radius:11px;border:1px solid var(--line);background:var(--card);font-size:20px;font-weight:600;cursor:pointer;transition:.12s;text-align:center;user-select:none}
+.pin-key:hover,.pin-key:active{background:var(--accent-soft);border-color:var(--accent)}
+.pin-dots{display:flex;justify-content:center;gap:12px;padding:14px 0}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--line);transition:.15s}
+.pin-dot.filled{background:var(--accent)}
+/* Employee grid */
+.emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:12px}
+.emp-tile{background:var(--card);border:2px solid var(--line);border-radius:13px;padding:16px 10px;text-align:center;cursor:pointer;transition:.15s}
+.emp-tile:hover,.emp-tile:active{border-color:var(--accent);background:var(--accent-soft)}
+.emp-avt{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:17px;margin:0 auto 8px}
+.pos-cashier-bar{background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:13px}
+.pos-tab-bar{display:none;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.pos-tab{flex:1;padding:10px;text-align:center;font-weight:600;font-size:13.5px;cursor:pointer;background:var(--paper);border:none;transition:.12s}
+.pos-tab.active{background:var(--accent);color:#fff}
+@media(max-width:900px){
+  .pos-wrap{grid-template-columns:1fr;height:auto;overflow:visible;margin:0}
+  .pos-items-panel{padding:0}
+  .pos-cart-panel{border-left:none;border-top:2px solid var(--line);min-height:420px}
+  .pos-tab-bar{display:flex}
+}
 /* touch-friendly icon buttons everywhere */
 @media(max-width:900px){
   .iconbtn{width:36px;height:36px;border-radius:9px}
@@ -322,12 +367,15 @@ table{width:100%;border-collapse:collapse}
         <a data-view="dashboard"><span class="ic" data-i="grid"></span> Dashboard</a>
         <a data-view="items"><span class="ic" data-i="box"></span> Items</a>
         <a data-view="customers"><span class="ic" data-i="users"></span> Customers</a>
+        <a data-view="pos"><span class="ic" data-i="pos"></span> POS</a>
+        <a data-view="employees"><span class="ic" data-i="badge"></span> Employees</a>
         <div class="nav-group">Sales</div>
         <a data-view="quotations"><span class="ic" data-i="doc"></span> Quotations</a>
         <a data-view="invoices"><span class="ic" data-i="receipt"></span> Invoices</a>
         <div class="nav-group">Operations <span class="badge pro" style="font-size:9px">PRO</span></div>
         <a data-view="deliveries"><span class="ic" data-i="truck"></span> Deliveries <span class="lock" data-lock>PRO</span></a>
         <a data-view="email"><span class="ic" data-i="mail"></span> Email <span class="lock" data-lock>PRO</span></a>
+        <a data-view="team"><span class="ic" data-i="team"></span> Team access <span class="lock" data-lock>PRO</span></a>
         <div class="nav-group">Account</div>
         <a data-view="settings"><span class="ic" data-i="gear"></span> Settings</a>
         <div class="nav-group" id="adminGroup" style="display:none">Superadmin</div>
@@ -394,7 +442,10 @@ const ICONS={
  empty:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
- menu:'<path d="M3 12h18M3 6h18M3 18h18"/>'
+ menu:'<path d="M3 12h18M3 6h18M3 18h18"/>',
+ pos:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M6 8h.01M10 8h4M6 12h12"/>',
+ badge:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>',
+ team:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-5-3.87M16 3.13a4 4 0 0 1 0 7.75"/><path d="M20 8v6M23 11h-6"/>'
 };
 function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`;});}
 function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
@@ -541,7 +592,11 @@ async function doAuth(){
   launchApp();
 }
 function launchApp(){
-  if(State.db && !Array.isArray(State.db.customers)) State.db.customers=[];
+  if(State.db && !Array.isArray(State.db.customers))  State.db.customers=[];
+  if(State.db && !Array.isArray(State.db.employees))  State.db.employees=[];
+  if(State.db && !Array.isArray(State.db.transactions))State.db.transactions=[];
+  if(State.db && !Array.isArray(State.db.invitedUsers))State.db.invitedUsers=[];
+  if(State.db){ const s=State.db.settings; if(!s.senderName)s.senderName=s.businessName||''; if(!s.senderEmail)s.senderEmail=s.email||''; if(!s.posPrefix)s.posPrefix='TXN-'; if(!State.db.counters.pos)State.db.counters.pos=1; }
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='block';
   renderIcons();
@@ -577,8 +632,8 @@ document.getElementById('upgradeBtn').onclick=openUpgrade;
 /* ============================================================
    ROUTER
    ============================================================ */
-const PRO_VIEWS=['deliveries','email'];
-const TITLES={dashboard:'Dashboard',items:'Items',customers:'Customers',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',settings:'Settings',admin:'Portal Admin'};
+const PRO_VIEWS=['deliveries','email','team'];
+const TITLES={dashboard:'Dashboard',items:'Items',customers:'Customers',pos:'Point of Sale',employees:'Employees',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
 function go(view){
   if(view==='admin'&&!State.isAdmin){view='dashboard';}
   State.view=view;
@@ -586,7 +641,7 @@ function go(view){
   document.getElementById('pageTitle').textContent=TITLES[view];
   const c=document.getElementById('content');
   if(PRO_VIEWS.includes(view)&&!isPro()){c.innerHTML=lockedView(view);renderIcons(c);return;}
-  ({dashboard:viewDashboard,items:viewItems,customers:viewCustomers,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,settings:viewSettings,admin:viewAdmin}[view])();
+  ({dashboard:viewDashboard,items:viewItems,customers:viewCustomers,pos:viewPOS,employees:viewEmployees,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,team:viewTeam,settings:viewSettings,admin:viewAdmin}[view])();
   renderIcons(c);
 }
 document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(a){go(a.dataset.view);toggleNav(false);}});
@@ -1161,7 +1216,16 @@ function viewSettings(){
         <div class="field"><label>Quote footer</label><input id="s_qfoot" value="${esc(s.quoteFooter)}"></div>
         <div class="field"><label>Invoice footer</label><input id="s_ifoot" value="${esc(s.invoiceFooter)}"></div>
       </div>
-      <div style="margin-top:16px"><button class="btn accent" onclick="saveSettings()">Save settings</button></div>
+    </div>
+    <div class="card pad" style="grid-column:1/-1">
+      <h3 style="margin-bottom:4px">Email sending</h3>
+      <p class="muted" style="font-size:12.5px;margin-bottom:14px">Emails send from your Google account. Set a display name and reply-to address so customers reply to the right place.</p>
+      <div class="fgrid">
+        <div class="field"><label>Sender display name</label><input id="s_sname" value="${esc(s.senderName||s.businessName)}" placeholder="${esc(s.businessName)}"></div>
+        <div class="field"><label>Reply-to email</label><input id="s_semail" value="${esc(s.senderEmail||s.email)}" placeholder="${esc(s.email)}"></div>
+        <div class="field"><label>POS receipt prefix</label><input id="s_pos" value="${esc(s.posPrefix||'TXN-')}"></div>
+      </div>
+      <div style="margin-top:16px"><button class="btn accent" onclick="saveSettings()">Save all settings</button></div>
     </div>
    </div>`;
   document.getElementById('logoFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{State.db.settings.logo=r.result;document.getElementById('logoPrev').innerHTML=`<img src="${r.result}">`;persist();refreshChrome();};r.readAsDataURL(f);};
@@ -1172,7 +1236,301 @@ function saveSettings(){
   s.currency=val('s_cur');s.currencySymbol=val('s_sym');s.taxLabel=val('s_tlbl');s.taxRate=+val('s_trate')||0;
   s.quotePrefix=val('s_qpre');s.invoicePrefix=val('s_ipre');s.deliveryPrefix=val('s_dpre');s.quoteValidity=+val('s_qval')||14;
   s.paymentTerms=val('s_terms');s.bankDetails=val('s_bank');s.quoteFooter=val('s_qfoot');s.invoiceFooter=val('s_ifoot');
+  s.senderName=val('s_sname')||s.businessName;s.senderEmail=val('s_semail')||s.email;
+  if(val('s_pos'))s.posPrefix=val('s_pos');
   persist();refreshChrome();toast('Settings saved');
+}
+
+/* ============================================================
+   EMPLOYEES
+   ============================================================ */
+const EMP_FREE_LIMIT = 5;
+function viewEmployees(){
+  const emps=State.db.employees||[];
+  const atLimit=!isPro()&&emps.length>=EMP_FREE_LIMIT;
+  document.getElementById('content').innerHTML=`
+   <div class="between" style="margin-bottom:16px">
+     <div>
+       <p class="muted" style="font-size:13px;margin-top:3px">Employees can log in to the POS with a PIN. Free plan: up to ${EMP_FREE_LIMIT} employees.</p>
+     </div>
+     <button class="btn accent" onclick="openEmpEditor()" ${atLimit?'disabled':''} title="${atLimit?'Upgrade to Pro to add more employees':'Add employee'}">${svg('plus')} Add employee</button>
+   </div>
+   ${atLimit?`<div class="card pad" style="background:var(--amber-soft);border-color:var(--amber);margin-bottom:14px"><div class="row" style="gap:10px">${svg('lock',18)}<div><b>Employee limit reached (${EMP_FREE_LIMIT}).</b> <a class="linkish" onclick="openUpgrade()">Upgrade to Pro</a> for unlimited employees.</div></div></div>`:''}
+   ${emps.length?`<div class="tbl"><table><thead><tr><th>Name</th><th>Role</th><th>PIN set</th><th>Status</th><th></th></tr></thead><tbody>
+     ${emps.map(e=>`<tr>
+       <td style="font-weight:600"><div class="row" style="gap:9px"><div class="emp-avt" style="width:32px;height:32px;font-size:14px;flex-shrink:0">${(e.name||'?')[0].toUpperCase()}</div>${esc(e.name)}</div></td>
+       <td><span class="pill ${e.role==='manager'?'sent':'draft'}">${e.role||'cashier'}</span></td>
+       <td>${e.pin?'<span class="pill paid">●●●●</span>':'<span class="muted">Not set</span>'}</td>
+       <td><select class="pill ${e.active!==false?'paid':'draft'}" style="border:none;font-weight:600;cursor:pointer" onchange="setEmpActive('${e.id}',this.value==='active')"><option value="active" ${e.active!==false?'selected':''}>Active</option><option value="inactive" ${e.active===false?'selected':''}>Inactive</option></select></td>
+       <td><div class="rowacts"><button class="iconbtn" onclick='openEmpEditor("${e.id}")'>${svg('edit')}</button><button class="iconbtn" onclick='delEmployee("${e.id}")'>${svg('trash')}</button></div></td>
+     </tr>`).join('')}
+   </tbody></table></div>`:emptyBox('No employees yet','Add employees so they can log in to the POS with a PIN.')}`;
+  renderIcons(document.getElementById('content'));
+}
+function openEmpEditor(id){
+  const e=id?(State.db.employees||[]).find(x=>x.id===id):{name:'',role:'cashier',pin:'',active:true};
+  openModal(`${id?'Edit':'New'} employee`,`
+    <div class="fgrid">
+      <div class="field full"><label>Full name *</label><input id="em_name" value="${esc(e.name||'')}"></div>
+      <div class="field"><label>Role</label><select id="em_role"><option value="cashier" ${(e.role||'cashier')==='cashier'?'selected':''}>Cashier</option><option value="manager" ${e.role==='manager'?'selected':''}>Manager</option></select></div>
+      <div class="field"><label>4-digit PIN</label><input id="em_pin" type="password" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" value="${esc(e.pin||'')}" placeholder="Leave blank to keep unchanged"></div>
+      <div class="field"><label>Status</label><select id="em_act"><option value="1" ${e.active!==false?'selected':''}>Active</option><option value="0" ${e.active===false?'selected':''}>Inactive</option></select></div>
+    </div>`,
+    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:id?'Save':'Add employee',cls:'accent',fn:()=>{
+      const name=val('em_name');if(!name)return toast('Name is required');
+      const pin=val('em_pin'); if(pin&&!/^\d{4}$/.test(pin))return toast('PIN must be exactly 4 digits');
+      if(!State.db.employees)State.db.employees=[];
+      const rec={id:id||uid(),name,role:val('em_role'),pin:pin||(id?(State.db.employees.find(x=>x.id===id)||{}).pin:''),active:val('em_act')==='1'};
+      if(id){const ix=State.db.employees.findIndex(x=>x.id===id);State.db.employees[ix]=rec;}else State.db.employees.push(rec);
+      persist();closeModal();viewEmployees();toast(id?'Employee updated':'Employee added');
+    }}]);
+}
+function setEmpActive(id,active){const e=(State.db.employees||[]).find(x=>x.id===id);if(e){e.active=active;persist();}}
+function delEmployee(id){confirmDel('Delete this employee?',()=>{State.db.employees=(State.db.employees||[]).filter(e=>e.id!==id);persist();viewEmployees();toast('Employee removed');});}
+
+/* ============================================================
+   POS — POINT OF SALE
+   ============================================================ */
+let posCart=[], posCashier=null, posPayMethod='cash', _posTab='items';
+function viewPOS(){
+  const emps=(State.db.employees||[]).filter(e=>e.active!==false);
+  if(!posCashier){
+    if(!emps.length){posCashier={name:State.db.settings.businessName||'Owner',role:'manager'};renderPOS();return;}
+    showEmpLogin(emps);
+  }else renderPOS();
+}
+function showEmpLogin(emps){
+  const c=document.getElementById('content');
+  c.innerHTML=`<div style="max-width:500px;margin:0 auto;text-align:center;padding:20px 0">
+    <h2 style="margin-bottom:4px">Who's working today?</h2>
+    <p class="muted" style="font-size:13px;margin-bottom:2px">Tap your name to sign in to POS</p>
+    <div class="emp-grid" style="margin-top:16px">
+      ${emps.map(e=>`<div class="emp-tile" onclick="empPinPrompt('${e.id}')">
+        <div class="emp-avt">${(e.name||'?')[0].toUpperCase()}</div>
+        <div style="font-weight:600;font-size:13px">${esc(e.name)}</div>
+        <div class="muted" style="font-size:11.5px">${e.role||'cashier'}</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:20px"><button class="btn ghost sm" onclick="posCashier={name:'${esc(State.db.settings.businessName||'Owner')}',role:'manager'};renderPOS()">Continue as owner</button></div>
+  </div>`;
+}
+let _pinInput='',_pinEmpId='';
+function empPinPrompt(id){
+  const e=(State.db.employees||[]).find(x=>x.id===id);if(!e)return;
+  if(!e.pin){posCashier=e;renderPOS();return;}
+  _pinInput='';_pinEmpId=id;
+  openModal(`Sign in — ${esc(e.name)}`,`
+    <div style="text-align:center">
+      <div class="pin-dots" id="pinDots">${[0,1,2,3].map(()=>'<div class="pin-dot"></div>').join('')}</div>
+      <div class="pinpad" id="pinPad">
+        ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(k=>`<button class="pin-key" onclick="pinKey('${k}')">${k}</button>`).join('')}
+      </div>
+      <p class="muted" style="font-size:12.5px;margin-top:10px" id="pinErr"></p>
+    </div>`,[{label:'Cancel',cls:'ghost',fn:()=>{closeModal();}}],'sm');
+}
+function pinKey(k){
+  if(k==='⌫'){_pinInput=_pinInput.slice(0,-1);}
+  else if(k!==''&&_pinInput.length<4){_pinInput+=k;}
+  const dots=document.querySelectorAll('.pin-dot');
+  dots.forEach((d,i)=>d.classList.toggle('filled',i<_pinInput.length));
+  if(_pinInput.length===4){
+    const e=(State.db.employees||[]).find(x=>x.id===_pinEmpId);
+    if(e&&e.pin===_pinInput){closeModal();posCashier=e;renderPOS();}
+    else{document.getElementById('pinErr').textContent='Wrong PIN. Try again.';_pinInput='';dots.forEach(d=>d.classList.remove('filled'));}
+  }
+}
+function renderPOS(){
+  const s=State.db.settings;
+  const items=(State.db.items||[]).filter(i=>i.name.toLowerCase().includes((_posSearch||'').toLowerCase()));
+  const t=calcPosCart();
+  const mob=isMob();
+  document.getElementById('content').innerHTML=`
+    <div class="pos-cashier-bar">
+      <span>${svg('badge',15)} Cashier: <strong>${esc(posCashier.name)}</strong></span>
+      <button class="btn ghost tiny" onclick="posCashier=null;_posSearch='';viewPOS()">Switch</button>
+    </div>
+    ${mob?`<div class="pos-tab-bar"><button class="pos-tab ${_posTab==='items'?'active':''}" onclick="_posTab='items';renderPOS()">Items</button><button class="pos-tab ${_posTab==='cart'?'active':''}" onclick="_posTab='cart';renderPOS()">Cart (${posCart.reduce((s,c)=>s+c.qty,0)})</button></div>`:''}
+    <div class="pos-wrap">
+      <div class="pos-items-panel" style="${mob&&_posTab==='cart'?'display:none':''}">
+        <div class="search" style="margin-bottom:10px">${svg('search')}<input placeholder="Search items…" value="${esc(_posSearch||'')}" oninput="_posSearch=this.value;renderPOS()"></div>
+        ${items.length?`<div class="pos-grid">${items.map(i=>{const inCart=posCart.find(c=>c.itemId===i.id);return`<div class="pos-tile" onclick="addToCart('${i.id}')">
+          ${inCart?`<div class="pt-badge">${inCart.qty}</div>`:''}
+          <div class="pt-name">${esc(i.name)}</div>
+          <div class="pt-sku">${esc(i.sku||i.unit||'')}</div>
+          <div class="pt-price">${money(i.unitPrice)}</div>
+        </div>`;}).join('')}</div>`:`<div class="empty">No items match</div>`}
+      </div>
+      <div class="pos-cart-panel" style="${mob&&_posTab==='items'?'display:none':''}">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">Cart</div>
+        <div class="cart-rows">
+          ${posCart.length?posCart.map((ci,ix)=>`<div class="cart-row">
+            <div class="cart-row-name">${esc(ci.name)}</div>
+            <div class="qty-ctrl">
+              <button class="qty-btn" onclick="adjCart(${ix},-1)">−</button>
+              <span style="min-width:22px;text-align:center;font-size:13px">${ci.qty}</span>
+              <button class="qty-btn" onclick="adjCart(${ix},1)">+</button>
+            </div>
+            <div class="cart-row-amt">${money(ci.amount)}</div>
+            <button class="iconbtn" onclick="posCart.splice(${ix},1);renderPOS()" style="flex-shrink:0">${svg('trash')}</button>
+          </div>`).join(''):`<div class="empty" style="padding:24px 0;font-size:13px">Tap items to add to cart</div>`}
+        </div>
+        <div class="pos-totals">
+          <div class="tr"><span class="muted">Subtotal</span><span class="mono">${money(t.subtotal)}</span></div>
+          <div class="tr"><span class="muted">${esc(s.taxLabel)} (${s.taxRate}%)</span><span class="mono">${money(t.tax)}</span></div>
+          <div class="tr grand"><span>Total</span><span class="mono">${money(t.total)}</span></div>
+        </div>
+        <div class="pay-btns">
+          <button class="pay-btn ${posPayMethod==='cash'?'sel':''}" onclick="posPayMethod='cash';renderPOS()">💵 Cash</button>
+          <button class="pay-btn ${posPayMethod==='card'?'sel':''}" onclick="posPayMethod='card';renderPOS()">💳 Card</button>
+          <button class="pay-btn ${posPayMethod==='transfer'?'sel':''}" onclick="posPayMethod='transfer';renderPOS()">🏦 Transfer</button>
+        </div>
+        <button class="btn accent block" style="margin-bottom:10px" ${!posCart.length?'disabled':''} onclick="posCheckout()">Complete Sale — ${money(t.total)}</button>
+        <button class="btn ghost block" style="font-size:12.5px" onclick="viewPOSHistory()">View transaction history</button>
+      </div>
+    </div>`;
+  renderIcons(document.getElementById('content'));
+}
+let _posSearch='';
+function addToCart(itemId){
+  const item=State.db.items.find(i=>i.id===itemId);if(!item)return;
+  const ex=posCart.find(c=>c.itemId===itemId);
+  if(ex)ex.qty++;
+  else posCart.push({itemId,name:item.name,unitPrice:item.unitPrice,taxable:item.taxable!==false,qty:1,amount:item.unitPrice});
+  calcPosCart();renderPOS();
+}
+function adjCart(ix,delta){
+  posCart[ix].qty=Math.max(1,posCart[ix].qty+delta);
+  calcPosCart();renderPOS();
+}
+function calcPosCart(){
+  const rate=State.db.settings.taxRate/100;
+  let sub=0,tax=0;
+  posCart.forEach(ci=>{ci.amount=+(ci.qty*ci.unitPrice).toFixed(2);sub+=ci.amount;if(ci.taxable)tax+=ci.amount*rate;});
+  return {subtotal:+sub.toFixed(2),tax:+tax.toFixed(2),total:+(sub+tax).toFixed(2)};
+}
+function posCheckout(){
+  const t=calcPosCart();
+  openModal('Complete Sale',`
+    <div class="fgrid">
+      <div class="field full"><label>Customer name (optional)</label><input id="pos_cust" placeholder="Walk-in customer"></div>
+      <div class="field"><label>Total</label><input readonly value="${money(t.total)}" style="font-weight:700;background:var(--accent-soft)"></div>
+      ${posPayMethod==='cash'?`<div class="field"><label>Cash tendered</label><input id="pos_tend" type="number" step="0.01" placeholder="${t.total}" oninput="document.getElementById('pos_chg').textContent=money(Math.max(0,(+this.value||0)-${t.total}))"></div>`:``}
+      ${posPayMethod==='cash'?`<div class="field"><label>Change</label><div id="pos_chg" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-weight:700;background:var(--accent-soft)">${money(0)}</div></div>`:``}
+    </div>`,
+    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:'Confirm & Print Receipt',cls:'accent',fn:()=>{
+      const tendered=posPayMethod==='cash'?+(document.getElementById('pos_tend')?.value||t.total):t.total;
+      const txn={id:uid(),number:(State.db.settings.posPrefix||'TXN-')+String(State.db.counters.pos).padStart(4,'0'),
+        date:todayISO(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+        cashier:posCashier.name,customer:document.getElementById('pos_cust')?.value||'Walk-in',
+        lineItems:JSON.parse(JSON.stringify(posCart)),totals:{...t,tendered,change:+(tendered-t.total).toFixed(2)},
+        paymentMethod:posPayMethod};
+      if(!State.db.transactions)State.db.transactions=[];
+      State.db.transactions.unshift(txn);
+      State.db.counters.pos=(State.db.counters.pos||1)+1;
+      persist();closeModal();posCart=[];printReceipt(txn);
+    }}]);
+}
+function printReceipt(txn){
+  const s=State.db.settings;
+  const logo=s.logo?`<img src="${s.logo}" style="width:48px;height:48px;border-radius:8px;object-fit:cover">`:`<div style="width:48px;height:48px;border-radius:8px;background:#0f6d5a;color:#fff;display:grid;place-items:center;font-family:'Fraunces',serif;font-size:22px;font-weight:700">${(s.businessName||'B')[0]}</div>`;
+  document.getElementById('printRoot').innerHTML=`<div class="doc" style="width:380px;margin:0 auto;padding:28px 24px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px">${logo}<div style="text-align:left"><div style="font-family:'Fraunces',serif;font-size:18px;font-weight:600">${esc(s.businessName)}</div><div style="font-size:11px;color:#777">${esc(s.address?s.address.split('\n')[0]:'')}</div></div></div>
+      <div style="margin-top:10px;font-size:12px;color:#777">─────────────────────────</div>
+      <div style="font-size:13px;margin-top:6px"><strong>Receipt ${esc(txn.number)}</strong> · ${txn.date} ${txn.time}</div>
+      <div style="font-size:12px;color:#777">Cashier: ${esc(txn.cashier)} · ${esc(txn.customer)}</div>
+      <div style="font-size:12px;color:#777">─────────────────────────</div>
+    </div>
+    <table style="width:100%;font-size:12.5px;border-collapse:collapse">
+      ${txn.lineItems.map(li=>`<tr><td style="padding:4px 0">${esc(li.name)}<br><span style="color:#777">× ${li.qty} @ ${money(li.unitPrice)}</span></td><td style="text-align:right;padding:4px 0;font-family:monospace">${money(li.amount)}</td></tr>`).join('')}
+    </table>
+    <div style="border-top:1px dashed #ccc;margin-top:10px;padding-top:10px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:#777">Subtotal</span><span style="font-family:monospace">${money(txn.totals.subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:#777">${esc(s.taxLabel)} ${s.taxRate}%</span><span style="font-family:monospace">${money(txn.totals.tax)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:4px"><span>TOTAL</span><span style="font-family:monospace">${money(txn.totals.total)}</span></div>
+      ${txn.paymentMethod==='cash'?`<div style="display:flex;justify-content:space-between;margin-top:6px;color:#777;font-size:12px"><span>Cash tendered</span><span style="font-family:monospace">${money(txn.totals.tendered)}</span></div><div style="display:flex;justify-content:space-between;color:#777;font-size:12px"><span>Change</span><span style="font-family:monospace">${money(txn.totals.change)}</span></div>`:`<div style="text-align:right;color:#777;font-size:12px;margin-top:4px">Paid by ${txn.paymentMethod}</div>`}
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#999">Thank you for your business!<br>${esc(s.invoiceFooter||'')}</div>
+  </div>`;
+  setTimeout(()=>window.print(),100);
+  toast('Printing receipt…');
+  setTimeout(()=>renderPOS(),800);
+}
+function viewPOSHistory(){
+  const txns=(State.db.transactions||[]).slice(0,50);
+  const c=document.getElementById('content');
+  const total=txns.reduce((s,t)=>s+t.totals.total,0);
+  c.innerHTML=`
+    <div class="between" style="margin-bottom:14px">
+      <div><h3>Transaction history</h3><p class="muted" style="font-size:13px">${txns.length} recent transactions · ${money(total)}</p></div>
+      <button class="btn ghost sm" onclick="posCashier=null;viewPOS()">← Back to POS</button>
+    </div>
+    ${txns.length?`<div class="mob-cards">${txns.map(t=>`<div class="mob-card">
+      <div class="mob-card-top"><span class="mob-card-id">${esc(t.number)}</span><span class="pill paid">${t.paymentMethod||'cash'}</span></div>
+      <div class="mob-card-name">${esc(t.customer||'Walk-in')}</div>
+      <div class="mob-card-meta"><span>${t.date} ${t.time||''}</span><span>Cashier: ${esc(t.cashier)}</span></div>
+      <div class="mob-card-foot">
+        <div class="mob-card-actions"><button class="iconbtn" onclick='printReceipt(JSON.parse(decodeURIComponent("${encodeURIComponent(JSON.stringify(t))}")))' title="Reprint">${svg('pdf')}</button></div>
+        <span class="mob-card-amount">${money(t.totals.total)}</span>
+      </div>
+    </div>`).join('')}</div>`:emptyBox('No transactions yet','Complete a sale to see it here.')}`;
+  renderIcons(c);
+}
+
+/* ============================================================
+   TEAM ACCESS (Pro)
+   ============================================================ */
+async function viewTeam(){
+  const invited=State.db.invitedUsers||[];
+  document.getElementById('content').innerHTML=`
+   <div class="between" style="margin-bottom:16px">
+     <div>
+       <p class="muted" style="font-size:13px;margin-top:3px">Invite team members to access this business portal with their own login. Pro plan only.</p>
+     </div>
+     <button class="btn accent" onclick="openInviteModal()">${svg('plus')} Invite member</button>
+   </div>
+   ${invited.length?`<div class="tbl"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead><tbody>
+     ${invited.map(u=>`<tr>
+       <td style="font-weight:600">${esc(u.name)}</td>
+       <td class="muted">${esc(u.email)}</td>
+       <td><span class="pill ${u.role==='admin'?'sent':'draft'}">${u.role||'manager'}</span></td>
+       <td><div class="rowacts"><button class="iconbtn" onclick="removeInvite('${esc(u.email)}')">${svg('trash')}</button></div></td>
+     </tr>`).join('')}
+   </tbody></table></div>`:emptyBox('No team members yet','Invite a colleague to give them access to your business portal.')}
+   <div class="card pad" style="margin-top:16px;background:var(--accent-soft);border-color:var(--accent)">
+     <b>How team access works</b>
+     <ol style="margin-top:8px;padding-left:18px;font-size:13px;line-height:1.9;color:var(--ink-soft)">
+       <li>Add the team member's email above.</li>
+       <li>They go to <strong>wadde.online/quotemaster/</strong> and register with that exact email.</li>
+       <li>Their account automatically links to your business data on first login.</li>
+       <li>You can manage their access from this page at any time.</li>
+     </ol>
+   </div>`;
+  renderIcons(document.getElementById('content'));
+}
+function openInviteModal(){
+  openModal('Invite team member',`
+    <div class="fgrid">
+      <div class="field"><label>Name *</label><input id="inv_name" placeholder="e.g. Ahmed Ali"></div>
+      <div class="field"><label>Email *</label><input id="inv_email" type="email" placeholder="ahmed@example.com"></div>
+      <div class="field"><label>Role</label><select id="inv_role"><option value="manager">Manager</option><option value="admin">Admin (full access)</option></select></div>
+    </div>`,
+    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:'Send invite',cls:'accent',fn:async()=>{
+      const name=val('inv_name'),email=val('inv_email').toLowerCase();
+      if(!name||!email)return toast('Name and email required');
+      if(!State.db.invitedUsers)State.db.invitedUsers=[];
+      if(State.db.invitedUsers.find(u=>u.email===email))return toast('Already invited');
+      State.db.invitedUsers.push({email,name,role:val('inv_role')});
+      const r=await call('inviteUser',{email,name,role:val('inv_role')});
+      persist();closeModal();viewTeam();toast(`Invite saved for ${email}`);
+    }}]);
+}
+async function removeInvite(email){
+  confirmDel(`Remove access for ${email}?`,async()=>{
+    State.db.invitedUsers=(State.db.invitedUsers||[]).filter(u=>u.email!==email);
+    await call('removeInvite',{email});
+    persist();viewTeam();toast('Access removed');
+  });
 }
 
 /* ============================================================
