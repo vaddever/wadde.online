@@ -1606,12 +1606,29 @@ function openUpgrade(){
    <p class="muted" style="font-size:12px;margin-top:14px;text-align:center">In production this opens Stripe Checkout. Here it unlocks Pro instantly so you can explore the features.</p>`,
    [{label:'Close',cls:'ghost',fn:closeModal}],'lg');
 }
-async function startCheckout(){
+/* ── Lemon Squeezy hosted checkout (Merchant of Record) ──
+   Setup (one-time, in app.lemonsqueezy.com):
+     1) Create a Store, then a "Subscription" product + variant for Pro.
+     2) Open the variant → "Share" → copy its Buy link:
+          https://YOURSTORE.lemonsqueezy.com/buy/VARIANT-UUID
+     3) In the product's settings, set "Redirect after purchase" to:
+          https://wadde.online/?paid=1
+     4) Fill the two constants below.
+   No API key is needed for this hosted-checkout flow — only the webhook
+   (see lemonsqueezy-webhook.gs) actually grants Pro, after payment. */
+const LS_STORE   = "YOURSTORE";                                  // <-- your *.lemonsqueezy.com subdomain
+const LS_VARIANT = "00000000-0000-0000-0000-000000000000";       // <-- the Pro variant UUID
+
+function startCheckout(){
   if(isPro()){closeModal();return;}
+  const email = (State.user && State.user.email) ? State.user.email : '';
+  const p = new URLSearchParams();
+  if(email) p.set('checkout[email]', email);
+  // custom data is echoed back to the webhook so we know which account to upgrade
+  p.set('checkout[custom][account_email]', email);
+  if(TOKEN) p.set('checkout[custom][token]', TOKEN);
   toast('Opening secure checkout…');
-  const r=await call('createCheckout');
-  if(r.ok&&r.url){ window.location.href=r.url; }
-  else { toast(r.error||'Could not start checkout'); }
+  window.location.href = `https://${LS_STORE}.lemonsqueezy.com/buy/${LS_VARIANT}?${p.toString()}`;
 }
 
 /* ============================================================
