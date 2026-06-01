@@ -150,6 +150,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .v-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
 .meta-chip{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);}
 .cat-section{margin-bottom:32px;}
+.year-divider{display:flex;align-items:center;gap:14px;margin:8px 0 22px;}
+.year-divider-line{flex:1;height:1px;background:linear-gradient(to right,transparent,var(--border2),transparent);}
+.year-divider-label{font-family:'DM Serif Display',serif;font-size:18px;color:var(--gold);letter-spacing:.02em;white-space:nowrap;}
 .cat-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border);}
 .cat-num{width:24px;height:24px;border-radius:50%;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.2);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .cat-title{font-size:15px;font-weight:500;}
@@ -669,6 +672,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div class="tab-panel" id="superadmin-results">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
         <div class="rf" style="margin-bottom:0;flex:1;">
+          <select class="fsel" id="sa-fyear" onchange="renderSAResults()">
+            <option value="">All years</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+          </select>
           <select class="fsel" id="sa-fcat" onchange="renderSAResults()"><option value="">All categories</option></select>
           <select class="fsel" id="sa-fdept" onchange="saDeptChanged()"><option value="">All departments</option></select>
           <select class="fsel" id="sa-funit" onchange="renderSAResults()"><option value="">All units</option></select>
@@ -880,6 +888,8 @@ const LS = {
 };
 
 // ── Baked-in defaults — work on any device without setup ──
+const YEARS = ['2024','2025'];
+const DEFAULT_YEAR = '2025';
 const DEFAULT_SHEET_ID = '1w46DEImiSb0xuqeMCk4DFn2QsDaZ8WB7FddzS5M16eE';
 const DEFAULT_API_KEY  = 'AIzaSyDc4WFYt4MiM3AXO6hN3G0H2hh4ONDS0Uc';
 
@@ -1000,11 +1010,11 @@ async function fetchFromSheets() {
 
   // Fetch all tabs in one batch — tabs that don't exist are skipped gracefully
   const tabRanges = [
-    'Voters!A2:F',
+    'Voters!A2:H',
     'Nominees!A2:F',
     'Votes!A2:D',
     'Admins!A2:C',
-    'Categories!A2:E',
+    'Categories!A2:F',
     'Departments!A2:D',
     'Config!A1:B20',
     'Staff!A2:D'
@@ -1056,7 +1066,9 @@ async function fetchFromSheets() {
     dept:    (r[2]||'').trim(),
     unit:    (r[3]||'').trim(),
     hasVoted:(r[4]||'').toUpperCase()==='TRUE',
-    empId:   (r[5]||'').trim()   // column F — Employee ID
+    empId:   (r[5]||'').trim(),  // column F — Employee ID
+    excl2024:(r[6]||'').toUpperCase()==='TRUE',  // column G — excluded from 2024
+    excl2025:(r[7]||'').toUpperCase()==='TRUE'   // column H — excluded from 2025
   })).filter(v=>v.pin);
 
   // ── ADMINS: PIN | Role | Name ──
@@ -1073,21 +1085,23 @@ async function fetchFromSheets() {
   const VALID_SCOPES = ['dept','unit','global','deptcat'];
   if (catD.length) DATA.categories = catD.map(r=>{
     const c0=(r[0]||'').trim(), c1=(r[1]||'').trim(), c2=(r[2]||'').trim();
-    const c3=(r[3]||'').trim(), c4=(r[4]||'').trim();
+    const c3=(r[3]||'').trim(), c4=(r[4]||'').trim(), c5=(r[5]||'').trim();
     // Detect if first column looks like a generated ID
     const looksLikeId = /^[a-z_]+\d{10,}$/.test(c0) || c0.startsWith('cat_');
-    let id, name, scope, linkedDept='', linkedUnit='';
+    let id, name, scope, linkedDept='', linkedUnit='', year='';
     if(looksLikeId){
-      // Portal format: ID | Name | Scope | LinkedDept | LinkedUnit
+      // Portal format: ID | Name | Scope | LinkedDept | LinkedUnit | Year
       id=c0; name=c1||c0;
       scope=VALID_SCOPES.includes(c2)?c2:'global';
-      linkedDept=c3; linkedUnit=c4;
+      linkedDept=c3; linkedUnit=c4; year=c5;
     } else {
-      // Human format: Name | Scope | LinkedDept | LinkedUnit
+      // Human format: Name | Scope | LinkedDept | LinkedUnit | Year
       name=c0; id='cat_'+toId(c0);
       scope=VALID_SCOPES.includes(c1)?c1:'global';
-      linkedDept=c2; linkedUnit=c3;
+      linkedDept=c2; linkedUnit=c3; year=c4||c5;
     }
+    // Normalise year — default to the configured default year
+    year = (year||'').replace(/[^0-9]/g,'') || DEFAULT_YEAR;
     // Resolve linkedDept/Unit names to IDs
     if(linkedDept && !linkedDept.startsWith('dept_')){
       const d=DATA.departments.find(d=>d.name.toLowerCase()===linkedDept.toLowerCase());
@@ -1099,7 +1113,7 @@ async function fetchFromSheets() {
         if(u){ linkedUnit=u.id; break; }
       }
     }
-    return {id, name, scope, linkedDept, linkedUnit};
+    return {id, name, scope, linkedDept, linkedUnit, year};
   }).filter(c=>c.name);
 
   // ── DEPARTMENTS: Flexible — accepts either:
@@ -1530,12 +1544,23 @@ function initVoter(){
   container.innerHTML='';
   let idx=0;
 
-  DATA.categories.forEach(cat=>{
-    // Check visibility for this voter
-    if(!voterCanSeeCategory(cat, v)) return;
-    // All nominees in this category are shown regardless of their dept/unit
+  // Group categories by year — show each year as its own section
+  YEARS.forEach(yr=>{
+    // Categories for this year that the voter can see + have nominees
+    const yrCats = DATA.categories.filter(cat=>
+      String(cat.year)===String(yr) &&
+      voterCanSeeCategory(cat, v) &&
+      DATA.nominees.filter(n=>n.category===cat.id).length>0
+    );
+    if(!yrCats.length) return;
+    // Year header
+    const yrHdr=document.createElement('div');
+    yrHdr.className='year-divider';
+    yrHdr.innerHTML=`<span class="year-divider-line"></span><span class="year-divider-label">${yr} Awards</span><span class="year-divider-line"></span>`;
+    container.appendChild(yrHdr);
+
+  yrCats.forEach(cat=>{
     const noms=DATA.nominees.filter(n=>n.category===cat.id);
-    if(!noms.length) return;
     idx++;
     const hasMany = noms.length > 3;
     // Build scope label for header
@@ -1581,6 +1606,7 @@ function initVoter(){
       grid.appendChild(card);
     });
   });
+  }); // end YEARS forEach
 
   if(idx===0){
     container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div>No nominees available for your department/unit yet. Please contact the administrator.</div>`;
@@ -1917,9 +1943,19 @@ function updateVProg(){
   btn.disabled=sel<total||!CFG.votingOpen;
 }
 
+function voterEligibleForYear(voter, year){
+  // Returns true if voter is allowed to vote in this year
+  if(!voter) return false;
+  if(String(year)==='2024' && voter.excl2024) return false;
+  if(String(year)==='2025' && voter.excl2025) return false;
+  return true;
+}
+
 function voterCanSeeCategory(cat, voter){
   // Returns true if this voter should see this category
   if(!cat || !voter) return false;
+  // Year eligibility check first
+  if(!voterEligibleForYear(voter, cat.year)) return false;
   const scope = cat.scope || 'global';
   if(scope === 'global')  return true;
   if(scope === 'dept' || scope === 'deptcat'){
@@ -2425,15 +2461,25 @@ function renderSAResults(){
   const container=document.getElementById('sa-results-container');
   if(!container) return;
 
+  const yearF=document.getElementById('sa-fyear')?.value||'';
   const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
-  const cats=catF?DATA.categories.filter(c=>c.id===catF):DATA.categories;
+  let cats=catF?DATA.categories.filter(c=>c.id===catF):DATA.categories;
+  if(yearF) cats=cats.filter(c=>String(c.year)===String(yearF));
 
   if(!cats.length||!DATA.nominees.length){
     container.innerHTML='<div class="empty-state"><div class="empty-state-icon">📊</div>No results yet — votes will appear here once cast.</div>';
     return;
   }
 
+  // Sort categories by year so they group naturally
+  cats=[...cats].sort((a,b)=>String(a.year).localeCompare(String(b.year)));
+  let lastYear=null;
   container.innerHTML=cats.map((cat,ci)=>{
+    let yearHdr='';
+    if(String(cat.year)!==lastYear){
+      lastYear=String(cat.year);
+      yearHdr=`<div class="year-divider" style="margin:${ci===0?'4px':'24px'} 0 16px;"><span class="year-divider-line"></span><span class="year-divider-label">${cat.year} Awards</span><span class="year-divider-line"></span></div>`;
+    }
     const c=COLORS[ci%COLORS.length];
     let noms=DATA.nominees.filter(n=>n.category===cat.id&&(!deptF||n.dept===deptF)&&(!unitF||n.unit===unitF))
       .map(n=>({...n,votes:getVotes(n.id,n.name)})).sort((a,b)=>b.votes-a.votes);
@@ -2471,7 +2517,7 @@ function renderSAResults(){
       </div>`;
     }).join('');
 
-    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden;">
+    return `${yearHdr}<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden;">
       <!-- Category header -->
       <div style="padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:8px;">
@@ -3266,6 +3312,18 @@ function openAddVoterModal(){
     </div>
     <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mv-dept" onchange="fillVoterUnits()">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
     <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mv-unit"></select></div>
+    <div class="modal-field">
+      <label class="modal-lbl">Voting Eligibility</label>
+      <div style="display:flex;gap:16px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="mv-elig-2024" checked style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;"> 2024
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="mv-elig-2025" checked style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;"> 2025
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Uncheck a year to exclude this voter from that year's awards.</div>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-confirm" onclick="addVoter()">Add Voter</button>
@@ -3284,9 +3342,11 @@ async function addVoter(){
   const pin=document.getElementById('mv-pin').value.trim();
   const dept=document.getElementById('mv-dept').value;
   const unit=document.getElementById('mv-unit').value;
+  const excl2024=!(document.getElementById('mv-elig-2024')?.checked ?? true);
+  const excl2025=!(document.getElementById('mv-elig-2025')?.checked ?? true);
   if(!name||!pin){showToast('Name and PIN required','err');return;}
   if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){showToast('PIN already in use — click "New PIN"','err');return;}
-  const voter={pin, empId, name, dept, unit, hasVoted:false};
+  const voter={pin, empId, name, dept, unit, hasVoted:false, excl2024, excl2025};
   DATA.voters.push(voter);
   cacheData();
   closeModal();renderVoterList();renderStats('sa');
@@ -3460,10 +3520,15 @@ function openAddCatModal(){
   const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
   const allUnitOpts=DATA.departments.flatMap(d=>d.units.map(u=>
     `<option value="${u.id}">${d.name} › ${u.name}</option>`)).join('');
+  const yrOpts=YEARS.map(y=>`<option value="${y}" ${y===DEFAULT_YEAR?'selected':''}>${y}</option>`).join('');
   openModal(`<div class="modal-title">Add Voting Category</div>
     <div class="modal-field">
       <label class="modal-lbl">Category Name</label>
       <input class="modal-inp" id="mc-name" placeholder="e.g. Best Staff — Leadership">
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Award Year</label>
+      <select class="modal-sel" id="mc-year">${yrOpts}</select>
     </div>
     <div class="modal-field">
       <label class="modal-lbl">Visibility</label>
@@ -3524,17 +3589,19 @@ function catUnitDeptChanged(){
 async function addCat(){
   const name=document.getElementById('mc-name').value.trim();
   const scope=document.getElementById('mc-scope').value;
+  const year=document.getElementById('mc-year')?.value||DEFAULT_YEAR;
   const linkedDept=document.getElementById('mc-linked-dept')?.value||'';
   const linkedUnit=document.getElementById('mc-linked-unit')?.value||'';
   if(!name){showToast('Enter a category name','err');return;}
   if(scope==='dept'&&!linkedDept){showToast('Please select a department','err');return;}
   if(scope==='unit'&&!linkedUnit){showToast('Please select a unit','err');return;}
-  const cat={id:'cat_'+toId(name), name, scope, linkedDept, linkedUnit};
+  // ID includes year so same-named categories in different years stay distinct
+  const cat={id:'cat_'+toId(name)+'_'+year, name, scope, linkedDept, linkedUnit, year};
   DATA.categories.push(cat);
   cacheData();
   closeModal();renderCatList();fillResultFilters('sa');fillResultFilters('a');
   await writeToSheets('addCategory',{category:cat});
-  showToast(`Category "${name}" added`,'ok');
+  showToast(`Category "${name}" (${year}) added`,'ok');
 }
 
 function openAddDeptModal(){
