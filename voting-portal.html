@@ -263,6 +263,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .vrow:last-child{border-bottom:none;}
 .vrow:hover{background:rgba(255,255,255,.015);}
 .vpin{font-family:monospace;color:var(--gold);background:var(--gold-dim);padding:2px 7px;border-radius:4px;font-size:12px;}
+.vyears{display:inline-flex;flex-shrink:0;}
 .vname{flex:1;font-weight:500;font-size:13px;}
 .vdept{font-size:11px;color:var(--text2);}
 .vdot{width:7px;height:7px;border-radius:50%;}
@@ -1768,6 +1769,7 @@ function renderAdminVoterList(){
       ${v.empId?`<span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;">${v.empId}</span>`:''}
       <span class="vname">${v.name}</span>
       <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
+      <span class="vyears">${voterYearBadges(v)}</span>
       <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
         <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
         <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
@@ -1859,7 +1861,7 @@ function renderAdminNominees(){
     return `<div class="nom-cat-group">
       <div class="nom-cat-group-hdr">
         <div style="flex:1;">
-          <span class="nom-cat-group-title">${cat.name}</span>
+          <span class="nom-cat-group-title">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></span>
           <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;">(${scopeTag[cat.scope]||cat.scope})</span>
         </div>
         <span class="nom-cat-group-count">${noms.length} nominee${noms.length!==1?'s':''}</span>
@@ -2026,6 +2028,25 @@ const getUnitName = id => {
 // Get staff member linked to a nominee (by name match)
 const getStaff = name => DATA.staff.find(s=>s.name.toLowerCase()===(name||'').toLowerCase());
 const getStaffId = name => { const s=getStaff(name); return s?s.empId||s.id:''; };
+
+// Year eligibility badges for a voter — green = eligible, struck = excluded
+function voterYearBadges(v){
+  return YEARS.map(yr=>{
+    const eligible = voterEligibleForYear(v, yr);
+    if(eligible){
+      return `<span style="font-size:9px;font-weight:600;font-family:monospace;padding:1px 5px;border-radius:3px;background:var(--green-dim);color:var(--green);border:1px solid rgba(76,175,125,.2);margin-right:3px;">${yr}</span>`;
+    } else {
+      return `<span style="font-size:9px;font-weight:600;font-family:monospace;padding:1px 5px;border-radius:3px;background:var(--bg3);color:var(--text3);text-decoration:line-through;margin-right:3px;" title="Excluded from ${yr}">${yr}</span>`;
+    }
+  }).join('');
+}
+
+// Returns "Award Name YYYY" — appends year if present
+const catLabel = cat => {
+  if(!cat) return '';
+  const c = typeof cat==='string' ? getCat(cat) : cat;
+  return c.year ? `${c.name} ${c.year}` : c.name;
+};
 
 const getCat = id => {
   if(!id) return {id:'',name:'',scope:'global'};
@@ -2213,7 +2234,7 @@ function renderAdminResults(){
         <div style="padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
           <div style="width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0;"></div>
           <div style="flex:1;">
-            <div style="font-size:13px;font-weight:500;">${cat.name}</div>
+            <div style="font-size:13px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
             <div style="font-size:11px;color:var(--text3);margin-top:2px;">${scopeTxt}${linkedTxt} · ${noms.length} nominee${noms.length!==1?'s':''} · ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
           </div>
         </div>
@@ -2292,7 +2313,7 @@ function renderResults(who){
   tbody.innerHTML=ranked.map((nom,i)=>{
     const rC=i===0?'r1':i===1?'r2':i===2?'r3':'';
     const rnk=i<3?`<span class="rnk ${rC}">${i+1}</span>`:`<span style="color:var(--text3);font-size:12px;">${i+1}</span>`;
-    const catName=getCat(nom.category).name;
+    const catName=catLabel(getCat(nom.category));
     const empId=getStaffId(nom.name);
     return `<tr>
       <td style="text-align:center;">${rnk}</td>
@@ -2523,7 +2544,7 @@ function renderSAResults(){
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0;"></div>
           <div style="flex:1;">
-            <div style="font-size:14px;font-weight:500;">${cat.name}</div>
+            <div style="font-size:14px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
             <div style="font-size:11px;color:var(--text3);margin-top:2px;">${scopeTxt}${linkedTxt} · ${noms.length} nominee${noms.length!==1?'s':''} · ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
           </div>
         </div>
@@ -2546,7 +2567,7 @@ function renderSAResults(){
 
 function nomResultCard(nom, color){
   const votes=nom.votes; const empId=getStaffId(nom.name);
-  const catName=getCat(nom.category).name;
+  const catName=catLabel(getCat(nom.category));
   return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);">
     <div style="width:28px;height:28px;border-radius:50%;background:${color}22;color:${color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
     <div style="flex:1;min-width:0;">
@@ -2734,7 +2755,7 @@ function renderCategoryDetail(containerId){
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden;">
       <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:flex-start;gap:10px;">
         <div style="flex:1;">
-          <div style="font-size:14px;font-weight:500;">${cat.name}</div>
+          <div style="font-size:14px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
           <div style="font-size:11px;color:var(--text3);margin-top:3px;">(${scopeTxt}${linkedTxt}) · ${noms.length} nominees · ${totalVotes} votes cast</div>
         </div>
       </div>
@@ -2786,6 +2807,7 @@ function renderVoterList(){
       ${v.empId?`<span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;">${v.empId}</span>`:''}
       <span class="vname">${v.name}</span>
       <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
+      <span class="vyears">${voterYearBadges(v)}</span>
       <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
         <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
         <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
@@ -2939,7 +2961,7 @@ function renderNominees(){
     return `<div class="nom-cat-group">
       <div class="nom-cat-group-hdr">
         <div style="flex:1;">
-          <span class="nom-cat-group-title">${cat.name}</span>
+          <span class="nom-cat-group-title">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></span>
           <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;">(${nomScopeTxt}${nomLinkedTxt})</span>
         </div>
         <span class="nom-cat-group-count">${noms.length} nominee${noms.length!==1?'s':''}</span>
