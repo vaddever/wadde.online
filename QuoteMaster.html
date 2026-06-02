@@ -216,6 +216,25 @@ table{width:100%;border-collapse:collapse}
 .doc .d-foot{margin-top:40px;text-align:center;font-size:11px;color:#9a9ca3}
 .doc .d-stamp{display:inline-block;border:2px solid var(--accent);color:var(--accent-ink);font-family:'Fraunces',serif;font-weight:700;padding:4px 14px;border-radius:8px;transform:rotate(-4deg);font-size:15px;text-transform:uppercase;letter-spacing:.05em}
 
+/* ---- Finance / Expenses ---- */
+.margin-pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px}
+.margin-good{background:#e3f0ea;color:#0b5345}
+.margin-ok{background:var(--amber-soft);color:var(--amber)}
+.margin-thin{background:var(--danger-soft);color:var(--danger)}
+.cost-badge{font-size:11px;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-weight:500}
+.pl-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+.pl-row:last-child{border-bottom:none}
+.pl-row .lbl{font-size:13px;color:var(--ink-soft)}
+.pl-row .amt{font-family:'Spline Sans Mono',monospace;font-size:14px;font-weight:700}
+.exp-cat-bar-wrap{background:var(--line);border-radius:4px;height:6px;margin-top:5px;overflow:hidden}
+.exp-cat-bar{height:100%;border-radius:4px;background:var(--accent);transition:width .4s}
+.exp-cat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.exp-cat-name{font-size:13px;font-weight:600;display:flex;gap:7px;align-items:center}
+.pl-net-pos{color:var(--accent-ink);background:var(--accent-soft)}
+.pl-net-neg{color:var(--danger);background:var(--danger-soft)}
+.period-tabs{display:flex;gap:4px;background:var(--paper);padding:4px;border-radius:10px;border:1px solid var(--line);width:fit-content}
+.period-tab{padding:6px 12px;border-radius:7px;font-weight:600;font-size:13px;color:var(--ink-soft);cursor:pointer;border:none;background:transparent}
+.period-tab.active{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 /* ---- mobile card lists ---- */
 .mob-cards{display:flex;flex-direction:column;gap:10px}
 .mob-card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 15px;box-shadow:var(--shadow)}
@@ -369,6 +388,8 @@ table{width:100%;border-collapse:collapse}
         <a data-view="customers"><span class="ic" data-i="users"></span> Customers</a>
         <a data-view="pos"><span class="ic" data-i="pos"></span> POS</a>
         <a data-view="employees"><span class="ic" data-i="badge"></span> Employees</a>
+        <div class="nav-group">Finance</div>
+        <a data-view="expenses"><span class="ic" data-i="wallet"></span> Expenses</a>
         <div class="nav-group">Sales</div>
         <a data-view="quotations"><span class="ic" data-i="doc"></span> Quotations</a>
         <a data-view="invoices"><span class="ic" data-i="receipt"></span> Invoices</a>
@@ -445,7 +466,9 @@ const ICONS={
  menu:'<path d="M3 12h18M3 6h18M3 18h18"/>',
  pos:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M6 8h.01M10 8h4M6 12h12"/>',
  badge:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>',
- team:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-5-3.87M16 3.13a4 4 0 0 1 0 7.75"/><path d="M20 8v6M23 11h-6"/>'
+ team:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-5-3.87M16 3.13a4 4 0 0 1 0 7.75"/><path d="M20 8v6M23 11h-6"/>',
+ wallet:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
+ trending:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'
 };
 function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`;});}
 function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
@@ -595,7 +618,7 @@ function launchApp(){
   if(State.db && !Array.isArray(State.db.customers))  State.db.customers=[];
   if(State.db && !Array.isArray(State.db.employees))  State.db.employees=[];
   if(State.db && !Array.isArray(State.db.transactions))State.db.transactions=[];
-  if(State.db && !Array.isArray(State.db.invitedUsers))State.db.invitedUsers=[];
+  if(State.db && !Array.isArray(State.db.expenses))     State.db.expenses=[];
   if(State.db){ const s=State.db.settings; if(!s.senderName)s.senderName=s.businessName||''; if(!s.senderEmail)s.senderEmail=s.email||''; if(!s.posPrefix)s.posPrefix='TXN-'; if(!State.db.counters.pos)State.db.counters.pos=1; }
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='block';
@@ -633,7 +656,7 @@ document.getElementById('upgradeBtn').onclick=openUpgrade;
    ROUTER
    ============================================================ */
 const PRO_VIEWS=['deliveries','email','team'];
-const TITLES={dashboard:'Dashboard',items:'Items',customers:'Customers',pos:'Point of Sale',employees:'Employees',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
+const TITLES={dashboard:'Dashboard',items:'Items',customers:'Customers',pos:'Point of Sale',employees:'Employees',expenses:'Expenses',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
 function go(view){
   if(view==='admin'&&!State.isAdmin){view='dashboard';}
   State.view=view;
@@ -641,7 +664,7 @@ function go(view){
   document.getElementById('pageTitle').textContent=TITLES[view];
   const c=document.getElementById('content');
   if(PRO_VIEWS.includes(view)&&!isPro()){c.innerHTML=lockedView(view);renderIcons(c);return;}
-  ({dashboard:viewDashboard,items:viewItems,customers:viewCustomers,pos:viewPOS,employees:viewEmployees,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,team:viewTeam,settings:viewSettings,admin:viewAdmin}[view])();
+  ({dashboard:viewDashboard,items:viewItems,customers:viewCustomers,pos:viewPOS,employees:viewEmployees,expenses:viewExpenses,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,team:viewTeam,settings:viewSettings,admin:viewAdmin}[view])();
   renderIcons(c);
 }
 document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(a){go(a.dataset.view);toggleNav(false);}});
@@ -767,20 +790,46 @@ function viewDashboard(){
   const openQuotes=db.quotations.filter(q=>q.status==='sent'||q.status==='draft').length;
   const recent=[...db.invoices.map(d=>({...d,_t:'Invoice'})),...db.quotations.map(d=>({...d,_t:'Quotation'}))]
      .sort((a,b)=>(b.date>a.date?1:-1)).slice(0,6);
+  // P&L this month
+  const now=new Date(),mm=now.getMonth(),yy=now.getFullYear();
+  const monthStr=now.toLocaleString('default',{month:'long',year:'numeric'});
+  const mthRevenue=(db.invoices||[]).filter(i=>i.status==='paid'&&i.date&&new Date(i.date).getMonth()===mm&&new Date(i.date).getFullYear()===yy).reduce((s,i)=>s+(i.totals.total||0),0);
+  const mthExpenses=(db.expenses||[]).filter(e=>e.date&&new Date(e.date).getMonth()===mm&&new Date(e.date).getFullYear()===yy).reduce((s,e)=>s+(e.amount||0),0);
+  const netProfit=mthRevenue-mthExpenses;
+  const netCls=netProfit>=0?'pl-net-pos':'pl-net-neg';
+  // avg margin
+  const priced=(db.items||[]).filter(i=>i.costPrice>0&&i.unitPrice>0);
+  const avgMargin=priced.length?priced.reduce((s,i)=>s+((i.unitPrice-i.costPrice)/i.unitPrice*100),0)/priced.length:null;
   document.getElementById('content').innerHTML=`
-   <div class="grid kpis" style="margin-bottom:18px">
+   <div class="grid kpis" style="margin-bottom:14px">
      <div class="card kpi"><div class="lbl">Outstanding</div><div class="val">${money(outstanding)}</div><div class="sub muted">${unpaid.length} unpaid</div></div>
      <div class="card kpi"><div class="lbl">Collected</div><div class="val">${money(paid)}</div><div class="sub up">Paid to date</div></div>
      <div class="card kpi"><div class="lbl">Open quotes</div><div class="val">${openQuotes}</div><div class="sub muted">awaiting</div></div>
-     <div class="card kpi"><div class="lbl">Catalogue</div><div class="val">${db.items.length}</div><div class="sub muted">items</div></div>
+     <div class="card kpi"><div class="lbl">Avg margin</div><div class="val">${avgMargin!==null?avgMargin.toFixed(1)+'%':'—'}</div><div class="sub muted">${priced.length} priced items</div></div>
    </div>
-   <div class="between" style="margin-bottom:14px">
-     <h3>Recent activity</h3>
-     <div class="row" style="gap:8px">
-       <button class="btn ghost sm" onclick="go('quotations');setTimeout(()=>openDocEditor('quote'),50)">+ Quote</button>
-       <button class="btn accent sm" onclick="go('invoices');setTimeout(()=>openDocEditor('invoice'),50)">+ Invoice</button>
+   <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+     <div class="card">
+       <div style="padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:center">
+         <h3 style="font-size:14px">P&amp;L — ${monthStr}</h3>
+         <button class="btn ghost tiny" onclick="go('expenses')">All expenses →</button>
+       </div>
+       <div class="pl-row"><span class="lbl">Revenue (paid)</span><span class="amt">${money(mthRevenue)}</span></div>
+       <div class="pl-row"><span class="lbl">Expenses</span><span class="amt" style="color:var(--danger)">${money(mthExpenses)}</span></div>
+       <div class="pl-row ${netCls}" style="border-radius:0 0 var(--radius) var(--radius)"><span class="lbl" style="font-weight:700">Net profit</span><span class="amt">${money(Math.abs(netProfit))} ${netProfit<0?'loss':''}</span></div>
+     </div>
+     <div class="card">
+       <div style="padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:center">
+         <h3 style="font-size:14px">Quick actions</h3>
+       </div>
+       <div style="padding:0 14px 14px;display:grid;gap:8px">
+         <button class="btn ghost sm block" onclick="go('quotations');setTimeout(()=>openDocEditor('quote'),50)">+ New quotation</button>
+         <button class="btn accent sm block" onclick="go('invoices');setTimeout(()=>openDocEditor('invoice'),50)">+ New invoice</button>
+         <button class="btn ghost sm block" onclick="go('expenses');setTimeout(openExpenseEditor,60)">+ Log expense</button>
+         <button class="btn ghost sm block" onclick="go('pos')">Open POS register</button>
+       </div>
      </div>
    </div>
+   <div class="between" style="margin-bottom:14px"><h3>Recent activity</h3></div>
    ${isMob()?recentCards(recent):`<div class="tbl"><table><thead><tr><th>Type</th><th>Number</th><th>Customer</th><th>Date</th><th>Status</th><th class="right">Total</th></tr></thead><tbody>
      ${recent.map(d=>`<tr><td class="muted">${d._t}</td><td class="mono">${esc(d.number)}</td><td>${esc(d.customer.name||'—')}</td><td>${fmtDate(d.date)}</td><td><span class="pill ${d.status}">${d.status}</span></td><td class="right mono">${money(d.totals.total)}</td></tr>`).join('')}
    </tbody></table></div>`}`;
@@ -788,21 +837,53 @@ function viewDashboard(){
 function emptyBox(t,s){return `<div class="card empty"><div class="ic" data-i="empty" style="margin:0 auto 10px;width:42px;height:42px;opacity:.4">${svg('empty',42)}</div><h3>${t}</h3><p class="muted">${s}</p></div>`;}
 
 /* ============================================================
-   ITEMS
+   ITEMS  (with cost price, selling price & profit margin)
    ============================================================ */
+function marginPct(i){if(!i.costPrice||!i.unitPrice)return null;return +((i.unitPrice-i.costPrice)/i.unitPrice*100).toFixed(1);}
+function marginPill(i){const m=marginPct(i);if(m===null)return '<span class="muted" style="font-size:12px">—</span>';const cls=m>=20?'margin-good':m>=10?'margin-ok':'margin-thin';return `<span class="margin-pill ${cls}">${m}%</span>`;}
+function itemCards(items){
+  if(!items.length)return emptyBox('No items yet','Add products or services to reuse on quotes and invoices.');
+  return `<div class="mob-cards">${items.map(i=>{const m=marginPct(i);return`
+    <div class="mob-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div class="mob-card-name" style="margin-bottom:3px">${esc(i.name)}</div>
+          <div class="mob-card-meta" style="margin-bottom:0">
+            <span>${esc(i.sku||'—')}</span><span>${esc(i.unit||'pc')}</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="mob-card-amount">${money(i.unitPrice)}</div>
+          ${i.costPrice?`<div class="cost-badge" style="margin-top:3px">Cost: ${money(i.costPrice)}</div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
+        <div style="display:flex;gap:6px;align-items:center">
+          ${marginPill(i)}
+          ${i.taxable!==false?`<span class="pill paid" style="font-size:11px">${esc(State.db.settings.taxLabel)}</span>`:'<span class="muted" style="font-size:12px">No tax</span>'}
+        </div>
+        <div class="mob-card-actions">
+          <button class="iconbtn" onclick='openItemEditor("${i.id}")'>${svg('edit')}</button>
+          <button class="iconbtn" onclick='delItem("${i.id}")'>${svg('trash')}</button>
+        </div>
+      </div>
+    </div>`;}).join('')}</div>`;
+}
 let itemSearch='';
 function viewItems(){
-  const items=State.db.items.filter(i=>(i.name+i.sku).toLowerCase().includes(itemSearch.toLowerCase()));
+  const items=State.db.items.filter(i=>(i.name+(i.sku||'')).toLowerCase().includes(itemSearch.toLowerCase()));
   document.getElementById('content').innerHTML=`
    <div class="toolbar">
      <div class="search">${svg('search')}<input placeholder="Search items…" value="${esc(itemSearch)}" oninput="itemSearch=this.value;viewItems()"></div>
      <button class="btn accent" onclick="openItemEditor()">${svg('plus')} New</button>
    </div>
-   ${isMob()?itemCards(items):`<div class="tbl"><table><thead><tr><th>Name</th><th>SKU</th><th>Unit</th><th class="right">Unit price</th><th>Tax</th><th></th></tr></thead><tbody>
+   ${isMob()?itemCards(items):`<div class="tbl"><table><thead><tr><th>Name</th><th>SKU</th><th>Unit</th><th class="right">Cost price</th><th class="right">Selling price</th><th>Margin</th><th>Tax</th><th></th></tr></thead><tbody>
      ${items.map(i=>`<tr>
-        <td><div style="font-weight:600">${esc(i.name)}</div>${i.desc?`<div class="muted" style="font-size:12.5px">${esc(i.desc)}</div>`:''}</td>
+        <td><div style="font-weight:600">${esc(i.name)}</div>${i.desc?`<div class="muted" style="font-size:12px">${esc(i.desc)}</div>`:''}</td>
         <td class="mono muted">${esc(i.sku||'—')}</td><td>${esc(i.unit||'pc')}</td>
-        <td class="right mono">${money(i.unitPrice)}</td>
+        <td class="right mono muted">${i.costPrice?money(i.costPrice):'—'}</td>
+        <td class="right mono" style="font-weight:600">${money(i.unitPrice)}</td>
+        <td>${marginPill(i)}</td>
         <td>${i.taxable!==false?`<span class="pill paid">${esc(State.db.settings.taxLabel)}</span>`:'<span class="muted">—</span>'}</td>
         <td><div class="rowacts">
           <button class="iconbtn" onclick='openItemEditor("${i.id}")'>${svg('edit')}</button>
@@ -812,22 +893,51 @@ function viewItems(){
   renderIcons(document.getElementById('content'));
 }
 function openItemEditor(id){
-  const it=id?State.db.items.find(i=>i.id===id):{name:'',sku:'',desc:'',unitPrice:'',unit:'pc',taxable:true};
+  const it=id?State.db.items.find(i=>i.id===id):{name:'',sku:'',desc:'',unitPrice:'',costPrice:'',unit:'pc',taxable:true};
   openModal(`${id?'Edit':'New'} item`,`
     <div class="fgrid">
       <div class="field full"><label>Item name *</label><input id="i_name" value="${esc(it.name)}" placeholder="e.g. A4 Copy Paper"></div>
       <div class="field"><label>SKU / code</label><input id="i_sku" value="${esc(it.sku||'')}"></div>
       <div class="field"><label>Unit</label><input id="i_unit" value="${esc(it.unit||'pc')}" placeholder="pc, hr, box…"></div>
-      <div class="field"><label>Unit price (${esc(State.db.settings.currency)}) *</label><input id="i_price" type="number" step="0.01" value="${it.unitPrice}"></div>
+      <div class="field"><label>Cost price (${esc(State.db.settings.currency)}) — internal</label>
+        <input id="i_cost" type="number" step="0.01" value="${it.costPrice||''}" placeholder="0.00" oninput="calcItemFields()"></div>
+      <div class="field"><label>Selling price (${esc(State.db.settings.currency)}) *</label>
+        <input id="i_price" type="number" step="0.01" value="${it.unitPrice||''}" oninput="calcItemFields()"></div>
+      <div class="field"><label>Set by markup % <span class="muted" style="font-weight:400">(fills selling price)</span></label>
+        <input id="i_markup" type="number" step="0.1" placeholder="e.g. 35" oninput="applyMarkup()"></div>
+      <div class="field" style="align-self:end">
+        <label>Calculated margin</label>
+        <div id="i_margin_disp" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-weight:700;font-size:14px;background:var(--paper)">—</div>
+      </div>
       <div class="field"><label>${esc(State.db.settings.taxLabel)} applies</label><select id="i_tax"><option value="1" ${it.taxable!==false?'selected':''}>Yes</option><option value="0" ${it.taxable===false?'selected':''}>No</option></select></div>
       <div class="field full"><label>Description</label><textarea id="i_desc" rows="2">${esc(it.desc||'')}</textarea></div>
     </div>`,
     [{label:'Cancel',cls:'ghost',fn:closeModal},{label:id?'Save changes':'Add item',cls:'accent',fn:()=>{
       const name=val('i_name');if(!name)return toast('Item name is required');
-      const rec={id:id||uid(),name,sku:val('i_sku'),unit:val('i_unit')||'pc',desc:val('i_desc'),unitPrice:+val('i_price')||0,taxable:val('i_tax')==='1'};
+      const sell=+val('i_price')||0;if(!sell)return toast('Selling price is required');
+      const rec={id:id||uid(),name,sku:val('i_sku'),unit:val('i_unit')||'pc',desc:val('i_desc'),costPrice:+val('i_cost')||0,unitPrice:sell,taxable:val('i_tax')==='1'};
       if(id){const ix=State.db.items.findIndex(i=>i.id===id);State.db.items[ix]=rec;}else State.db.items.push(rec);
       persist();closeModal();viewItems();toast(id?'Item updated':'Item added');
     }}]);
+  setTimeout(()=>{if(it.costPrice&&it.unitPrice)calcItemFields();},80);
+}
+function calcItemFields(){
+  const cost=+document.getElementById('i_cost')?.value||0;
+  const sell=+document.getElementById('i_price')?.value||0;
+  const d=document.getElementById('i_margin_disp');if(!d)return;
+  if(cost>0&&sell>0){
+    const m=((sell-cost)/sell*100);
+    d.textContent=m.toFixed(1)+'% margin';
+    d.style.color=m>=20?'var(--accent-ink)':m>=10?'var(--amber)':'var(--danger)';
+    d.style.background=m>=20?'var(--accent-soft)':m>=10?'var(--amber-soft)':'var(--danger-soft)';
+    // update markup display
+    const mk=document.getElementById('i_markup');if(mk&&!mk.value)mk.placeholder=((sell/cost-1)*100).toFixed(1);
+  }else{d.textContent='—';d.style.color='var(--ink-soft)';d.style.background='var(--paper)';}
+}
+function applyMarkup(){
+  const cost=+document.getElementById('i_cost')?.value||0;
+  const mk=+document.getElementById('i_markup')?.value||0;
+  if(cost>0&&mk>0){const sell=+(cost*(1+mk/100)).toFixed(2);const p=document.getElementById('i_price');if(p)p.value=sell;calcItemFields();}
 }
 function delItem(id){confirmDel('Delete this item?',()=>{State.db.items=State.db.items.filter(i=>i.id!==id);persist();viewItems();toast('Item deleted');});}
 
@@ -1240,6 +1350,93 @@ function saveSettings(){
   if(val('s_pos'))s.posPrefix=val('s_pos');
   persist();refreshChrome();toast('Settings saved');
 }
+
+/* ============================================================
+   EXPENSES
+   ============================================================ */
+const EXP_CATS=['Rent & Utilities','Salaries & Wages','Equipment & Supplies','Marketing & Advertising','Transport & Delivery','Food & Entertainment','Maintenance & Repairs','Taxes & Fees','Stock & Inventory','Other'];
+const EXP_EMOJI={'Rent & Utilities':'🏢','Salaries & Wages':'👥','Equipment & Supplies':'🔧','Marketing & Advertising':'📣','Transport & Delivery':'🚚','Food & Entertainment':'🍽️','Maintenance & Repairs':'🔨','Taxes & Fees':'📋','Stock & Inventory':'📦','Other':'💼'};
+let expPeriod='month', expCat='All';
+function viewExpenses(){
+  if(!State.db.expenses)State.db.expenses=[];
+  const now=new Date(), mm=now.getMonth(), yy=now.getFullYear();
+  const lastMm=mm===0?11:mm-1, lastYy=mm===0?yy-1:yy;
+  const inPeriod=e=>{if(!e.date)return true;const d=new Date(e.date);if(expPeriod==='month')return d.getMonth()===mm&&d.getFullYear()===yy;if(expPeriod==='last')return d.getMonth()===lastMm&&d.getFullYear()===lastYy;return true;};
+  const filtered=State.db.expenses.filter(e=>inPeriod(e)&&(expCat==='All'||e.category===expCat)).sort((a,b)=>b.date>a.date?1:-1);
+  const total=filtered.reduce((s,e)=>s+(e.amount||0),0);
+  // category totals for breakdown
+  const bycat={};filtered.forEach(e=>{bycat[e.category||'Other']=(bycat[e.category||'Other']||0)+(e.amount||0);});
+  const maxCat=Math.max(...Object.values(bycat),1);
+  const periodLabel=expPeriod==='month'?now.toLocaleString('default',{month:'long',year:'numeric'}):expPeriod==='last'?new Date(lastYy,lastMm).toLocaleString('default',{month:'long',year:'numeric'}):'All time';
+  document.getElementById('content').innerHTML=`
+   <div class="between" style="margin-bottom:14px;flex-wrap:wrap;gap:10px">
+     <div class="period-tabs">
+       <button class="period-tab ${expPeriod==='month'?'active':''}" onclick="expPeriod='month';viewExpenses()">This month</button>
+       <button class="period-tab ${expPeriod==='last'?'active':''}" onclick="expPeriod='last';viewExpenses()">Last month</button>
+       <button class="period-tab ${expPeriod==='all'?'active':''}" onclick="expPeriod='all';viewExpenses()">All time</button>
+     </div>
+     <button class="btn accent" onclick="openExpenseEditor()">${svg('plus')} Add expense</button>
+   </div>
+   <div class="grid" style="grid-template-columns:${isMob()?'1fr':'1fr 260px'};gap:14px;margin-bottom:16px">
+     <div class="card pad">
+       <div class="between" style="margin-bottom:12px">
+         <div><div class="muted" style="font-size:12.5px">${periodLabel}</div><div style="font-size:22px;font-weight:700;font-family:'Spline Sans Mono',monospace;margin-top:2px">${money(total)}</div></div>
+         <select class="ghost" style="border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px;background:var(--paper)" onchange="expCat=this.value;viewExpenses()">
+           <option value="All" ${expCat==='All'?'selected':''}>All categories</option>
+           ${EXP_CATS.map(c=>`<option value="${esc(c)}" ${expCat===c?'selected':''}>${c}</option>`).join('')}
+         </select>
+       </div>
+       ${filtered.length?`${isMob()?`<div class="mob-cards">${filtered.map(e=>`<div class="mob-card">
+         <div class="mob-card-top"><span style="font-size:14px">${EXP_EMOJI[e.category]||'💼'} <span style="font-weight:600">${esc(e.category||'Other')}</span></span><span class="muted" style="font-size:12.5px">${fmtDate(e.date)}</span></div>
+         <div style="font-size:14px;margin-bottom:6px">${esc(e.desc||'—')}</div>
+         ${e.notes?`<div class="muted" style="font-size:12px;margin-bottom:6px">${esc(e.notes)}</div>`:''}
+         <div class="mob-card-foot">
+           <div class="mob-card-actions"><button class="iconbtn" onclick='openExpenseEditor("${e.id}")'>${svg('edit')}</button><button class="iconbtn" onclick='delExpense("${e.id}")'>${svg('trash')}</button></div>
+           <span class="mob-card-amount" style="color:var(--danger)">${money(e.amount)}</span>
+         </div>
+       </div>`).join('')}</div>`:`<div class="tbl"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Method</th><th class="right">Amount</th><th></th></tr></thead><tbody>
+         ${filtered.map(e=>`<tr>
+           <td>${fmtDate(e.date)}</td>
+           <td>${EXP_EMOJI[e.category]||'💼'} ${esc(e.category||'Other')}</td>
+           <td>${esc(e.desc||'—')}${e.notes?`<div class="muted" style="font-size:12px">${esc(e.notes)}</div>`:''}</td>
+           <td class="muted">${esc(e.method||'cash')}</td>
+           <td class="right mono" style="color:var(--danger);font-weight:600">${money(e.amount)}</td>
+           <td><div class="rowacts"><button class="iconbtn" onclick='openExpenseEditor("${e.id}")'>${svg('edit')}</button><button class="iconbtn" onclick='delExpense("${e.id}")'>${svg('trash')}</button></div></td>
+         </tr>`).join('')}
+       </tbody></table></div>`}`:emptyBox('No expenses','Add your first expense to start tracking business costs.')}
+     </div>
+     <div class="card pad" style="${isMob()&&Object.keys(bycat).length===0?'display:none':''}">
+       <div style="font-weight:700;font-size:13.5px;margin-bottom:12px">By category</div>
+       ${Object.keys(bycat).length?Object.entries(bycat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`<div class="exp-cat-row">
+         <div style="flex:1;min-width:0"><div class="exp-cat-name">${EXP_EMOJI[cat]||'💼'} <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cat)}</span></div>
+         <div class="exp-cat-bar-wrap"><div class="exp-cat-bar" style="width:${(amt/maxCat*100).toFixed(0)}%"></div></div></div>
+         <div style="font-family:'Spline Sans Mono',monospace;font-size:13px;font-weight:700;margin-left:10px;white-space:nowrap">${money(amt)}</div>
+       </div>`).join(''):emptyBox('No data','—')}
+     </div>
+   </div>`;
+  renderIcons(document.getElementById('content'));
+}
+function openExpenseEditor(id){
+  const e=id?(State.db.expenses||[]).find(x=>x.id===id):{date:todayISO(),category:EXP_CATS[0],desc:'',amount:'',method:'cash',notes:''};
+  openModal(`${id?'Edit':'New'} expense`,`
+    <div class="fgrid">
+      <div class="field"><label>Date *</label><input id="ex_date" type="date" value="${e.date||todayISO()}"></div>
+      <div class="field"><label>Category *</label><select id="ex_cat">${EXP_CATS.map(c=>`<option value="${c}" ${(e.category||EXP_CATS[0])===c?'selected':''}>${EXP_EMOJI[c]||''} ${c}</option>`).join('')}</select></div>
+      <div class="field full"><label>Description *</label><input id="ex_desc" value="${esc(e.desc||'')}" placeholder="e.g. Monthly office rent"></div>
+      <div class="field"><label>Amount (${esc(State.db.settings.currency)}) *</label><input id="ex_amt" type="number" step="0.01" value="${e.amount||''}"></div>
+      <div class="field"><label>Payment method</label><select id="ex_meth"><option value="cash" ${(e.method||'cash')==='cash'?'selected':''}>Cash</option><option value="card" ${e.method==='card'?'selected':''}>Card</option><option value="transfer" ${e.method==='transfer'?'selected':''}>Bank transfer</option><option value="cheque" ${e.method==='cheque'?'selected':''}>Cheque</option></select></div>
+      <div class="field full"><label>Notes (optional)</label><input id="ex_notes" value="${esc(e.notes||'')}" placeholder="Extra details…"></div>
+    </div>`,
+    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:id?'Save':'Add expense',cls:'accent',fn:()=>{
+      const desc=val('ex_desc'),amt=+val('ex_amt')||0;
+      if(!desc)return toast('Description is required');if(!amt)return toast('Amount is required');
+      if(!State.db.expenses)State.db.expenses=[];
+      const rec={id:id||uid(),date:val('ex_date'),category:val('ex_cat'),desc,amount:amt,method:val('ex_meth'),notes:val('ex_notes')};
+      if(id){const ix=State.db.expenses.findIndex(x=>x.id===id);State.db.expenses[ix]=rec;}else State.db.expenses.push(rec);
+      persist();closeModal();viewExpenses();toast(id?'Expense updated':'Expense added');
+    }}]);
+}
+function delExpense(id){confirmDel('Delete this expense?',()=>{State.db.expenses=(State.db.expenses||[]).filter(e=>e.id!==id);persist();viewExpenses();toast('Expense deleted');});}
 
 /* ============================================================
    EMPLOYEES
