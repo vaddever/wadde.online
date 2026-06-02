@@ -535,7 +535,9 @@ function queueSave(){
   _saveT=setTimeout(()=>{ if(TOKEN&&State.db) call('saveDb',{db:JSON.stringify(State.db)}); }, 700);
 }
 
-let State={user:null,db:null,view:'dashboard',isAdmin:false};
+let State={user:null,db:null,view:'dashboard',isAdmin:false,trialDaysLeft:0};
+
+function isPro(){ const p=State.db?.settings?.plan; return p==='pro'||p==='trial'; }
 
 function blankDB(biz){
   return {
@@ -586,7 +588,6 @@ function money(n){const s=State.db.settings;return s.currencySymbol+' '+Number(n
 function fmtDate(iso){if(!iso)return'—';return new Date(iso).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'});}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function hash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h)+s.charCodeAt(i);return (h>>>0).toString(16);}
-function isPro(){return State.db.settings.plan==='pro';}
 
 function lineFromItem(it){return {itemId:it.id,name:it.name,desc:it.desc||'',unitPrice:it.unitPrice,qty:1,taxable:it.taxable!==false};}
 function newDoc(type,db){
@@ -639,6 +640,8 @@ async function doAuth(){
   btn.disabled=false; btn.textContent=orig;
   if(!r.ok){ err.textContent=r.error||'Something went wrong'; return; }
   TOKEN=r.token; State.user={email}; State.db=r.db; State.isAdmin=!!r.isAdmin;
+  State.db.settings.plan = r.plan || r.db?.settings?.plan || 'free';
+  State.trialDaysLeft = r.trialDaysLeft||0;
   try{ localStorage.setItem('qm_token',TOKEN); }catch(e){}
   launchApp();
 }
@@ -649,7 +652,7 @@ function launchApp(){
   if(State.db && !Array.isArray(State.db.expenses))     State.db.expenses=[];
   const DEFAULT_UOMS=['pc','box','hr','kg','g','L','mL','m','cm','ft','dozen','ream','pair','set','service','month','day','km'];
   if(State.db){ const s=State.db.settings; if(!s.uoms||!s.uoms.length)s.uoms=[...DEFAULT_UOMS]; }
-  if(State.db){ const s=State.db.settings; if(!s.senderName)s.senderName=s.businessName||''; if(!s.senderEmail)s.senderEmail=s.email||''; if(!s.posPrefix)s.posPrefix='TXN-'; if(!State.db.counters.pos)State.db.counters.pos=1; }
+  if(State.db){ const s=State.db.settings; if(!s.senderName)s.senderName=s.businessName||''; if(!s.senderEmail)s.senderEmail=s.email||''; if(!s.posPrefix)s.posPrefix='TXN-'; if(!State.db.counters.pos)State.db.counters.pos=1; if(!s.posToken)s.posToken=uid(); }
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='block';
   renderIcons();
@@ -671,12 +674,16 @@ function refreshChrome(){
   const s=State.db.settings;
   document.getElementById('topBiz').textContent=s.businessName;
   document.getElementById('topLogo').innerHTML=s.logo?`<img src="${s.logo}" style="width:100%;height:100%;object-fit:cover;border-radius:7px">`:esc(s.businessName[0]||'B');
-  const pro=isPro();
-  document.getElementById('topPlan').className='badge '+(pro?'pro':'free');
-  document.getElementById('topPlan').textContent=pro?'PRO':'FREE';
-  document.getElementById('planName').textContent=pro?'Pro':'Free';
-  document.getElementById('upgradeBtn').style.display=pro?'none':'block';
-  document.querySelectorAll('[data-lock]').forEach(l=>l.style.display=pro?'none':'inline-block');
+  const plan=s.plan||'free';
+  const proAccess=plan==='pro'||plan==='trial';
+  const badge=plan==='pro'?'PRO':plan==='trial'?`TRIAL · ${State.trialDaysLeft}d`:'FREE';
+  const badgeCls=plan==='pro'?'pro':plan==='trial'?'pro':'free';
+  document.getElementById('topPlan').className='badge '+badgeCls;
+  document.getElementById('topPlan').textContent=badge;
+  document.getElementById('planName').textContent=plan==='pro'?'Pro':plan==='trial'?`Trial (${State.trialDaysLeft} days left)`:'Free';
+  document.getElementById('upgradeBtn').style.display=plan==='pro'?'none':'block';
+  document.getElementById('upgradeBtn').textContent=plan==='trial'?'Upgrade to Pro':'Upgrade to Pro';
+  document.querySelectorAll('[data-lock]').forEach(l=>l.style.display=proAccess?'none':'inline-block');
   document.getElementById('adminGroup').style.display=State.isAdmin?'block':'none';
   document.getElementById('adminLink').style.display=State.isAdmin?'flex':'none';
 }
@@ -820,41 +827,46 @@ function viewDashboard(){
   const openQuotes=db.quotations.filter(q=>q.status==='sent'||q.status==='draft').length;
   const recent=[...db.invoices.map(d=>({...d,_t:'Invoice'})),...db.quotations.map(d=>({...d,_t:'Quotation'}))]
      .sort((a,b)=>(b.date>a.date?1:-1)).slice(0,6);
-  // P&L this month
   const now=new Date(),mm=now.getMonth(),yy=now.getFullYear();
   const monthStr=now.toLocaleString('default',{month:'long',year:'numeric'});
   const mthRevenue=(db.invoices||[]).filter(i=>i.status==='paid'&&i.date&&new Date(i.date).getMonth()===mm&&new Date(i.date).getFullYear()===yy).reduce((s,i)=>s+(i.totals.total||0),0);
   const mthExpenses=(db.expenses||[]).filter(e=>e.date&&new Date(e.date).getMonth()===mm&&new Date(e.date).getFullYear()===yy).reduce((s,e)=>s+(e.amount||0),0);
   const netProfit=mthRevenue-mthExpenses;
   const netCls=netProfit>=0?'pl-net-pos':'pl-net-neg';
-  // avg margin
   const priced=(db.items||[]).filter(i=>i.costPrice>0&&i.unitPrice>0);
   const avgMargin=priced.length?priced.reduce((s,i)=>s+((i.unitPrice-i.costPrice)/i.unitPrice*100),0)/priced.length:null;
-  document.getElementById('content').innerHTML=`
+  const plan=db.settings.plan||'free';
+  const trialBanner=plan==='trial'&&State.trialDaysLeft<=7
+    ?`<div class="card pad" style="background:var(--amber-soft);border-color:var(--amber);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><b>⏰ Trial ending in ${State.trialDaysLeft} day${State.trialDaysLeft!==1?'s':''}!</b> Upgrade to keep Pro features.</div><button class="btn amber sm" onclick="openUpgrade()">Upgrade now</button></div>`
+    :plan==='trial'
+    ?`<div class="card pad" style="background:var(--accent-soft);border-color:var(--accent);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div>✅ <b>Pro Trial active</b> — ${State.trialDaysLeft} days left. Enjoy all Pro features!</div><button class="btn ghost sm" onclick="openUpgrade()">Upgrade</button></div>`
+    :'';
+  document.getElementById('content').innerHTML=trialBanner+`
    <div class="grid kpis" style="margin-bottom:14px">
      <div class="card kpi"><div class="lbl">Outstanding</div><div class="val">${money(outstanding)}</div><div class="sub muted">${unpaid.length} unpaid</div></div>
      <div class="card kpi"><div class="lbl">Collected</div><div class="val">${money(paid)}</div><div class="sub up">Paid to date</div></div>
      <div class="card kpi"><div class="lbl">Open quotes</div><div class="val">${openQuotes}</div><div class="sub muted">awaiting</div></div>
-     <div class="card kpi"><div class="lbl">Avg margin</div><div class="val">${avgMargin!==null?avgMargin.toFixed(1)+'%':'—'}</div><div class="sub muted">${priced.length} priced items</div></div>
+     <div class="card kpi"><div class="lbl">Avg margin</div><div class="val">${avgMargin!==null?avgMargin.toFixed(1)+'%':'—'}</div><div class="sub muted">${priced.length} priced</div></div>
    </div>
    <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
      <div class="card">
        <div style="padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:center">
          <h3 style="font-size:14px">P&amp;L — ${monthStr}</h3>
-         <button class="btn ghost tiny" onclick="go('expenses')">All expenses →</button>
+         ${isPro()?`<button class="btn ghost tiny" onclick="go('expenses')">Expenses →</button>`:''}
        </div>
        <div class="pl-row"><span class="lbl">Revenue (paid)</span><span class="amt">${money(mthRevenue)}</span></div>
-       <div class="pl-row"><span class="lbl">Expenses</span><span class="amt" style="color:var(--danger)">${money(mthExpenses)}</span></div>
-       <div class="pl-row ${netCls}" style="border-radius:0 0 var(--radius) var(--radius)"><span class="lbl" style="font-weight:700">Net profit</span><span class="amt">${money(Math.abs(netProfit))} ${netProfit<0?'loss':''}</span></div>
+       ${isPro()?`<div class="pl-row"><span class="lbl">Expenses</span><span class="amt" style="color:var(--danger)">${money(mthExpenses)}</span></div>
+       <div class="pl-row ${netCls}" style="border-radius:0 0 var(--radius) var(--radius)"><span class="lbl" style="font-weight:700">Net profit</span><span class="amt">${money(Math.abs(netProfit))} ${netProfit<0?'loss':''}</span></div>`
+       :`<div class="pl-row" style="border-radius:0 0 var(--radius) var(--radius)"><span class="muted" style="font-size:13px">💡 Track expenses on Pro to see net profit</span><button class="btn amber tiny" onclick="openUpgrade()">Upgrade</button></div>`}
      </div>
      <div class="card">
-       <div style="padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:center">
-         <h3 style="font-size:14px">Quick actions</h3>
-       </div>
+       <div style="padding:14px 16px 10px"><h3 style="font-size:14px">Quick actions</h3></div>
        <div style="padding:0 14px 14px;display:grid;gap:8px">
          <button class="btn ghost sm block" onclick="go('quotations');setTimeout(()=>openDocEditor('quote'),50)">+ New quotation</button>
          <button class="btn accent sm block" onclick="go('invoices');setTimeout(()=>openDocEditor('invoice'),50)">+ New invoice</button>
-         <button class="btn ghost sm block" onclick="go('expenses');setTimeout(openExpenseEditor,60)">+ Log expense</button>
+         ${isPro()
+           ?`<button class="btn ghost sm block" onclick="go('expenses');setTimeout(openExpenseEditor,60)">+ Log expense</button>`
+           :`<button class="btn ghost sm block" style="opacity:.6" onclick="openUpgrade()" title="Pro feature">+ Log expense ↗</button>`}
          <button class="btn ghost sm block" onclick="go('pos')">Open POS register</button>
        </div>
      </div>
@@ -1364,6 +1376,16 @@ function viewSettings(){
       </div>
     </div>
     <div class="card pad" style="grid-column:1/-1">
+      <h3 style="margin-bottom:4px">POS Staff Access Link</h3>
+      <p class="muted" style="font-size:12.5px;margin-bottom:12px">Share this link with your staff. They open it on any device to access the POS directly — no portal account needed, just their PIN.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <input id="s_poslink" readonly onclick="this.select()" style="flex:1;min-width:200px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;background:var(--paper);cursor:text" value="${(location.href.split('?')[0].split('/').slice(0,-1).join('/')+'/')+'pos.html?t='+esc(s.posToken||'')}">
+        <button class="btn ghost sm" onclick="navigator.clipboard?.writeText(document.getElementById('s_poslink').value).then(()=>toast('POS link copied!'))">Copy link</button>
+        <button class="btn ghost sm" onclick="resetPosToken()">Reset link</button>
+      </div>
+      <p class="muted" style="font-size:12px;margin-top:8px">Resetting the link immediately invalidates the old one — staff will need the new URL.</p>
+    </div>
+    <div class="card pad" style="grid-column:1/-1">
       <h3 style="margin-bottom:4px">Units of measure (UOM)</h3>
       <p class="muted" style="font-size:12.5px;margin-bottom:12px">These appear in the unit dropdown when adding products. Add your own or remove ones you don't use.</p>
       <div class="uom-tags" id="uomTagList">${(s.uoms||[]).map(u=>`<span class="uom-tag">${esc(u)}<button onclick="removeUOM('${esc(u)}')">×</button></span>`).join('')}</div>
@@ -1823,6 +1845,7 @@ async function removeInvite(email){
 
 function addUOM(){const v=val('s_newuom').trim();if(!v)return;if(!State.db.settings.uoms)State.db.settings.uoms=[];if(State.db.settings.uoms.includes(v))return toast('Already in list');State.db.settings.uoms.push(v);persist();viewSettings();toast('Unit added');}
 function removeUOM(u){State.db.settings.uoms=(State.db.settings.uoms||[]).filter(x=>x!==u);persist();const tags=document.getElementById('uomTagList');if(tags)tags.innerHTML=State.db.settings.uoms.map(x=>`<span class="uom-tag">${esc(x)}<button onclick="removeUOM('${esc(x)}')">×</button></span>`).join('');}
+function resetPosToken(){confirmDel('Reset the POS link? All staff will need to bookmark the new URL.',()=>{State.db.settings.posToken=uid();persist();viewSettings();toast('POS access link has been reset.');});}
 
 /* ============================================================
    SUPERADMIN PORTAL
@@ -2029,7 +2052,10 @@ renderIcons();
   TOKEN=t;
   const r=await call('loadDb');
   if(r&&r.ok){
-    State.user={email:''}; State.db=r.db; State.isAdmin=!!r.isAdmin; launchApp();
+    State.user={email:''}; State.db=r.db; State.isAdmin=!!r.isAdmin;
+    State.db.settings.plan = r.plan || r.db?.settings?.plan || 'free';
+    State.trialDaysLeft = r.trialDaysLeft||0;
+    launchApp();
     if(location.search.indexOf('paid=1')>-1) toast('🎉 Pro is now active');
   }else{ try{ localStorage.removeItem('qm_token'); }catch(e){} }
 })();
