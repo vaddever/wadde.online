@@ -225,7 +225,10 @@ async function api(action, payload={}) {
 
 // ── Boot ─────────────────────────────────────────────────────────
 (async () => {
-  if (!POS_TOKEN) { showErr('No POS token found in the URL.\nAsk the admin to share the correct POS link with you.'); return; }
+  if (!POS_TOKEN) {
+    showErr('No POS access token in this URL.\n\nTo get the correct link:\n1. Open the portal at wadde.online/quotemaster/\n2. Go to Settings\n3. Copy the link from "POS Staff Access Link"\n4. Bookmark that link on this device.');
+    return;
+  }
   const r = await api('getPOSContext', {posToken: POS_TOKEN});
   if (!r.ok) { showErr(r.error||'Could not connect. Check your internet and try again.'); return; }
   ctx = r;
