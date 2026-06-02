@@ -1,0 +1,8 @@
+name = "qm-ls-webhook"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Secrets are NOT stored here. Set them with:
+#   wrangler secret put LS_SIGNING_SECRET
+#   wrangler secret put APPS_SCRIPT_URL
+#   wrangler secret put WH_SHARED_SECRET
