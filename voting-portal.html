@@ -320,6 +320,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .modal-inp{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:9px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
 .modal-inp:focus{border-color:var(--gold);}
 .modal-sel{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:9px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
+.modal-sel optgroup{color:var(--text3);font-style:normal;font-weight:600;letter-spacing:.04em;}
+.modal-sel optgroup option{color:var(--text);font-weight:400;}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
 .btn-cancel{background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:12px;padding:8px 16px;border-radius:var(--rs);cursor:pointer;font-family:'DM Sans',sans-serif;}
 .btn-confirm{background:var(--gold);color:#0f0f10;font-size:12px;font-weight:600;padding:8px 18px;border-radius:var(--rs);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;}
@@ -3376,9 +3378,28 @@ async function addVoter(){
   showToast(`${name} added as voter (PIN: ${pin})`,'ok');
 }
 
+function buildCatOptGroups(preCatId){
+  // Group categories by year using <optgroup> so similar names are clearly separated
+  const grouped = {};
+  DATA.categories.forEach(c=>{
+    const yr = c.year || 'Other';
+    if(!grouped[yr]) grouped[yr]=[];
+    grouped[yr].push(c);
+  });
+  const years = Object.keys(grouped).sort((a,b)=>b.localeCompare(a)); // newest first
+  if(years.length<=1){
+    // Only one year — just show name + year without groups
+    return DATA.categories.map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.name}${c.year?' '+c.year:''}</option>`).join('');
+  }
+  return years.map(yr=>{
+    const opts=grouped[yr].map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.name}</option>`).join('');
+    return `<optgroup label="── ${yr} Awards ──">${opts}</optgroup>`;
+  }).join('');
+}
+
 function openAddNomModal(preCatId){
   const hasStaff = DATA.staff.length > 0;
-  const cOpts = DATA.categories.map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.name}</option>`).join('');
+  const cOpts = buildCatOptGroups(preCatId);
 
   if(hasStaff){
     // Sort staff alphabetically by name for easier picking
