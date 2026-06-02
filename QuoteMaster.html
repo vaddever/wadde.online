@@ -45,7 +45,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .auth-card{width:100%}
 .auth-card .wm{font-family:'Fraunces',serif;font-size:24px;font-weight:600;display:flex;align-items:center;gap:9px;margin-bottom:6px}
 .brandmark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:'Fraunces',serif;font-weight:700;font-size:17px}
-.field{margin:14px 0}
+.field{margin:10px 0}
 .field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
 .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:10px;background:var(--card);transition:.15s}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -146,9 +146,9 @@ table{width:100%;border-collapse:collapse}
 @keyframes pop{from{transform:translateY(8px) scale(.99);opacity:0}to{transform:none;opacity:1}}
 .modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line)}
 .modal-head h3{font-size:17px}
-.modal-body{padding:20px 22px;max-height:70vh;overflow:auto}
+.modal-body{padding:16px 20px;max-height:70vh;overflow:auto}
 .modal-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;background:#fbf9f3;border-radius:0 0 16px 16px}
-.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fgrid .full{grid-column:1/-1}
 
 /* line items editor */
@@ -290,7 +290,33 @@ table{width:100%;border-collapse:collapse}
   .pos-cart-panel{border-left:none;border-top:2px solid var(--line);min-height:420px}
   .pos-tab-bar{display:flex}
 }
-/* touch-friendly icon buttons everywhere */
+/* Barcode scanner */
+.scan-frame{position:relative;overflow:hidden;border-radius:13px;background:#111;max-width:320px;margin:0 auto}
+.scan-frame video{width:100%;display:block;max-height:240px;object-fit:cover}
+.scan-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.scan-box{width:185px;height:95px;border:2.5px solid #fff;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
+/* Admin settings panel */
+.admin-tabs{display:flex;gap:4px;background:var(--paper);padding:4px;border-radius:10px;border:1px solid var(--line);width:fit-content;margin-bottom:18px}
+.admin-tab{padding:7px 16px;border-radius:7px;font-weight:600;font-size:13px;color:var(--ink-soft);cursor:pointer;border:none;background:transparent;transition:.12s}
+.admin-tab.active{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.cfg-section{margin-bottom:22px}
+.cfg-section h4{font-size:13.5px;font-weight:700;margin-bottom:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-row label{font-size:13.5px;font-weight:500}
+.toggle-row .desc{font-size:12px;color:var(--ink-soft);margin-top:1px}
+/* UOM tag list */
+.uom-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.uom-tag{display:inline-flex;align-items:center;gap:5px;background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:4px 10px 4px 12px;font-size:13px;font-weight:500}
+.uom-tag button{width:16px;height:16px;border-radius:50%;background:var(--line);color:var(--ink-soft);font-size:11px;display:grid;place-items:center;cursor:pointer;border:none;line-height:1}
+.uom-tag button:hover{background:var(--danger);color:#fff}
+@media(max-width:900px){
+  .field{margin:7px 0}
+  .fgrid{gap:7px}
+  .modal-body{padding:12px 14px}
+  .modal-foot{padding:11px 14px}
+  .modal-head{padding:14px 16px}
+}
 @media(max-width:900px){
   .iconbtn{width:36px;height:36px;border-radius:9px}
   /* CRITICAL: prevents iOS Safari from zooming on input focus */
@@ -384,7 +410,7 @@ table{width:100%;border-collapse:collapse}
       <nav class="nav" id="nav">
         <div class="nav-group">Workspace</div>
         <a data-view="dashboard"><span class="ic" data-i="grid"></span> Dashboard</a>
-        <a data-view="items"><span class="ic" data-i="box"></span> Items</a>
+        <a data-view="items"><span class="ic" data-i="box"></span> Products</a>
         <a data-view="customers"><span class="ic" data-i="users"></span> Customers</a>
         <a data-view="pos"><span class="ic" data-i="pos"></span> POS</a>
         <a data-view="employees"><span class="ic" data-i="badge"></span> Employees</a>
@@ -468,7 +494,9 @@ const ICONS={
  badge:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>',
  team:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-5-3.87M16 3.13a4 4 0 0 1 0 7.75"/><path d="M20 8v6M23 11h-6"/>',
  wallet:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
- trending:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'
+ trending:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+ barcode:'<path d="M3 5v14M7 5v14M11 5v14M15 5v3M15 16v3M19 5v3M19 16v3M15 10v4M19 10v4"/>',
+ scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M8 12h8"/>'
 };
 function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`;});}
 function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
@@ -619,6 +647,8 @@ function launchApp(){
   if(State.db && !Array.isArray(State.db.employees))  State.db.employees=[];
   if(State.db && !Array.isArray(State.db.transactions))State.db.transactions=[];
   if(State.db && !Array.isArray(State.db.expenses))     State.db.expenses=[];
+  const DEFAULT_UOMS=['pc','box','hr','kg','g','L','mL','m','cm','ft','dozen','ream','pair','set','service','month','day','km'];
+  if(State.db){ const s=State.db.settings; if(!s.uoms||!s.uoms.length)s.uoms=[...DEFAULT_UOMS]; }
   if(State.db){ const s=State.db.settings; if(!s.senderName)s.senderName=s.businessName||''; if(!s.senderEmail)s.senderEmail=s.email||''; if(!s.posPrefix)s.posPrefix='TXN-'; if(!State.db.counters.pos)State.db.counters.pos=1; }
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='block';
@@ -655,8 +685,8 @@ document.getElementById('upgradeBtn').onclick=openUpgrade;
 /* ============================================================
    ROUTER
    ============================================================ */
-const PRO_VIEWS=['deliveries','email','team'];
-const TITLES={dashboard:'Dashboard',items:'Items',customers:'Customers',pos:'Point of Sale',employees:'Employees',expenses:'Expenses',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
+const PRO_VIEWS=['deliveries','email','team','expenses'];
+const TITLES={dashboard:'Dashboard',items:'Products',customers:'Customers',pos:'Point of Sale',employees:'Employees',expenses:'Expenses',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
 function go(view){
   if(view==='admin'&&!State.isAdmin){view='dashboard';}
   State.view=view;
@@ -837,19 +867,22 @@ function viewDashboard(){
 function emptyBox(t,s){return `<div class="card empty"><div class="ic" data-i="empty" style="margin:0 auto 10px;width:42px;height:42px;opacity:.4">${svg('empty',42)}</div><h3>${t}</h3><p class="muted">${s}</p></div>`;}
 
 /* ============================================================
-   ITEMS  (with cost price, selling price & profit margin)
+   PRODUCTS  (cost, selling, margin, UOM datalist, barcode)
    ============================================================ */
+function uomDatalist(){return `<datalist id="uom_dl">${(State.db.settings.uoms||[]).map(u=>`<option value="${esc(u)}">`).join('')}</datalist>`;}
 function marginPct(i){if(!i.costPrice||!i.unitPrice)return null;return +((i.unitPrice-i.costPrice)/i.unitPrice*100).toFixed(1);}
 function marginPill(i){const m=marginPct(i);if(m===null)return '<span class="muted" style="font-size:12px">—</span>';const cls=m>=20?'margin-good':m>=10?'margin-ok':'margin-thin';return `<span class="margin-pill ${cls}">${m}%</span>`;}
 function itemCards(items){
-  if(!items.length)return emptyBox('No items yet','Add products or services to reuse on quotes and invoices.');
-  return `<div class="mob-cards">${items.map(i=>{const m=marginPct(i);return`
+  if(!items.length)return emptyBox('No products yet','Add products or services to reuse on quotes, invoices and the POS.');
+  return `<div class="mob-cards">${items.map(i=>`
     <div class="mob-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
           <div class="mob-card-name" style="margin-bottom:3px">${esc(i.name)}</div>
           <div class="mob-card-meta" style="margin-bottom:0">
-            <span>${esc(i.sku||'—')}</span><span>${esc(i.unit||'pc')}</span>
+            ${i.sku?`<span class="mono">${esc(i.sku)}</span>`:''}
+            ${i.barcode?`<span>${svg('barcode',13)} ${esc(i.barcode)}</span>`:''}
+            <span>${esc(i.unit||'pc')}</span>
           </div>
         </div>
         <div style="text-align:right;flex-shrink:0">
@@ -857,8 +890,8 @@ function itemCards(items){
           ${i.costPrice?`<div class="cost-badge" style="margin-top:3px">Cost: ${money(i.costPrice)}</div>`:''}
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
-        <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">
+        <div style="display:flex;gap:5px;align-items:center">
           ${marginPill(i)}
           ${i.taxable!==false?`<span class="pill paid" style="font-size:11px">${esc(State.db.settings.taxLabel)}</span>`:'<span class="muted" style="font-size:12px">No tax</span>'}
         </div>
@@ -867,20 +900,21 @@ function itemCards(items){
           <button class="iconbtn" onclick='delItem("${i.id}")'>${svg('trash')}</button>
         </div>
       </div>
-    </div>`;}).join('')}</div>`;
+    </div>`).join('')}</div>`;
 }
 let itemSearch='';
 function viewItems(){
-  const items=State.db.items.filter(i=>(i.name+(i.sku||'')).toLowerCase().includes(itemSearch.toLowerCase()));
+  const items=State.db.items.filter(i=>(i.name+(i.sku||'')+(i.barcode||'')).toLowerCase().includes(itemSearch.toLowerCase()));
   document.getElementById('content').innerHTML=`
    <div class="toolbar">
-     <div class="search">${svg('search')}<input placeholder="Search items…" value="${esc(itemSearch)}" oninput="itemSearch=this.value;viewItems()"></div>
-     <button class="btn accent" onclick="openItemEditor()">${svg('plus')} New</button>
+     <div class="search">${svg('search')}<input placeholder="Search products…" value="${esc(itemSearch)}" oninput="itemSearch=this.value;viewItems()"></div>
+     <button class="btn accent" onclick="openItemEditor()">${svg('plus')} New product</button>
    </div>
-   ${isMob()?itemCards(items):`<div class="tbl"><table><thead><tr><th>Name</th><th>SKU</th><th>Unit</th><th class="right">Cost price</th><th class="right">Selling price</th><th>Margin</th><th>Tax</th><th></th></tr></thead><tbody>
+   ${isMob()?itemCards(items):`<div class="tbl"><table><thead><tr><th>Product</th><th>SKU / Barcode</th><th>Unit</th><th class="right">Cost</th><th class="right">Selling</th><th>Margin</th><th>Tax</th><th></th></tr></thead><tbody>
      ${items.map(i=>`<tr>
         <td><div style="font-weight:600">${esc(i.name)}</div>${i.desc?`<div class="muted" style="font-size:12px">${esc(i.desc)}</div>`:''}</td>
-        <td class="mono muted">${esc(i.sku||'—')}</td><td>${esc(i.unit||'pc')}</td>
+        <td class="mono muted" style="font-size:12px">${esc(i.sku||'—')}${i.barcode?`<div>${svg('barcode',12)} ${esc(i.barcode)}</div>`:''}</td>
+        <td>${esc(i.unit||'pc')}</td>
         <td class="right mono muted">${i.costPrice?money(i.costPrice):'—'}</td>
         <td class="right mono" style="font-weight:600">${money(i.unitPrice)}</td>
         <td>${marginPill(i)}</td>
@@ -889,35 +923,38 @@ function viewItems(){
           <button class="iconbtn" onclick='openItemEditor("${i.id}")'>${svg('edit')}</button>
           <button class="iconbtn" onclick='delItem("${i.id}")'>${svg('trash')}</button>
         </div></td></tr>`).join('')}
-   </tbody></table></div>`}`;
+   </tbody></table></div>`}
+  `;
   renderIcons(document.getElementById('content'));
 }
 function openItemEditor(id){
-  const it=id?State.db.items.find(i=>i.id===id):{name:'',sku:'',desc:'',unitPrice:'',costPrice:'',unit:'pc',taxable:true};
-  openModal(`${id?'Edit':'New'} item`,`
+  const it=id?State.db.items.find(i=>i.id===id):{name:'',sku:'',barcode:'',desc:'',unitPrice:'',costPrice:'',unit:'pc',taxable:true};
+  openModal(`${id?'Edit':'New'} product`,`
+    ${uomDatalist()}
     <div class="fgrid">
-      <div class="field full"><label>Item name *</label><input id="i_name" value="${esc(it.name)}" placeholder="e.g. A4 Copy Paper"></div>
-      <div class="field"><label>SKU / code</label><input id="i_sku" value="${esc(it.sku||'')}"></div>
-      <div class="field"><label>Unit</label><input id="i_unit" value="${esc(it.unit||'pc')}" placeholder="pc, hr, box…"></div>
+      <div class="field full"><label>Product name *</label><input id="i_name" value="${esc(it.name)}" placeholder="e.g. A4 Copy Paper"></div>
+      <div class="field"><label>SKU / internal code</label><input id="i_sku" value="${esc(it.sku||'')}"></div>
+      <div class="field"><label>Barcode (EAN/UPC) <button class="btn ghost tiny" style="margin-left:6px" onclick="openBarcodeScanner(v=>{document.getElementById('i_barcode').value=v;})">${svg('scan',13)} Scan</button></label><input id="i_barcode" value="${esc(it.barcode||'')}" placeholder="Scan or type"></div>
+      <div class="field"><label>Unit of measure</label><input id="i_unit" list="uom_dl" value="${esc(it.unit||'pc')}" placeholder="pc, kg, hr…"></div>
       <div class="field"><label>Cost price (${esc(State.db.settings.currency)}) — internal</label>
         <input id="i_cost" type="number" step="0.01" value="${it.costPrice||''}" placeholder="0.00" oninput="calcItemFields()"></div>
       <div class="field"><label>Selling price (${esc(State.db.settings.currency)}) *</label>
         <input id="i_price" type="number" step="0.01" value="${it.unitPrice||''}" oninput="calcItemFields()"></div>
-      <div class="field"><label>Set by markup % <span class="muted" style="font-weight:400">(fills selling price)</span></label>
+      <div class="field"><label>Markup % → auto-fills selling</label>
         <input id="i_markup" type="number" step="0.1" placeholder="e.g. 35" oninput="applyMarkup()"></div>
       <div class="field" style="align-self:end">
-        <label>Calculated margin</label>
-        <div id="i_margin_disp" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-weight:700;font-size:14px;background:var(--paper)">—</div>
+        <label>Margin</label>
+        <div id="i_margin_disp" style="padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-weight:700;font-size:14px;background:var(--paper)">—</div>
       </div>
       <div class="field"><label>${esc(State.db.settings.taxLabel)} applies</label><select id="i_tax"><option value="1" ${it.taxable!==false?'selected':''}>Yes</option><option value="0" ${it.taxable===false?'selected':''}>No</option></select></div>
       <div class="field full"><label>Description</label><textarea id="i_desc" rows="2">${esc(it.desc||'')}</textarea></div>
     </div>`,
-    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:id?'Save changes':'Add item',cls:'accent',fn:()=>{
-      const name=val('i_name');if(!name)return toast('Item name is required');
+    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:id?'Save changes':'Add product',cls:'accent',fn:()=>{
+      const name=val('i_name');if(!name)return toast('Product name is required');
       const sell=+val('i_price')||0;if(!sell)return toast('Selling price is required');
-      const rec={id:id||uid(),name,sku:val('i_sku'),unit:val('i_unit')||'pc',desc:val('i_desc'),costPrice:+val('i_cost')||0,unitPrice:sell,taxable:val('i_tax')==='1'};
+      const rec={id:id||uid(),name,sku:val('i_sku'),barcode:val('i_barcode'),unit:val('i_unit')||'pc',desc:val('i_desc'),costPrice:+val('i_cost')||0,unitPrice:sell,taxable:val('i_tax')==='1'};
       if(id){const ix=State.db.items.findIndex(i=>i.id===id);State.db.items[ix]=rec;}else State.db.items.push(rec);
-      persist();closeModal();viewItems();toast(id?'Item updated':'Item added');
+      persist();closeModal();viewItems();toast(id?'Product updated':'Product added');
     }}]);
   setTimeout(()=>{if(it.costPrice&&it.unitPrice)calcItemFields();},80);
 }
@@ -930,8 +967,7 @@ function calcItemFields(){
     d.textContent=m.toFixed(1)+'% margin';
     d.style.color=m>=20?'var(--accent-ink)':m>=10?'var(--amber)':'var(--danger)';
     d.style.background=m>=20?'var(--accent-soft)':m>=10?'var(--amber-soft)':'var(--danger-soft)';
-    // update markup display
-    const mk=document.getElementById('i_markup');if(mk&&!mk.value)mk.placeholder=((sell/cost-1)*100).toFixed(1);
+    const mk=document.getElementById('i_markup');if(mk&&!mk.value)mk.placeholder=((sell/cost-1)*100).toFixed(1)+'%';
   }else{d.textContent='—';d.style.color='var(--ink-soft)';d.style.background='var(--paper)';}
 }
 function applyMarkup(){
@@ -939,7 +975,7 @@ function applyMarkup(){
   const mk=+document.getElementById('i_markup')?.value||0;
   if(cost>0&&mk>0){const sell=+(cost*(1+mk/100)).toFixed(2);const p=document.getElementById('i_price');if(p)p.value=sell;calcItemFields();}
 }
-function delItem(id){confirmDel('Delete this item?',()=>{State.db.items=State.db.items.filter(i=>i.id!==id);persist();viewItems();toast('Item deleted');});}
+function delItem(id){confirmDel('Delete this product?',()=>{State.db.items=State.db.items.filter(i=>i.id!==id);persist();viewItems();toast('Product deleted');});}
 
 /* ============================================================
    CUSTOMERS
@@ -1328,6 +1364,15 @@ function viewSettings(){
       </div>
     </div>
     <div class="card pad" style="grid-column:1/-1">
+      <h3 style="margin-bottom:4px">Units of measure (UOM)</h3>
+      <p class="muted" style="font-size:12.5px;margin-bottom:12px">These appear in the unit dropdown when adding products. Add your own or remove ones you don't use.</p>
+      <div class="uom-tags" id="uomTagList">${(s.uoms||[]).map(u=>`<span class="uom-tag">${esc(u)}<button onclick="removeUOM('${esc(u)}')">×</button></span>`).join('')}</div>
+      <div class="row" style="margin-top:12px;gap:8px">
+        <input id="s_newuom" placeholder="Add unit (e.g. carton)" style="flex:1;padding:8px 11px;border:1px solid var(--line-strong);border-radius:9px;font-family:inherit;font-size:14px" onkeydown="if(event.key==='Enter')addUOM()">
+        <button class="btn ghost sm" onclick="addUOM()">+ Add</button>
+      </div>
+    </div>
+    <div class="card pad" style="grid-column:1/-1">
       <h3 style="margin-bottom:4px">Email sending</h3>
       <p class="muted" style="font-size:12.5px;margin-bottom:14px">Emails send from your Google account. Set a display name and reply-to address so customers reply to the right place.</p>
       <div class="fgrid">
@@ -1439,6 +1484,51 @@ function openExpenseEditor(id){
 function delExpense(id){confirmDel('Delete this expense?',()=>{State.db.expenses=(State.db.expenses||[]).filter(e=>e.id!==id);persist();viewExpenses();toast('Expense deleted');});}
 
 /* ============================================================
+   BARCODE SCANNER  (BarcodeDetector API + manual fallback)
+   ============================================================ */
+let _scanCb=null,_scanStream=null,_scanRaf=null;
+async function openBarcodeScanner(callback){
+  _scanCb=callback;
+  const hasCam=!!navigator.mediaDevices?.getUserMedia;
+  const hasBD='BarcodeDetector' in window;
+  openModal('Scan barcode',`<div style="text-align:center">
+    ${hasCam?`<div class="scan-frame" style="max-width:300px"><video id="_sv" autoplay playsinline muted></video><div class="scan-overlay"><div class="scan-box"></div></div></div>`:''}
+    <p class="muted" style="font-size:12.5px;margin:10px 0 6px" id="_ss">${hasCam?'Aim camera at barcode…':'No camera — type or use USB scanner'}</p>
+    <div class="field" style="max-width:300px;margin:0 auto"><label>Type / paste barcode manually</label>
+      <input id="_sm" placeholder="EAN-13, Code 128, QR…" oninput="document.getElementById('_sb').disabled=!this.value" autocomplete="off">
+    </div>
+    <div style="margin-top:8px"><button class="btn accent sm" id="_sb" disabled onclick="const v=document.getElementById('_sm').value;stopScan();closeModal();_scanCb&&_scanCb(v)">Use this code</button></div>
+  </div>`,[{label:'Cancel',cls:'ghost',fn:()=>{stopScan();closeModal();}}],'sm');
+  if(!hasCam)return;
+  try{
+    _scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}}});
+    const v=document.getElementById('_sv');if(!v)return;
+    v.srcObject=_scanStream;await v.play();
+    if(hasBD){
+      const det=new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code','data_matrix']});
+      const frame=async()=>{
+        const v=document.getElementById('_sv');if(!v||!_scanStream){return;}
+        try{const r=await det.detect(v);
+          if(r?.length){stopScan();closeModal();_scanCb&&_scanCb(r[0].rawValue);try{navigator.vibrate&&navigator.vibrate([60]);}catch(e){}toast('✓ Scanned: '+r[0].rawValue);}
+          else _scanRaf=requestAnimationFrame(frame);
+        }catch(e){_scanRaf=requestAnimationFrame(frame);}
+      };
+      _scanRaf=requestAnimationFrame(frame);
+    } else {
+      const s=document.getElementById('_ss');
+      if(s)s.textContent='Camera live — BarcodeDetector not supported on this browser. Use manual input or a USB/Bluetooth scanner.';
+    }
+  }catch(e){
+    const s=document.getElementById('_ss');
+    if(s)s.textContent='Camera permission denied — use the manual input below.';
+  }
+}
+function stopScan(){
+  if(_scanRaf){cancelAnimationFrame(_scanRaf);_scanRaf=null;}
+  if(_scanStream){_scanStream.getTracks().forEach(t=>t.stop());_scanStream=null;}
+}
+
+/* ============================================================
    EMPLOYEES
    ============================================================ */
 const EMP_FREE_LIMIT = 5;
@@ -1498,9 +1588,10 @@ function viewPOS(){
 }
 function showEmpLogin(emps){
   const c=document.getElementById('content');
-  c.innerHTML=`<div style="max-width:500px;margin:0 auto;text-align:center;padding:20px 0">
-    <h2 style="margin-bottom:4px">Who's working today?</h2>
-    <p class="muted" style="font-size:13px;margin-bottom:2px">Tap your name to sign in to POS</p>
+  c.innerHTML=`<div style="max-width:480px;margin:40px auto;text-align:center;padding:20px 16px">
+    <div style="width:56px;height:56px;border-radius:16px;background:var(--accent-soft);display:grid;place-items:center;margin:0 auto 14px">${svg('pos',26)}</div>
+    <h2 style="margin-bottom:4px">POS Sign-in</h2>
+    <p class="muted" style="font-size:13px;margin-bottom:2px">Select your name to open the register</p>
     <div class="emp-grid" style="margin-top:16px">
       ${emps.map(e=>`<div class="emp-tile" onclick="empPinPrompt('${e.id}')">
         <div class="emp-avt">${(e.name||'?')[0].toUpperCase()}</div>
@@ -1508,7 +1599,7 @@ function showEmpLogin(emps){
         <div class="muted" style="font-size:11.5px">${e.role||'cashier'}</div>
       </div>`).join('')}
     </div>
-    <div style="margin-top:20px"><button class="btn ghost sm" onclick="posCashier={name:'${esc(State.db.settings.businessName||'Owner')}',role:'manager'};renderPOS()">Continue as owner</button></div>
+    <p class="muted" style="font-size:12px;margin-top:20px">Not listed? Ask the admin to add you as an employee.</p>
   </div>`;
 }
 let _pinInput='',_pinEmpId='';
@@ -1549,7 +1640,7 @@ function renderPOS(){
     ${mob?`<div class="pos-tab-bar"><button class="pos-tab ${_posTab==='items'?'active':''}" onclick="_posTab='items';renderPOS()">Items</button><button class="pos-tab ${_posTab==='cart'?'active':''}" onclick="_posTab='cart';renderPOS()">Cart (${posCart.reduce((s,c)=>s+c.qty,0)})</button></div>`:''}
     <div class="pos-wrap">
       <div class="pos-items-panel" style="${mob&&_posTab==='cart'?'display:none':''}">
-        <div class="search" style="margin-bottom:10px">${svg('search')}<input placeholder="Search items…" value="${esc(_posSearch||'')}" oninput="_posSearch=this.value;renderPOS()"></div>
+        <div class="search" style="margin-bottom:10px">${svg('search')}<input placeholder="Search products…" value="${esc(_posSearch||'')}" oninput="_posSearch=this.value;renderPOS()"><button class="iconbtn" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)" title="Scan barcode" onclick="openBarcodeScanner(v=>{const it=State.db.items.find(i=>i.barcode===v||i.sku===v);if(it){addToCart(it.id);if(isMob()){_posTab='cart';renderPOS();}}else{_posSearch=v;renderPOS();toast('No product found for: '+v);}})">${svg('scan',15)}</button></div>
         ${items.length?`<div class="pos-grid">${items.map(i=>{const inCart=posCart.find(c=>c.itemId===i.id);return`<div class="pos-tile" onclick="addToCart('${i.id}')">
           ${inCart?`<div class="pt-badge">${inCart.qty}</div>`:''}
           <div class="pt-name">${esc(i.name)}</div>
@@ -1730,9 +1821,13 @@ async function removeInvite(email){
   });
 }
 
+function addUOM(){const v=val('s_newuom').trim();if(!v)return;if(!State.db.settings.uoms)State.db.settings.uoms=[];if(State.db.settings.uoms.includes(v))return toast('Already in list');State.db.settings.uoms.push(v);persist();viewSettings();toast('Unit added');}
+function removeUOM(u){State.db.settings.uoms=(State.db.settings.uoms||[]).filter(x=>x!==u);persist();const tags=document.getElementById('uomTagList');if(tags)tags.innerHTML=State.db.settings.uoms.map(x=>`<span class="uom-tag">${esc(x)}<button onclick="removeUOM('${esc(x)}')">×</button></span>`).join('');}
+
 /* ============================================================
    SUPERADMIN PORTAL
    ============================================================ */
+let _adminTab='users';
 function num(n){return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
 let _adminUsers=[];
 async function viewAdmin(){
@@ -1741,7 +1836,17 @@ async function viewAdmin(){
   const r=await call('adminList');
   if(!r||!r.ok){c.innerHTML=`<div class="card pad">${esc((r&&r.error)||'Failed to load portal data')}</div>`;return;}
   _adminUsers=r.users||[];
-  renderAdmin('');
+  renderAdminView();
+}
+function renderAdminView(){
+  const c=document.getElementById('content');
+  c.innerHTML=`<div class="admin-tabs">
+    <button class="admin-tab ${_adminTab==='users'?'active':''}" onclick="_adminTab='users';renderAdminView()">Users</button>
+    <button class="admin-tab ${_adminTab==='settings'?'active':''}" onclick="_adminTab='settings';renderAdminSettings()">Platform Settings</button>
+  </div>
+  <div id="adminPanel"></div>`;
+  if(_adminTab==='users') renderAdmin('');
+  else renderAdminSettings();
 }
 function renderAdmin(q){
   const all=_adminUsers;
@@ -1749,42 +1854,126 @@ function renderAdmin(q){
   const proCount=all.filter(u=>u.plan==='pro').length;
   const totalInv=all.reduce((s,u)=>s+u.invoices,0);
   const collected=all.reduce((s,u)=>s+u.collected,0);
-  const c=document.getElementById('content');
-  c.innerHTML=`
-   <div class="grid kpis" style="margin-bottom:18px">
-     <div class="card kpi"><div class="lbl">Businesses</div><div class="val">${all.length}</div><div class="sub muted">registered tenants</div></div>
-     <div class="card kpi"><div class="lbl">Pro accounts</div><div class="val">${proCount}</div><div class="sub up">${all.length?Math.round(proCount/all.length*100):0}% on Pro</div></div>
-     <div class="card kpi"><div class="lbl">Invoices (all)</div><div class="val">${totalInv}</div><div class="sub muted">portal-wide</div></div>
-     <div class="card kpi"><div class="lbl">Collected (all)</div><div class="val" style="font-size:21px">${num(collected)}</div><div class="sub muted">mixed currencies</div></div>
+  const p=document.getElementById('adminPanel');if(!p)return;
+  p.innerHTML=`
+   <div class="grid kpis" style="margin-bottom:16px">
+     <div class="card kpi"><div class="lbl">Businesses</div><div class="val">${all.length}</div><div class="sub muted">tenants</div></div>
+     <div class="card kpi"><div class="lbl">Pro accounts</div><div class="val">${proCount}</div><div class="sub up">${all.length?Math.round(proCount/all.length*100):0}% Pro</div></div>
+     <div class="card kpi"><div class="lbl">Invoices</div><div class="val">${totalInv}</div><div class="sub muted">portal-wide</div></div>
+     <div class="card kpi"><div class="lbl">Collected</div><div class="val" style="font-size:20px">${num(collected)}</div><div class="sub muted">mixed currencies</div></div>
    </div>
    <div class="toolbar"><div class="search">${svg('search')}<input placeholder="Search businesses…" value="${esc(q)}" oninput="renderAdmin(this.value)"></div></div>
-   ${us.length?`<div class="tbl"><table><thead><tr><th>Business</th><th>Email</th><th>Plan</th><th class="right">Items</th><th class="right">Quotes</th><th class="right">Invoices</th><th class="right">Outstanding</th><th></th></tr></thead><tbody>
+   ${us.length?`<div class="tbl"><table><thead><tr><th>Business</th><th>Email</th><th>Plan</th><th>Expiry date</th><th class="right">Products</th><th class="right">Invoices</th><th class="right">Outstanding</th><th></th></tr></thead><tbody>
      ${us.map(u=>`<tr>
        <td style="font-weight:600">${esc(u.businessName||'—')}<div class="muted" style="font-size:11px">${u.created?fmtDate(u.created):''}</div></td>
        <td class="muted">${esc(u.email)}</td>
        <td><select class="pill ${u.plan==='pro'?'paid':'draft'}" style="border:none;font-weight:600;cursor:pointer" onchange="adminSetPlan('${u.userId}',this.value)">
          <option value="free" ${u.plan!=='pro'?'selected':''}>free</option><option value="pro" ${u.plan==='pro'?'selected':''}>pro</option></select></td>
-       <td class="right mono">${u.items}</td><td class="right mono">${u.quotes}</td><td class="right mono">${u.invoices}</td>
+       <td><input type="date" value="${u.expiry||''}" style="border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px;background:var(--paper)" onchange="adminSetExpiry('${u.userId}',this.value)"></td>
+       <td class="right mono">${u.items}</td><td class="right mono">${u.invoices}</td>
        <td class="right mono">${num(u.outstanding)}</td>
-       <td><div class="rowacts"><button class="iconbtn" title="Delete business" onclick="adminDelete('${u.userId}')">${svg('trash')}</button></div></td>
+       <td><div class="rowacts"><button class="iconbtn" onclick="adminDelete('${u.userId}')">${svg('trash')}</button></div></td>
      </tr>`).join('')}
-   </tbody></table></div>`:emptyBox('No businesses found','No tenants match your search.')}`;
-  renderIcons(c);
+   </tbody></table></div>`:emptyBox('No businesses found','No tenants match.')}
+  `;
+  renderIcons(p);
 }
 async function adminSetPlan(userId,plan){
   const r=await call('adminSetPlan',{userId,plan});
   if(!r.ok)return toast(r.error||'Failed');
-  const u=_adminUsers.find(x=>x.userId===userId); if(u)u.plan=plan;
+  const u=_adminUsers.find(x=>x.userId===userId);if(u)u.plan=plan;
   toast('Plan set to '+plan);
+}
+async function adminSetExpiry(userId,date){
+  const r=await call('adminSetExpiry',{userId,date});
+  if(!r.ok)return toast(r.error||'Failed');
+  const u=_adminUsers.find(x=>x.userId===userId);if(u)u.expiry=date;
+  toast('Expiry updated');
 }
 function adminDelete(userId){
   const u=_adminUsers.find(x=>x.userId===userId);
-  confirmDel('Delete "'+esc(u?u.businessName||u.email:'this business')+'" and all of its data? This cannot be undone.',async()=>{
+  confirmDel('Delete "'+esc(u?u.businessName||u.email:'this business')+'" and all data? This cannot be undone.',async()=>{
     const r=await call('adminDelete',{userId});
     if(!r.ok)return toast(r.error||'Failed');
     _adminUsers=_adminUsers.filter(x=>x.userId!==userId);
     renderAdmin('');toast('Business deleted');
   });
+}
+
+/* ---- Platform Settings ---- */
+let _adminCfg={};
+async function renderAdminSettings(){
+  const p=document.getElementById('adminPanel');if(!p)return;
+  p.innerHTML='<div class="muted" style="padding:16px">Loading settings…</div>';
+  const r=await call('getAdminSettings');
+  if(!r||!r.ok){p.innerHTML=`<div class="card pad muted">${r?.error||'Could not load'}</div>`;return;}
+  _adminCfg=r.settings||{};
+  const c=_adminCfg;
+  p.innerHTML=`
+   <div class="grid set-grid">
+    <div class="card pad">
+      <div class="cfg-section"><h4>Pro plan pricing</h4>
+        <div class="fgrid">
+          <div class="field"><label>Monthly price</label><input id="cfg_price" type="number" value="${c.proPrice||299}"></div>
+          <div class="field"><label>Currency symbol</label><input id="cfg_sym" value="${esc(c.currency||'Rf')}"></div>
+          <div class="field"><label>Annual price (0=off)</label><input id="cfg_aprx" type="number" value="${c.proAnnualPrice||0}"></div>
+          <div class="field"><label>Annual label</label><input id="cfg_albl" value="${esc(c.annualLabel||'Save 20%')}"></div>
+        </div>
+      </div>
+      <div class="cfg-section"><h4>Free trial</h4>
+        <div class="toggle-row"><div><div style="font-weight:500">Enable free trial</div><div class="desc">New accounts get trial days before upgrading</div></div>
+          <select id="cfg_trial" style="border:1px solid var(--line);border-radius:8px;padding:6px 10px"><option value="1" ${c.trialEnabled?'selected':''}>On</option><option value="0" ${!c.trialEnabled?'selected':''}>Off</option></select></div>
+        <div class="fgrid" style="margin-top:8px">
+          <div class="field"><label>Trial days</label><input id="cfg_tdays" type="number" value="${c.trialDays||14}"></div>
+          <div class="field"><label>Require card</label><select id="cfg_tcard"><option value="0" ${!c.trialRequiresCard?'selected':''}>No</option><option value="1" ${c.trialRequiresCard?'selected':''}>Yes</option></select></div>
+        </div>
+      </div>
+    </div>
+    <div class="card pad">
+      <div class="cfg-section"><h4>Expiry reminders</h4>
+        <div class="toggle-row"><div><div style="font-weight:500">Email reminders</div><div class="desc">Send reminders before Pro plan expires</div></div>
+          <select id="cfg_rem" style="border:1px solid var(--line);border-radius:8px;padding:6px 10px"><option value="1" ${c.reminderEnabled?'selected':''}>On</option><option value="0" ${!c.reminderEnabled?'selected':''}>Off</option></select></div>
+        <div class="field" style="margin-top:8px"><label>Remind (days before, comma-sep)</label><input id="cfg_remdays" value="${esc((c.reminderDays||[7,3,1]).join(','))}"></div>
+      </div>
+      <div class="cfg-section"><h4>Free tier limits</h4>
+        <div class="fgrid">
+          <div class="field"><label>Max employees (free)</label><input id="cfg_maxemp" type="number" value="${c.maxFreeEmployees||5}"></div>
+          <div class="field"><label>Max products (0=∞)</label><input id="cfg_maxprod" type="number" value="${c.maxFreeProducts||0}"></div>
+        </div>
+      </div>
+      <div class="cfg-section"><h4>Pro feature flags</h4>
+        <div class="toggle-row"><div><div style="font-weight:500">Expenses in free tier</div></div>
+          <select id="cfg_expfree" style="border:1px solid var(--line);border-radius:8px;padding:6px 10px"><option value="0" ${!c.expensesInFree?'selected':''}>Pro only</option><option value="1" ${c.expensesInFree?'selected':''}>Free</option></select></div>
+        <div class="toggle-row"><div><div style="font-weight:500">Delivery in free tier</div></div>
+          <select id="cfg_delfree" style="border:1px solid var(--line);border-radius:8px;padding:6px 10px"><option value="0" ${!c.deliveryInFree?'selected':''}>Pro only</option><option value="1" ${c.deliveryInFree?'selected':''}>Free</option></select></div>
+      </div>
+    </div>
+    <div class="card pad" style="grid-column:1/-1">
+      <div class="cfg-section"><h4>Platform announcement banner</h4>
+        <div class="fgrid">
+          <div class="field"><label>Banner text (blank=hidden)</label><input id="cfg_ann" value="${esc(c.announcement||'')}" placeholder="e.g. Maintenance on 15 Jun 2026"></div>
+          <div class="field"><label>Banner type</label><select id="cfg_anntype"><option value="info" ${(c.announcementType||'info')==='info'?'selected':''}>Info</option><option value="warning" ${c.announcementType==='warning'?'selected':''}>Warning</option></select></div>
+          <div class="field"><label>New registrations</label><select id="cfg_reg"><option value="1" ${!c.registrationClosed?'selected':''}>Open</option><option value="0" ${c.registrationClosed?'selected':''}>Closed</option></select></div>
+        </div>
+      </div>
+      <button class="btn accent" onclick="saveAdminSettings()">Save platform settings</button>
+    </div>
+   </div>`;
+}
+async function saveAdminSettings(){
+  const cfg={
+    proPrice:+val('cfg_price')||299, currency:val('cfg_sym')||'Rf',
+    proAnnualPrice:+val('cfg_aprx')||0, annualLabel:val('cfg_albl'),
+    trialEnabled:val('cfg_trial')==='1', trialDays:+val('cfg_tdays')||14, trialRequiresCard:val('cfg_tcard')==='1',
+    reminderEnabled:val('cfg_rem')==='1', reminderDays:(val('cfg_remdays')||'7,3,1').split(',').map(n=>+n.trim()).filter(Boolean),
+    maxFreeEmployees:+val('cfg_maxemp')||5, maxFreeProducts:+val('cfg_maxprod')||0,
+    expensesInFree:val('cfg_expfree')==='1', deliveryInFree:val('cfg_delfree')==='1',
+    announcement:val('cfg_ann'), announcementType:val('cfg_anntype'),
+    registrationClosed:val('cfg_reg')==='0'
+  };
+  const r=await call('saveAdminSettings',{config:JSON.stringify(cfg)});
+  if(!r.ok)return toast(r.error||'Failed to save');
+  _adminCfg=cfg; toast('Platform settings saved');
 }
 
 /* ============================================================
