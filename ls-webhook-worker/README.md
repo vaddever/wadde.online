@@ -41,6 +41,38 @@ authentic, untampered events ever reach your backend.
 
 ## Test
 
-In the Lemon Squeezy webhook page use **Send test event**. A valid event
-returns `200`; a tampered body or wrong secret returns `401` and never reaches
-Apps Script.
+**Quickest:** in the Lemon Squeezy webhook page use **Send test event** — a
+valid event returns `200`; a tampered body or wrong secret returns `401`.
+
+**Local script** (`test.mjs`, Node 18+, no dependencies) — sends a valid signed
+event, a tampered one, and an unsigned one, and asserts the responses:
+
+```bash
+LS_SIGNING_SECRET=your-signing-secret \
+WORKER_URL=https://qm-ls-webhook.<you>.workers.dev \
+TEST_EMAIL=webhook-test@example.com \
+node test.mjs
+```
+
+Expected:
+
+```
+[valid signed event]          HTTP 200   => PASS ✅
+[tampered body, old signature] HTTP 401   => PASS ✅
+[no signature header]          HTTP 401   => PASS ✅
+ALL TESTS PASSED ✅
+```
+
+> The **valid** request really reaches Apps Script and will set the account in
+> `account_email` to Pro — use a throwaway `TEST_EMAIL` or a staging deployment.
+
+**One-off curl** — a tampered request (a signature that doesn't match the body)
+must be rejected with `401`:
+
+```bash
+curl -i -X POST "$WORKER_URL" \
+  -H 'Content-Type: application/json' \
+  -H 'X-Signature: 0000000000000000000000000000000000000000000000000000000000000000' \
+  -d '{"meta":{"event_name":"subscription_created","custom_data":{"account_email":"x@x.com"}},"data":{"attributes":{"status":"active"}}}'
+# => HTTP/1.1 401 Invalid signature
+```
