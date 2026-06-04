@@ -216,6 +216,26 @@ table{width:100%;border-collapse:collapse}
 .doc .d-foot{margin-top:40px;text-align:center;font-size:11px;color:#9a9ca3}
 .doc .d-stamp{display:inline-block;border:2px solid var(--accent);color:var(--accent-ink);font-family:'Fraunces',serif;font-weight:700;padding:4px 14px;border-radius:8px;transform:rotate(-4deg);font-size:15px;text-transform:uppercase;letter-spacing:.05em}
 
+/* ---- Stock management ---- */
+.stk-good{background:#e3f0ea;color:#0b5345}
+.stk-low{background:var(--amber-soft);color:var(--amber)}
+.stk-out{background:var(--danger-soft);color:var(--danger)}
+.stk-badge{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:20px}
+.stk-tile{position:absolute;bottom:5px;right:6px;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px}
+.stk-dim{opacity:.4;pointer-events:none;cursor:not-allowed}
+.inv-stat{padding:0 16px 0 0}
+.inv-stat .lbl{font-size:12px;color:var(--ink-soft);font-weight:600}
+.inv-stat .val{font-size:17px;font-weight:700;margin-top:2px;font-family:'Spline Sans Mono',monospace}
+.mv-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.mv-in{background:#e3f0ea;color:#0b5345}.mv-out{background:var(--danger-soft);color:var(--danger)}
+.mv-adj{background:var(--amber-soft);color:var(--amber)}.mv-count{background:#e6effd;color:#1d4ed8}
+.audit-grid{display:grid;grid-template-columns:1fr 80px 80px 80px 100px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.audit-grid .ah{background:#fbf9f3;padding:8px 11px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+.audit-grid .ac{padding:8px 11px;border-bottom:1px solid var(--line);font-size:13px;display:flex;align-items:center}
+.audit-grid .ar{justify-content:flex-end;font-family:'Spline Sans Mono',monospace}
+.audit-grid input[type=number]{width:68px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;font-size:14px;text-align:right;background:var(--paper);font-family:inherit}
+.audit-grid .pos-var{color:var(--accent);font-weight:700}.audit-grid .neg-var{color:var(--danger);font-weight:700}
+@media(max-width:900px){.audit-grid{grid-template-columns:1fr 68px 68px 68px 90px}}
 /* ---- Finance / Expenses ---- */
 .margin-pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px}
 .margin-good{background:#e3f0ea;color:#0b5345}
@@ -411,6 +431,7 @@ table{width:100%;border-collapse:collapse}
         <div class="nav-group">Workspace</div>
         <a data-view="dashboard"><span class="ic" data-i="grid"></span> Dashboard</a>
         <a data-view="items"><span class="ic" data-i="box"></span> Products</a>
+        <a data-view="stock"><span class="ic" data-i="layers"></span> Stock</a>
         <a data-view="customers"><span class="ic" data-i="users"></span> Customers</a>
         <a data-view="pos"><span class="ic" data-i="pos"></span> POS</a>
         <a data-view="employees"><span class="ic" data-i="badge"></span> Employees</a>
@@ -496,7 +517,9 @@ const ICONS={
  wallet:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
  trending:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
  barcode:'<path d="M3 5v14M7 5v14M11 5v14M15 5v3M15 16v3M19 5v3M19 16v3M15 10v4M19 10v4"/>',
- scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M8 12h8"/>'
+ scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M8 12h8"/>',
+ layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+ arrowup:'<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>'
 };
 function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`;});}
 function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
@@ -649,7 +672,9 @@ function launchApp(){
   if(State.db && !Array.isArray(State.db.customers))  State.db.customers=[];
   if(State.db && !Array.isArray(State.db.employees))  State.db.employees=[];
   if(State.db && !Array.isArray(State.db.transactions))State.db.transactions=[];
-  if(State.db && !Array.isArray(State.db.expenses))     State.db.expenses=[];
+  if(State.db && !Array.isArray(State.db.expenses))      State.db.expenses=[];
+  if(State.db && !Array.isArray(State.db.stockMovements)) State.db.stockMovements=[];
+  if(State.db && !Array.isArray(State.db.stockAudits))    State.db.stockAudits=[];
   const DEFAULT_UOMS=['pc','box','hr','kg','g','L','mL','m','cm','ft','dozen','ream','pair','set','service','month','day','km'];
   if(State.db){ const s=State.db.settings; if(!s.uoms||!s.uoms.length)s.uoms=[...DEFAULT_UOMS]; }
   if(State.db){ const s=State.db.settings; if(!s.senderName)s.senderName=s.businessName||''; if(!s.senderEmail)s.senderEmail=s.email||''; if(!s.posPrefix)s.posPrefix='TXN-'; if(!State.db.counters.pos)State.db.counters.pos=1; if(!s.posToken){s.posToken=uid();setTimeout(()=>persist(),200);} }
@@ -693,7 +718,7 @@ document.getElementById('upgradeBtn').onclick=openUpgrade;
    ROUTER
    ============================================================ */
 const PRO_VIEWS=['deliveries','email','team','expenses'];
-const TITLES={dashboard:'Dashboard',items:'Products',customers:'Customers',pos:'Point of Sale',employees:'Employees',expenses:'Expenses',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
+const TITLES={dashboard:'Dashboard',items:'Products',stock:'Stock',customers:'Customers',pos:'Point of Sale',employees:'Employees',expenses:'Expenses',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
 function go(view){
   if(view==='admin'&&!State.isAdmin){view='dashboard';}
   State.view=view;
@@ -701,7 +726,7 @@ function go(view){
   document.getElementById('pageTitle').textContent=TITLES[view];
   const c=document.getElementById('content');
   if(PRO_VIEWS.includes(view)&&!isPro()){c.innerHTML=lockedView(view);renderIcons(c);return;}
-  ({dashboard:viewDashboard,items:viewItems,customers:viewCustomers,pos:viewPOS,employees:viewEmployees,expenses:viewExpenses,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,team:viewTeam,settings:viewSettings,admin:viewAdmin}[view])();
+  ({dashboard:viewDashboard,items:viewItems,stock:viewStock,customers:viewCustomers,pos:viewPOS,employees:viewEmployees,expenses:viewExpenses,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,team:viewTeam,settings:viewSettings,admin:viewAdmin}[view])();
   renderIcons(c);
 }
 document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(a){go(a.dataset.view);toggleNav(false);}});
@@ -841,12 +866,26 @@ function viewDashboard(){
     :plan==='trial'
     ?`<div class="card pad" style="background:var(--accent-soft);border-color:var(--accent);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div>✅ <b>Pro Trial active</b> — ${State.trialDaysLeft} days left. Enjoy all Pro features!</div><button class="btn ghost sm" onclick="openUpgrade()">Upgrade</button></div>`
     :'';
+  // Inventory stats
+  const trackedItems=(db.items||[]).filter(i=>i.trackStock!==false&&i.stockQty>0);
+  const invCost=trackedItems.reduce((s,i)=>s+(i.stockQty||0)*(i.costPrice||0),0);
+  const invSell=trackedItems.reduce((s,i)=>s+(i.stockQty||0)*(i.unitPrice||0),0);
+  const lowStock=(db.items||[]).filter(i=>i.trackStock!==false&&i.reorderLevel>0&&(i.stockQty||0)<=(i.reorderLevel||0)).length;
   document.getElementById('content').innerHTML=trialBanner+`
-   <div class="grid kpis" style="margin-bottom:14px">
+   <div class="grid kpis" style="margin-bottom:10px">
      <div class="card kpi"><div class="lbl">Outstanding</div><div class="val">${money(outstanding)}</div><div class="sub muted">${unpaid.length} unpaid</div></div>
      <div class="card kpi"><div class="lbl">Collected</div><div class="val">${money(paid)}</div><div class="sub up">Paid to date</div></div>
      <div class="card kpi"><div class="lbl">Open quotes</div><div class="val">${openQuotes}</div><div class="sub muted">awaiting</div></div>
      <div class="card kpi"><div class="lbl">Avg margin</div><div class="val">${avgMargin!==null?avgMargin.toFixed(1)+'%':'—'}</div><div class="sub muted">${priced.length} priced</div></div>
+   </div>
+   <div class="card" style="padding:12px 18px;margin-bottom:12px;display:flex;gap:0;flex-wrap:wrap;border-left:3px solid var(--accent)">
+     <div class="inv-stat"><div class="lbl">Inventory cost value</div><div class="val">${money(invCost)}</div></div>
+     <div style="width:1px;background:var(--line);margin:0 20px"></div>
+     <div class="inv-stat"><div class="lbl">Inventory sell value</div><div class="val">${money(invSell)}</div></div>
+     <div style="width:1px;background:var(--line);margin:0 20px"></div>
+     <div class="inv-stat"><div class="lbl">Unrealised profit</div><div class="val" style="color:var(--accent-ink)">${money(invSell-invCost)}</div></div>
+     ${lowStock?`<div style="width:1px;background:var(--line);margin:0 20px"></div><div class="inv-stat"><div class="lbl">Low stock alerts</div><div class="val" style="color:var(--amber)">${lowStock} items</div></div>`:''}
+     <div style="margin-left:auto;align-self:center"><button class="btn ghost sm" onclick="go('stock')">View stock →</button></div>
    </div>
    <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
      <div class="card">
@@ -886,7 +925,12 @@ function marginPct(i){if(!i.costPrice||!i.unitPrice)return null;return +((i.unit
 function marginPill(i){const m=marginPct(i);if(m===null)return '<span class="muted" style="font-size:12px">—</span>';const cls=m>=20?'margin-good':m>=10?'margin-ok':'margin-thin';return `<span class="margin-pill ${cls}">${m}%</span>`;}
 function itemCards(items){
   if(!items.length)return emptyBox('No products yet','Add products or services to reuse on quotes, invoices and the POS.');
-  return `<div class="mob-cards">${items.map(i=>`
+  return `<div class="mob-cards">${items.map(i=>{
+    const m=marginPct(i);
+    const tracked=i.trackStock!==false;
+    const qty=i.stockQty||0;
+    const stkCls=!tracked?'':qty<=0?'stk-out':i.reorderLevel>0&&qty<=i.reorderLevel?'stk-low':'stk-good';
+    return`
     <div class="mob-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -903,38 +947,54 @@ function itemCards(items){
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">
-        <div style="display:flex;gap:5px;align-items:center">
+        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
           ${marginPill(i)}
+          ${tracked?`<span class="stk-badge ${stkCls}">${qty<=0?'Out of stock':qty+' '+esc(i.unit||'pc')}${i.reorderLevel>0&&qty<=i.reorderLevel&&qty>0?' ⚠':''}</span>`:''}
           ${i.taxable!==false?`<span class="pill paid" style="font-size:11px">${esc(State.db.settings.taxLabel)}</span>`:'<span class="muted" style="font-size:12px">No tax</span>'}
         </div>
         <div class="mob-card-actions">
+          ${tracked?`<button class="iconbtn" title="Adjust stock" onclick='openStockAdjust("${i.id}")'>${svg('layers')}</button>`:''}
           <button class="iconbtn" onclick='openItemEditor("${i.id}")'>${svg('edit')}</button>
           <button class="iconbtn" onclick='delItem("${i.id}")'>${svg('trash')}</button>
         </div>
       </div>
-    </div>`).join('')}</div>`;
+    </div>`;}).join('')}</div>`;
 }
 let itemSearch='';
 function viewItems(){
   const items=State.db.items.filter(i=>(i.name+(i.sku||'')+(i.barcode||'')).toLowerCase().includes(itemSearch.toLowerCase()));
+  const totalCost=State.db.items.filter(i=>i.trackStock!==false&&i.stockQty>0).reduce((s,i)=>s+(i.stockQty||0)*(i.costPrice||0),0);
   document.getElementById('content').innerHTML=`
    <div class="toolbar">
      <div class="search">${svg('search')}<input placeholder="Search products…" value="${esc(itemSearch)}" oninput="itemSearch=this.value;viewItems()"></div>
-     <button class="btn accent" onclick="openItemEditor()">${svg('plus')} New product</button>
+     <div class="row" style="gap:8px;flex-shrink:0">
+       <button class="btn ghost sm" onclick="go('stock')">${svg('layers',14)} Stock</button>
+       <button class="btn accent" onclick="openItemEditor()">${svg('plus')} New product</button>
+     </div>
    </div>
-   ${isMob()?itemCards(items):`<div class="tbl"><table><thead><tr><th>Product</th><th>SKU / Barcode</th><th>Unit</th><th class="right">Cost</th><th class="right">Selling</th><th>Margin</th><th>Tax</th><th></th></tr></thead><tbody>
-     ${items.map(i=>`<tr>
+   ${totalCost>0?`<div class="card pad" style="margin-bottom:12px;display:flex;gap:20px;flex-wrap:wrap;border-left:3px solid var(--accent)">
+     <div class="inv-stat"><div class="lbl">Total inventory cost value</div><div class="val">${money(totalCost)}</div></div>
+     <div class="inv-stat"><div class="lbl">Stock lines tracked</div><div class="val">${State.db.items.filter(i=>i.trackStock!==false&&i.stockQty>0).length}</div></div>
+   </div>`:''}
+   ${isMob()?itemCards(items):`<div class="tbl"><table><thead><tr><th>Product</th><th>SKU / Barcode</th><th>Unit</th><th class="right">Cost</th><th class="right">Selling</th><th>Margin</th><th class="right">Stock</th><th>Tax</th><th></th></tr></thead><tbody>
+     ${items.map(i=>{
+        const tracked=i.trackStock!==false;
+        const qty=i.stockQty||0;
+        const stkCls=!tracked?'':qty<=0?'stk-out':i.reorderLevel>0&&qty<=i.reorderLevel?'stk-low':'stk-good';
+        return`<tr>
         <td><div style="font-weight:600">${esc(i.name)}</div>${i.desc?`<div class="muted" style="font-size:12px">${esc(i.desc)}</div>`:''}</td>
         <td class="mono muted" style="font-size:12px">${esc(i.sku||'—')}${i.barcode?`<div>${svg('barcode',12)} ${esc(i.barcode)}</div>`:''}</td>
         <td>${esc(i.unit||'pc')}</td>
         <td class="right mono muted">${i.costPrice?money(i.costPrice):'—'}</td>
         <td class="right mono" style="font-weight:600">${money(i.unitPrice)}</td>
         <td>${marginPill(i)}</td>
+        <td class="right">${tracked?`<span class="stk-badge ${stkCls}">${qty<=0?'Out':qty}</span>${i.reorderLevel?`<div class="muted" style="font-size:11px">reorder@${i.reorderLevel}</div>`:''}  `:'<span class="muted" style="font-size:12px">—</span>'}</td>
         <td>${i.taxable!==false?`<span class="pill paid">${esc(State.db.settings.taxLabel)}</span>`:'<span class="muted">—</span>'}</td>
         <td><div class="rowacts">
+          ${tracked?`<button class="iconbtn" title="Adjust stock" onclick='openStockAdjust("${i.id}")'>${svg('layers')}</button>`:''}
           <button class="iconbtn" onclick='openItemEditor("${i.id}")'>${svg('edit')}</button>
           <button class="iconbtn" onclick='delItem("${i.id}")'>${svg('trash')}</button>
-        </div></td></tr>`).join('')}
+        </div></td></tr>`;}).join('')}
    </tbody></table></div>`}
   `;
   renderIcons(document.getElementById('content'));
@@ -960,12 +1020,39 @@ function openItemEditor(id){
       </div>
       <div class="field"><label>${esc(State.db.settings.taxLabel)} applies</label><select id="i_tax"><option value="1" ${it.taxable!==false?'selected':''}>Yes</option><option value="0" ${it.taxable===false?'selected':''}>No</option></select></div>
       <div class="field full"><label>Description</label><textarea id="i_desc" rows="2">${esc(it.desc||'')}</textarea></div>
+      <div class="field full" style="border-top:1px solid var(--line);padding-top:10px;margin-top:4px">
+        <label>Stock tracking</label>
+        <select id="i_track" onchange="document.getElementById('i_stkfields').style.display=this.value==='1'?'block':'none'">
+          <option value="1" ${it.trackStock!==false?'selected':''}>Track stock quantity</option>
+          <option value="0" ${it.trackStock===false?'selected':''}>No tracking (services / unlimited items)</option>
+        </select>
+      </div>
+    </div>
+    <div id="i_stkfields" style="display:${it.trackStock!==false?'block':'none'}">
+      <div class="fgrid" style="margin-top:8px">
+        <div class="field"><label>Current stock qty</label><input id="i_sqty" type="number" step="1" value="${it.stockQty||0}"></div>
+        <div class="field"><label>Reorder level (alert when ≤)</label><input id="i_reord" type="number" step="1" value="${it.reorderLevel||0}" placeholder="e.g. 5"></div>
+        <div class="field"><label>Reorder quantity</label><input id="i_reordqty" type="number" step="1" value="${it.reorderQty||0}" placeholder="Standard order amount"></div>
+        ${id&&it.trackStock!==false?`<div class="field" style="align-self:end"><label>Stock cost value</label>
+          <div style="padding:8px 12px;border:1px solid var(--line);border-radius:10px;font-weight:700;font-size:14px;background:var(--accent-soft);color:var(--accent-ink)">${money((it.stockQty||0)*(it.costPrice||0))}</div></div>`:''}
+      </div>
     </div>`,
     [{label:'Cancel',cls:'ghost',fn:closeModal},{label:id?'Save changes':'Add product',cls:'accent',fn:()=>{
       const name=val('i_name');if(!name)return toast('Product name is required');
       const sell=+val('i_price')||0;if(!sell)return toast('Selling price is required');
-      const rec={id:id||uid(),name,sku:val('i_sku'),barcode:val('i_barcode'),unit:val('i_unit')||'pc',desc:val('i_desc'),costPrice:+val('i_cost')||0,unitPrice:sell,taxable:val('i_tax')==='1'};
+      const trackStock=val('i_track')==='1';
+      const newStockQty=trackStock?+val('i_sqty')||0:0;
+      const oldStockQty=id?((State.db.items.find(i=>i.id===id)||{}).stockQty||0):0;
+      const rec={id:id||uid(),name,sku:val('i_sku'),barcode:val('i_barcode'),unit:val('i_unit')||'pc',desc:val('i_desc'),
+        costPrice:+val('i_cost')||0,unitPrice:sell,taxable:val('i_tax')==='1',
+        trackStock,stockQty:newStockQty,reorderLevel:trackStock?+val('i_reord')||0:0,reorderQty:trackStock?+val('i_reordqty')||0:0};
       if(id){const ix=State.db.items.findIndex(i=>i.id===id);State.db.items[ix]=rec;}else State.db.items.push(rec);
+      // Auto-create movement record when stock qty changes
+      if(trackStock){
+        const delta=newStockQty-oldStockQty;
+        if(!id&&newStockQty>0) addStockMovement(rec.id,'receive',newStockQty,'initial','Opening stock');
+        else if(id&&delta!==0) addStockMovement(rec.id,'adjust',delta,'manual','Stock updated via product editor');
+      }
       persist();closeModal();viewItems();toast(id?'Product updated':'Product added');
     }}]);
   setTimeout(()=>{if(it.costPrice&&it.unitPrice)calcItemFields();},80);
@@ -988,6 +1075,223 @@ function applyMarkup(){
   if(cost>0&&mk>0){const sell=+(cost*(1+mk/100)).toFixed(2);const p=document.getElementById('i_price');if(p)p.value=sell;calcItemFields();}
 }
 function delItem(id){confirmDel('Delete this product?',()=>{State.db.items=State.db.items.filter(i=>i.id!==id);persist();viewItems();toast('Product deleted');});}
+
+/* ============================================================
+   STOCK MANAGEMENT
+   ============================================================ */
+function addStockMovement(itemId,type,qty,reference,note){
+  const item=State.db.items.find(i=>i.id===itemId);if(!item)return;
+  item.stockQty=(item.stockQty||0)+qty;
+  if(!State.db.stockMovements)State.db.stockMovements=[];
+  State.db.stockMovements.unshift({id:uid(),date:todayISO(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+    itemId,itemName:item.name,type,qty,reference:reference||'manual',note:note||'',balance:item.stockQty});
+  if(State.db.stockMovements.length>600)State.db.stockMovements.length=600;
+}
+function stockBadgeHtml(i){
+  if(i.trackStock===false)return'<span class="muted" style="font-size:12px">—</span>';
+  const q=i.stockQty||0;
+  const cls=q<=0?'stk-out':i.reorderLevel>0&&q<=i.reorderLevel?'stk-low':'stk-good';
+  return`<span class="stk-badge ${cls}">${q<=0?'Out of stock':q+' '+esc(i.unit||'pc')}</span>`;
+}
+let _stockTab='overview';
+function viewStock(){
+  const tracked=(State.db.items||[]).filter(i=>i.trackStock!==false);
+  const totalCost=tracked.reduce((s,i)=>s+(i.stockQty||0)*(i.costPrice||0),0);
+  const totalSell=tracked.reduce((s,i)=>s+(i.stockQty||0)*(i.unitPrice||0),0);
+  const lowStock=tracked.filter(i=>i.reorderLevel>0&&(i.stockQty||0)<=i.reorderLevel);
+  const c=document.getElementById('content');
+  c.innerHTML=`
+   <div class="card" style="padding:12px 18px;margin-bottom:14px;display:flex;gap:0;flex-wrap:wrap;border-left:3px solid var(--accent)">
+     <div class="inv-stat"><div class="lbl">Total cost value</div><div class="val">${money(totalCost)}</div></div>
+     <div style="width:1px;background:var(--line);margin:0 20px"></div>
+     <div class="inv-stat"><div class="lbl">Total sell value</div><div class="val">${money(totalSell)}</div></div>
+     <div style="width:1px;background:var(--line);margin:0 20px"></div>
+     <div class="inv-stat"><div class="lbl">Unrealised profit</div><div class="val" style="color:var(--accent-ink)">${money(totalSell-totalCost)}</div></div>
+     <div style="width:1px;background:var(--line);margin:0 20px"></div>
+     <div class="inv-stat"><div class="lbl">Low stock items</div><div class="val" style="color:${lowStock.length?'var(--amber)':'var(--ink)'}">${lowStock.length}</div></div>
+   </div>
+   <div class="tabs" style="margin-bottom:14px">
+     <button class="${_stockTab==='overview'?'active':''}" onclick="_stockTab='overview';viewStock()">Overview</button>
+     <button class="${_stockTab==='movements'?'active':''}" onclick="_stockTab='movements';viewStock()">Movements</button>
+     <button class="${_stockTab==='audit'?'active':''}" onclick="_stockTab='audit';viewStock()">Stock Count (Audit)</button>
+   </div>
+   <div id="stockPanel"></div>`;
+  if(_stockTab==='overview')     renderStockOverview(tracked,lowStock);
+  else if(_stockTab==='movements') renderStockMovements();
+  else                             renderStockAudit(tracked);
+  renderIcons(c);
+}
+function renderStockOverview(tracked,lowStock){
+  const p=document.getElementById('stockPanel');
+  if(lowStock.length){
+    p.innerHTML+=`<div class="card pad" style="background:var(--amber-soft);border-color:var(--amber);margin-bottom:12px">
+      <b>⚠ Low stock alerts</b>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+        ${lowStock.map(i=>`<div style="background:var(--card);border:1px solid var(--amber);border-radius:9px;padding:7px 12px;font-size:13px">
+          <b>${esc(i.name)}</b> — ${i.stockQty||0} ${esc(i.unit||'pc')} (reorder at ${i.reorderLevel})
+          <button class="btn amber tiny" style="margin-left:8px" onclick='openStockAdjust("${i.id}")'>Receive stock</button>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  const rows=tracked.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const grandCost=rows.reduce((s,i)=>s+(i.stockQty||0)*(i.costPrice||0),0);
+  const grandSell=rows.reduce((s,i)=>s+(i.stockQty||0)*(i.unitPrice||0),0);
+  p.innerHTML+=`<div class="tbl"><table><thead><tr>
+    <th>Product</th><th class="right">Stock qty</th><th class="right">Reorder at</th>
+    <th class="right">Cost/unit</th><th class="right">Stock cost value</th><th class="right">Stock sell value</th><th></th>
+  </tr></thead><tbody>
+  ${rows.map(i=>{
+    const qty=i.stockQty||0, cv=qty*(i.costPrice||0), sv=qty*(i.unitPrice||0);
+    const cls=qty<=0?'stk-out':i.reorderLevel>0&&qty<=i.reorderLevel?'stk-low':'stk-good';
+    return`<tr>
+      <td style="font-weight:600">${esc(i.name)}<div class="muted" style="font-size:11px">${esc(i.unit||'pc')}</div></td>
+      <td class="right"><span class="stk-badge ${cls}">${qty<=0?'Out':qty}</span></td>
+      <td class="right mono muted">${i.reorderLevel||'—'}</td>
+      <td class="right mono muted">${i.costPrice?money(i.costPrice):'—'}</td>
+      <td class="right mono" style="font-weight:600">${i.costPrice?money(cv):'—'}</td>
+      <td class="right mono">${money(sv)}</td>
+      <td><div class="rowacts"><button class="iconbtn" title="Adjust stock" onclick='openStockAdjust("${i.id}")'>${svg('layers')}</button></div></td>
+    </tr>`;
+  }).join('')}
+  </tbody><tfoot><tr style="background:#fbf9f3;font-weight:700">
+    <td colspan="4" style="padding:10px 14px">Total</td>
+    <td class="right mono" style="padding:10px 14px">${money(grandCost)}</td>
+    <td class="right mono" style="padding:10px 14px">${money(grandSell)}</td>
+    <td></td>
+  </tr></tfoot></table></div>
+  <div style="margin-top:12px"><button class="btn accent sm" onclick='openStockAdjust()'>+ Receive / Adjust stock</button></div>`;
+  renderIcons(p);
+}
+function renderStockMovements(){
+  const p=document.getElementById('stockPanel');
+  const mvs=(State.db.stockMovements||[]).slice(0,200);
+  const typeLabel={receive:'📥 Receive',sale:'🛒 Sale',adjust:'✏️ Adjust',count:'📋 Count'};
+  const typeCls={receive:'mv-in',sale:'mv-out',adjust:'mv-adj',count:'mv-count'};
+  if(!mvs.length){p.innerHTML=emptyBox('No stock movements yet','Movements are recorded automatically from POS sales and manual adjustments.');return;}
+  if(isMob()){
+    p.innerHTML=`<div class="mob-cards">${mvs.map(m=>`<div class="mob-card">
+      <div class="mob-card-top"><span class="mv-pill ${typeCls[m.type]||'mv-adj'}">${typeLabel[m.type]||m.type}</span><span class="muted" style="font-size:12px">${fmtDate(m.date)}</span></div>
+      <div class="mob-card-name">${esc(m.itemName)}</div>
+      <div class="mob-card-meta">${esc(m.reference||'')}${m.note?` · ${esc(m.note)}`:''}</div>
+      <div class="mob-card-foot">
+        <span style="font-family:'Spline Sans Mono',monospace;font-size:15px;font-weight:700;color:${m.qty>0?'var(--accent)':'var(--danger)'}">${m.qty>0?'+':''}${m.qty}</span>
+        <span class="muted" style="font-size:12.5px">Balance: ${m.balance}</span>
+      </div>
+    </div>`).join('')}</div>`;
+  } else {
+    p.innerHTML=`<div class="tbl"><table><thead><tr><th>Date</th><th>Product</th><th>Type</th><th class="right">Movement</th><th class="right">Balance</th><th>Reference</th><th>Note</th></tr></thead><tbody>
+    ${mvs.map(m=>`<tr>
+      <td class="muted" style="white-space:nowrap">${fmtDate(m.date)}${m.time?' '+m.time:''}</td>
+      <td style="font-weight:600">${esc(m.itemName)}</td>
+      <td><span class="mv-pill ${typeCls[m.type]||'mv-adj'}">${typeLabel[m.type]||m.type}</span></td>
+      <td class="right mono" style="font-weight:700;color:${m.qty>0?'var(--accent)':'var(--danger)'}">${m.qty>0?'+':''}${m.qty}</td>
+      <td class="right mono">${m.balance}</td>
+      <td class="muted">${esc(m.reference||'')}</td>
+      <td class="muted" style="font-size:12.5px">${esc(m.note||'')}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+  }
+}
+let _auditRows={};
+function renderStockAudit(tracked){
+  const p=document.getElementById('stockPanel');
+  _auditRows={};
+  p.innerHTML=`
+  <div class="card pad" style="margin-bottom:12px;font-size:13.5px;background:var(--accent-soft);border-color:var(--accent)">
+    <b>📋 Stock Count Instructions</b><br>
+    <span class="muted">Enter the physically counted quantity for each product. The system will calculate variances and create adjustment movements automatically when you save.</span>
+  </div>
+  <div class="audit-grid">
+    <div class="ah">Product</div>
+    <div class="ah ar">System qty</div>
+    <div class="ah ar">Counted</div>
+    <div class="ah ar">Variance</div>
+    <div class="ah ar">Cost impact</div>
+    ${tracked.map(i=>`
+      <div class="ac">${esc(i.name)}<div class="muted" style="font-size:11px">${esc(i.unit||'pc')}</div></div>
+      <div class="ac ar"><span class="mono">${i.stockQty||0}</span></div>
+      <div class="ac ar"><input type="number" step="1" min="0" id="audit_${i.id}" value="${i.stockQty||0}" oninput="calcAuditRow('${i.id}',${i.stockQty||0},${i.costPrice||0})"></div>
+      <div class="ac ar" id="avar_${i.id}">—</div>
+      <div class="ac ar" id="acost_${i.id}" style="font-size:12.5px">—</div>`).join('')}
+  </div>
+  <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn accent" onclick="saveStockCount()">Save stock count & apply adjustments</button>
+    <button class="btn ghost sm" onclick="resetAuditInputs()">Reset inputs to system qty</button>
+  </div>`;
+  renderIcons(p);
+}
+function calcAuditRow(id,system,costPrice){
+  const el=document.getElementById('audit_'+id);if(!el)return;
+  const counted=+el.value||0;
+  const variance=counted-system;
+  const costImpact=variance*costPrice;
+  const vEl=document.getElementById('avar_'+id);
+  const cEl=document.getElementById('acost_'+id);
+  if(vEl){vEl.textContent=variance===0?'—':(variance>0?'+':'')+variance;vEl.className='ac ar '+(variance>0?'pos-var':variance<0?'neg-var':'');}
+  if(cEl){cEl.textContent=variance===0?'—':(costImpact>=0?'+':'')+money(costImpact).replace(/^Rf\s/,'');cEl.style.color=variance===0?'var(--ink-soft)':variance>0?'var(--accent)':'var(--danger)';}
+  _auditRows[id]={counted,system,variance,costPrice};
+}
+function saveStockCount(){
+  const tracked=(State.db.items||[]).filter(i=>i.trackStock!==false);
+  let adjustCount=0;
+  const auditItems=[];
+  tracked.forEach(i=>{
+    const counted=+document.getElementById('audit_'+i.id)?.value;
+    if(isNaN(counted))return;
+    const system=i.stockQty||0;
+    const variance=counted-system;
+    auditItems.push({itemId:i.id,itemName:i.name,system,counted,variance,costImpact:variance*(i.costPrice||0)});
+    if(variance!==0){addStockMovement(i.id,'count',variance,'stock-count','Physical stock count audit');adjustCount++;}
+  });
+  const audit={id:uid(),date:todayISO(),items:auditItems,adjustments:adjustCount};
+  if(!State.db.stockAudits)State.db.stockAudits=[];
+  State.db.stockAudits.unshift(audit);
+  persist();
+  toast(`Stock count saved — ${adjustCount} adjustment${adjustCount!==1?'s':''} applied`);
+  viewStock();
+}
+function resetAuditInputs(){
+  const tracked=(State.db.items||[]).filter(i=>i.trackStock!==false);
+  tracked.forEach(i=>{const el=document.getElementById('audit_'+i.id);if(el)el.value=i.stockQty||0;});
+}
+function openStockAdjust(itemId){
+  const items=(State.db.items||[]).filter(i=>i.trackStock!==false);
+  const pre=itemId?items.find(x=>x.id===itemId):null;
+  openModal('Adjust stock',`
+    <div class="fgrid">
+      <div class="field full"><label>Product *</label>
+        <select id="sa_item" onchange="updateStockAdjustBalance()">
+          ${items.map(i=>`<option value="${i.id}" ${i.id===(itemId||'')?'selected':''}>${esc(i.name)} (current: ${i.stockQty||0} ${esc(i.unit||'pc')})</option>`).join('')}
+        </select></div>
+      <div class="field"><label>Movement type</label>
+        <select id="sa_type">
+          <option value="receive">📥 Receive stock (add)</option>
+          <option value="adjust">✏️ Manual adjustment (+/-)</option>
+          <option value="sale">🛒 Manual issue (remove)</option>
+        </select></div>
+      <div class="field"><label>Quantity (always positive)</label><input id="sa_qty" type="number" step="1" min="0" placeholder="0"></div>
+      <div class="field"><label>Current balance</label><div id="sa_balance" style="padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-weight:700;background:var(--paper)">${pre?(pre.stockQty||0)+' '+(pre.unit||'pc'):'—'}</div></div>
+      <div class="field"><label>Reference (optional)</label><input id="sa_ref" placeholder="e.g. PO-001 / Supplier name"></div>
+      <div class="field"><label>Note (optional)</label><input id="sa_note" placeholder="Reason for adjustment"></div>
+    </div>`,
+    [{label:'Cancel',cls:'ghost',fn:closeModal},{label:'Save movement',cls:'accent',fn:()=>{
+      const iid=val('sa_item');const qty=+val('sa_qty');
+      if(!iid)return toast('Select a product');if(!qty||qty<0)return toast('Enter a positive quantity');
+      const type=val('sa_type');
+      const delta=(type==='receive'?1:-1)*qty;
+      addStockMovement(iid,type,delta,val('sa_ref')||'manual',val('sa_note'));
+      persist();closeModal();
+      toast('Stock movement saved');
+      if(State.view==='stock')viewStock();else if(State.view==='items')viewItems();
+    }}]);
+}
+function updateStockAdjustBalance(){
+  const id=document.getElementById('sa_item')?.value;
+  const item=State.db.items.find(i=>i.id===id);
+  const el=document.getElementById('sa_balance');
+  if(el&&item)el.textContent=(item.stockQty||0)+' '+(item.unit||'pc');
+}
 
 /* ============================================================
    CUSTOMERS
@@ -1664,8 +1968,9 @@ function renderPOS(){
     <div class="pos-wrap">
       <div class="pos-items-panel" style="${mob&&_posTab==='cart'?'display:none':''}">
         <div class="search" style="margin-bottom:10px">${svg('search')}<input placeholder="Search products…" value="${esc(_posSearch||'')}" oninput="_posSearch=this.value;renderPOS()"><button class="iconbtn" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)" title="Scan barcode" onclick="openBarcodeScanner(v=>{const it=State.db.items.find(i=>i.barcode===v||i.sku===v);if(it){addToCart(it.id);if(isMob()){_posTab='cart';renderPOS();}}else{_posSearch=v;renderPOS();toast('No product found for: '+v);}})">${svg('scan',15)}</button></div>
-        ${items.length?`<div class="pos-grid">${items.map(i=>{const inCart=posCart.find(c=>c.itemId===i.id);return`<div class="pos-tile" onclick="addToCart('${i.id}')">
+        ${items.length?`<div class="pos-grid">${items.map(i=>{const inCart=posCart.find(c=>c.itemId===i.id);return`<div class="pos-tile ${i.trackStock!==false&&(i.stockQty||0)<=0?'stk-dim':''}" onclick="addToCart('${i.id}')">
           ${inCart?`<div class="pt-badge">${inCart.qty}</div>`:''}
+          ${i.trackStock!==false?`<div class="stk-tile ${(i.stockQty||0)<=0?'stk-out':(i.reorderLevel>0&&(i.stockQty||0)<=i.reorderLevel?'stk-low':'stk-good')}">${(i.stockQty||0)<=0?'Out':(i.stockQty||0)}</div>`:''}
           <div class="pt-name">${esc(i.name)}</div>
           <div class="pt-sku">${esc(i.sku||i.unit||'')}</div>
           <div class="pt-price">${money(i.unitPrice)}</div>
@@ -1704,6 +2009,13 @@ function renderPOS(){
 let _posSearch='';
 function addToCart(itemId){
   const item=State.db.items.find(i=>i.id===itemId);if(!item)return;
+  // Check stock availability
+  if(item.trackStock!==false){
+    const inCart=posCart.find(c=>c.itemId===itemId);
+    const cartQty=inCart?inCart.qty:0;
+    const available=(item.stockQty||0)-cartQty;
+    if(available<=0){toast('⚠ '+item.name+' is out of stock');return;}
+  }
   const ex=posCart.find(c=>c.itemId===itemId);
   if(ex)ex.qty++;
   else posCart.push({itemId,name:item.name,unitPrice:item.unitPrice,taxable:item.taxable!==false,qty:1,amount:item.unitPrice});
@@ -1738,6 +2050,11 @@ function posCheckout(){
       if(!State.db.transactions)State.db.transactions=[];
       State.db.transactions.unshift(txn);
       State.db.counters.pos=(State.db.counters.pos||1)+1;
+      // Deduct stock for each sold item
+      posCart.forEach(ci=>{
+        const item=State.db.items.find(i=>i.id===ci.itemId);
+        if(item&&item.trackStock!==false) addStockMovement(ci.itemId,'sale',-ci.qty,'POS-'+txn.number,'');
+      });
       persist();closeModal();posCart=[];printReceipt(txn);
     }}]);
 }
