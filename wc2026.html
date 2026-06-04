@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC 2026 Predictions — wadde.online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #080f1e; --bg2: #0d1a2e; --bg3: #0f2140;
+      --bdr:    rgba(28,55,100,0.7);
+      --gold:   #f0b429; --gold-dim: rgba(240,180,41,0.12);
+      --text:   #dce8f5; --muted: #5b8bb8; --dim: #2a4d6e;
+      --green:  #22c55e; --red: #ef4444; --blue: #3b82f6;
+      --r: 12px; --rs: 8px;
+    }
+    html { scroll-behavior: smooth; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-size:15px; min-height:100vh; }
+    #root { min-height:100vh; }
+    .topbar { background:rgba(8,15,30,0.97); border-bottom:1px solid var(--bdr); padding:11px 20px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:50; backdrop-filter:blur(10px); }
+    .logo { font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:700; color:var(--gold); text-decoration:none; letter-spacing:1.5px; display:flex; align-items:center; gap:7px; }
+    .back-link { font-size:13px; color:var(--muted); text-decoration:none; display:flex; align-items:center; gap:4px; transition:color .15s; }
+    .back-link:hover { color:var(--text); }
+    .page { max-width:680px; margin:0 auto; padding:20px 16px 80px; }
+    .card { background:var(--bg2); border:1px solid var(--bdr); border-radius:var(--r); padding:1.25rem; }
+    .card-dark { background:var(--bg); border:1px solid var(--bdr); border-radius:var(--r); padding:1.25rem; }
+    .card-sm { padding:.75rem 1rem; }
+    h1,h2,h3 { font-family:'Barlow Condensed',sans-serif; font-weight:600; color:var(--text); letter-spacing:.5px; }
+    h1 { font-size:26px; } h2 { font-size:21px; margin-bottom:14px; } h3 { font-size:17px; margin-bottom:10px; }
+    button { font-family:'DM Sans',sans-serif; cursor:pointer; transition:all .15s; }
+    .btn { padding:9px 16px; border-radius:var(--rs); border:1px solid rgba(91,139,184,.3); background:transparent; color:var(--text); font-size:13px; display:inline-flex; align-items:center; gap:6px; }
+    .btn:hover:not(:disabled) { border-color:var(--muted); background:rgba(91,139,184,.08); }
+    .btn-primary { padding:10px 20px; border-radius:var(--rs); border:none; background:#1a56db; color:#fff; font-size:14px; font-weight:500; display:inline-flex; align-items:center; gap:6px; }
+    .btn-primary:hover:not(:disabled) { background:#1648bf; }
+    .btn-gold { padding:10px 24px; border-radius:var(--rs); border:none; background:var(--gold); color:var(--bg); font-size:14px; font-weight:600; }
+    .btn-gold:hover { background:#dea41f; }
+    button:disabled { opacity:.4; cursor:not-allowed; }
+    input,select { width:100%; padding:10px 14px; border:1px solid var(--bdr); border-radius:var(--rs); background:var(--bg3); color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; outline:none; transition:border-color .15s; }
+    input:focus { border-color:#1a56db; }
+    input::placeholder { color:var(--dim); }
+    label { display:block; font-size:13px; color:var(--muted); margin-bottom:5px; }
+    .tabs { display:flex; border-bottom:1px solid var(--bdr); margin-bottom:20px; overflow-x:auto; gap:0; }
+    .tab { padding:10px 16px; border:none; border-bottom:2px solid transparent; background:transparent; font-size:13px; color:var(--muted); white-space:nowrap; transition:all .15s; }
+    .tab.on { color:var(--gold); border-bottom-color:var(--gold); font-weight:500; }
+    .tab:hover:not(.on) { color:var(--text); }
+    .badge { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:500; }
+    .live { background:rgba(239,68,68,.12); color:#ef4444; }
+    .done { background:rgba(34,197,94,.12); color:#22c55e; }
+    .soon { background:rgba(91,139,184,.1); color:var(--muted); }
+    .past { background:rgba(245,158,11,.1); color:#f59e0b; }
+    .toast { position:fixed; top:64px; right:16px; z-index:999; padding:10px 16px; border-radius:var(--rs); font-size:13px; max-width:260px; animation:slidein .2s ease; }
+    .toast-ok { background:rgba(34,197,94,.15); border:1px solid rgba(34,197,94,.3); color:#4ade80; }
+    .toast-err { background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.3); color:#f87171; }
+    @keyframes slidein { from{opacity:0;transform:translateX(16px)} to{opacity:1;transform:translateX(0)} }
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:200; display:flex; align-items:flex-start; justify-content:center; padding:40px 16px 80px; overflow-y:auto; }
+    .modal { background:var(--bg2); border:1px solid var(--bdr); border-radius:var(--r); padding:1.5rem; width:100%; max-width:420px; }
+    .pill { padding:4px 12px; border-radius:20px; border:1px solid; cursor:pointer; font-size:12px; font-weight:400; transition:all .15s; }
+    .pill.on { background:#1a56db; color:#fff; border-color:#1a56db; }
+    .pill:not(.on) { background:transparent; color:var(--muted); border-color:var(--bdr); }
+    .pill:not(.on):hover { border-color:var(--muted); color:var(--text); }
+    .g2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .g3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .g4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .mcard { background:var(--bg2); border:1px solid var(--bdr); border-left:3px solid; border-radius:0 var(--r) var(--r) 0; padding:12px 14px; }
+    .score-num { font-family:'Barlow Condensed',sans-serif; font-size:34px; font-weight:700; min-width:36px; text-align:center; color:var(--text); }
+    .lb-row { background:var(--bg2); border:1px solid var(--bdr); border-radius:var(--r); padding:12px 16px; display:flex; align-items:center; gap:12px; }
+    ::-webkit-scrollbar{width:4px;height:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
+    @media(max-width:480px){ .g4{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(2,1fr)} }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<!--
+╔══════════════════════════════════════════════════════╗
+║  SETUP — 5 minutes to go live                       ║
+║                                                      ║
+║  1. Go to console.firebase.google.com               ║
+║  2. Create a project → Add web app                  ║
+║  3. Copy your config object below                   ║
+║  4. Build → Realtime Database → Create database     ║
+║     → Start in TEST MODE → Done                     ║
+║  5. Push this file to your GitHub repo              ║
+║  6. Live at wadde.online/wc2026.html                ║
+╚══════════════════════════════════════════════════════╝
+-->
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey:            "PASTE_YOUR_API_KEY",
+    authDomain:        "your-project.firebaseapp.com",
+    databaseURL:       "https://your-project-default-rtdb.firebaseio.com",
+    projectId:         "your-project",
+    storageBucket:     "your-project.appspot.com",
+    messagingSenderId: "000000000000",
+    appId:             "1:000000000000:web:000000000000"
+  };
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script>
+  try { firebase.initializeApp(FIREBASE_CONFIG); window.db = firebase.database(); }
+  catch(e) { console.warn('Firebase not configured yet:', e.message); window.db = null; }
+</script>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ═══ DATA ═══
+const F = {Mexico:'🇲🇽','South Africa':'🇿🇦','South Korea':'🇰🇷',Czechia:'🇨🇿',Canada:'🇨🇦','Bosnia & Herzegovina':'🇧🇦',Qatar:'🇶🇦',Switzerland:'🇨🇭',Brazil:'🇧🇷',Morocco:'🇲🇦',Haiti:'🇭🇹',Scotland:'🏴󠁧󠁢󠁳󠁣󠁴󠁿','United States':'🇺🇸',Paraguay:'🇵🇾',Australia:'🇦🇺','Türkiye':'🇹🇷',Germany:'🇩🇪','Curaçao':'🇨🇼','Ivory Coast':'🇨🇮',Ecuador:'🇪🇨',Netherlands:'🇳🇱',Japan:'🇯🇵',Sweden:'🇸🇪',Tunisia:'🇹🇳',Belgium:'🇧🇪',Egypt:'🇪🇬',Iran:'🇮🇷','New Zealand':'🇳🇿',Spain:'🇪🇸','Cape Verde':'🇨🇻','Saudi Arabia':'🇸🇦',Uruguay:'🇺🇾',France:'🇫🇷',Senegal:'🇸🇳',Iraq:'🇮🇶',Norway:'🇳🇴',Argentina:'🇦🇷',Algeria:'🇩🇿',Austria:'🇦🇹',Jordan:'🇯🇴',Portugal:'🇵🇹','DR Congo':'🇨🇩',Uzbekistan:'🇺🇿',Colombia:'🇨🇴',England:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',Croatia:'🇭🇷',Ghana:'🇬🇭',Panama:'🇵🇦'};
+const GRP = {A:['Mexico','South Africa','South Korea','Czechia'],B:['Canada','Bosnia & Herzegovina','Qatar','Switzerland'],C:['Brazil','Morocco','Haiti','Scotland'],D:['United States','Paraguay','Australia','Türkiye'],E:['Germany','Curaçao','Ivory Coast','Ecuador'],F:['Netherlands','Japan','Sweden','Tunisia'],G:['Belgium','Egypt','Iran','New Zealand'],H:['Spain','Cape Verde','Saudi Arabia','Uruguay'],I:['France','Senegal','Iraq','Norway'],J:['Argentina','Algeria','Austria','Jordan'],K:['Portugal','DR Congo','Uzbekistan','Colombia'],L:['England','Croatia','Ghana','Panama']};
+const TEAMS = Object.values(GRP).flat();
+const MS = [
+  {id:'m01',gr:'A',h:'Mexico',a:'South Africa',utc:'2026-06-11T19:00:00Z',v:'Estadio Azteca, Mexico City'},
+  {id:'m02',gr:'A',h:'South Korea',a:'Czechia',utc:'2026-06-12T02:00:00Z',v:'Estadio Akron, Guadalajara'},
+  {id:'m03',gr:'B',h:'Canada',a:'Bosnia & Herzegovina',utc:'2026-06-12T19:00:00Z',v:'BMO Field, Toronto'},
+  {id:'m04',gr:'D',h:'United States',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Los Angeles'},
+  {id:'m05',gr:'B',h:'Qatar',a:'Switzerland',utc:'2026-06-13T19:00:00Z',v:"Levi's Stadium, San Francisco"},
+  {id:'m06',gr:'C',h:'Brazil',a:'Morocco',utc:'2026-06-13T22:00:00Z',v:'MetLife Stadium, New York/NJ'},
+  {id:'m07',gr:'C',h:'Haiti',a:'Scotland',utc:'2026-06-14T01:00:00Z',v:'Gillette Stadium, Boston'},
+  {id:'m08',gr:'D',h:'Australia',a:'Türkiye',utc:'2026-06-14T22:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m09',gr:'E',h:'Germany',a:'Curaçao',utc:'2026-06-14T17:00:00Z',v:'Lincoln Financial, Philadelphia'},
+  {id:'m10',gr:'F',h:'Netherlands',a:'Japan',utc:'2026-06-15T01:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  {id:'m11',gr:'H',h:'Spain',a:'Cape Verde',utc:'2026-06-15T17:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  {id:'m12',gr:'G',h:'Belgium',a:'Egypt',utc:'2026-06-15T22:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m13',gr:'H',h:'Saudi Arabia',a:'Uruguay',utc:'2026-06-16T01:00:00Z',v:'Hard Rock Stadium, Miami'},
+  {id:'m14',gr:'I',h:'France',a:'Senegal',utc:'2026-06-16T19:00:00Z',v:"Levi's Stadium, San Francisco"},
+  {id:'m15',gr:'J',h:'Argentina',a:'Algeria',utc:'2026-06-16T22:00:00Z',v:'AT&T Stadium, Dallas'},
+  {id:'m16',gr:'K',h:'Portugal',a:'DR Congo',utc:'2026-06-17T01:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m17',gr:'L',h:'England',a:'Panama',utc:'2026-06-17T17:00:00Z',v:'Gillette Stadium, Boston'},
+  {id:'m18',gr:'E',h:'Ivory Coast',a:'Ecuador',utc:'2026-06-17T22:00:00Z',v:'SoFi Stadium, Los Angeles'},
+  {id:'m19',gr:'F',h:'Sweden',a:'Tunisia',utc:'2026-06-18T01:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  {id:'m20',gr:'G',h:'Iran',a:'New Zealand',utc:'2026-06-18T19:00:00Z',v:'SoFi Stadium, Los Angeles'},
+  {id:'m21',gr:'I',h:'Iraq',a:'Norway',utc:'2026-06-18T22:00:00Z',v:'MetLife Stadium, New York/NJ'},
+  {id:'m22',gr:'J',h:'Austria',a:'Jordan',utc:'2026-06-19T01:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m23',gr:'K',h:'Uzbekistan',a:'Colombia',utc:'2026-06-19T19:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  {id:'m24',gr:'L',h:'Croatia',a:'Ghana',utc:'2026-06-19T22:00:00Z',v:'BMO Field, Toronto'},
+  {id:'m25',gr:'A',h:'Mexico',a:'South Korea',utc:'2026-06-20T19:00:00Z',v:'Estadio Azteca, Mexico City'},
+  {id:'m26',gr:'A',h:'Czechia',a:'South Africa',utc:'2026-06-21T01:00:00Z',v:'Estadio Akron, Guadalajara'},
+  {id:'m27',gr:'C',h:'Brazil',a:'Haiti',utc:'2026-06-21T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
+  {id:'m28',gr:'C',h:'Morocco',a:'Scotland',utc:'2026-06-22T01:00:00Z',v:'Gillette Stadium, Boston'},
+  {id:'m29',gr:'B',h:'Canada',a:'Qatar',utc:'2026-06-22T19:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m30',gr:'D',h:'United States',a:'Australia',utc:'2026-06-23T01:00:00Z',v:'AT&T Stadium, Dallas'},
+  {id:'m31',gr:'E',h:'Germany',a:'Ivory Coast',utc:'2026-06-23T19:00:00Z',v:'Lincoln Financial, Philadelphia'},
+  {id:'m32',gr:'F',h:'Japan',a:'Sweden',utc:'2026-06-24T01:00:00Z',v:'SoFi Stadium, Los Angeles'},
+  {id:'m33',gr:'H',h:'Spain',a:'Saudi Arabia',utc:'2026-06-24T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m34',gr:'I',h:'France',a:'Iraq',utc:'2026-06-25T01:00:00Z',v:'AT&T Stadium, Dallas'},
+  {id:'m35',gr:'J',h:'Argentina',a:'Austria',utc:'2026-06-25T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
+  {id:'m36',gr:'K',h:'Portugal',a:'Colombia',utc:'2026-06-26T01:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m37',gr:'L',h:'England',a:'Croatia',utc:'2026-06-26T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
+];
+const QQ = [
+  {q:'Which country hosts the 2026 World Cup opening match?',o:['Brazil','Mexico','United States','Canada'],a:1},
+  {q:'How many teams compete in FIFA World Cup 2026?',o:['32','40','48','56'],a:2},
+  {q:'When is the 2026 World Cup final?',o:['July 12','July 15','July 19','July 22'],a:2},
+  {q:'Which team won the 2022 FIFA World Cup?',o:['France','Brazil','Argentina','Germany'],a:2},
+  {q:'What new round was introduced in 2026?',o:['Round of 64','Round of 32','Play-in stage','Pre-quarters'],a:1},
+  {q:'Which city hosts the 2026 World Cup final?',o:['Dallas','Los Angeles','East Rutherford NJ','Houston'],a:2},
+  {q:'How many total matches are played at WC 2026?',o:['64','80','96','104'],a:3},
+  {q:'Erling Haaland plays for which WC 2026 nation?',o:['Sweden','Denmark','Norway','Iceland'],a:2},
+  {q:'Argentina are in which 2026 WC group?',o:['Group G','Group H','Group J','Group K'],a:2},
+  {q:'Who are the three co-host nations of WC 2026?',o:['USA, Mexico, Cuba','USA, Canada, Mexico','USA, Canada, Brazil','USA, Mexico, Panama'],a:1},
+  {q:'How many groups are there in the 2026 group stage?',o:['8','10','12','16'],a:2},
+  {q:'Which opening match kicks off WC 2026?',o:['USA vs Mexico','Brazil vs Argentina','Mexico vs South Africa','England vs France'],a:2},
+];
+const FACTS = ['⚽ The 2026 World Cup is the first ever with 48 teams!','🏟️ 104 matches across 16 venues in USA, Canada & Mexico.','🇦🇷 Argentina are the defending champions from Qatar 2022.','📅 Opens June 11 with Mexico vs South Africa.','🏆 Final: July 19 at MetLife Stadium, New York/NJ.','⭐ The Round of 32 is a brand-new knockout round for 2026!','🌎 Three co-hosts: USA 🇺🇸 Canada 🇨🇦 Mexico 🇲🇽','🥅 4 pts exact score · 2 pts correct winner · 10 pts tournament winner!'];
+const PLY = [{n:'Lionel Messi',t:'Argentina',i:'2022 WC winner · 8× Ballon d\'Or'},{n:'Kylian Mbappé',t:'France',i:'Golden Boot favorite · Real Madrid'},{n:'Erling Haaland',t:'Norway',i:'Premier League top scorer'},{n:'Vinicius Jr.',t:'Brazil',i:'Champions League star'},{n:'Pedri',t:'Spain',i:'Barcelona midfield maestro'},{n:'Jude Bellingham',t:'England',i:'Real Madrid star'},{n:'Cristiano Ronaldo',t:'Portugal',i:'All-time record scorer'},{n:'Kevin De Bruyne',t:'Belgium',i:'World-class playmaker'}];
+
+// ═══ FIREBASE STORE ═══
+const Store = {
+  async get(path) {
+    if (!window.db) return null;
+    try { const s = await db.ref(`wc26/${path}`).once('value'); return s.val(); } catch { return null; }
+  },
+  async set(path, val) {
+    if (!window.db) return;
+    try { await db.ref(`wc26/${path}`).set(val); } catch {}
+  },
+  listen(path, cb) {
+    if (!window.db) { cb({}); return () => {}; }
+    const r = db.ref(`wc26/${path}`);
+    r.on('value', s => cb(s.val() || {}));
+    return () => r.off('value');
+  }
+};
+
+// ═══ SESSION (localStorage) ═══
+const Sess = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del: k => { try { localStorage.removeItem(k); } catch {} }
+};
+
+// ═══ UTILS ═══
+function calcPts(p,r) {
+  if (!p||!r) return null;
+  if (p.h===r.h && p.a===r.a) return 4;
+  const pw=p.h>p.a?1:p.h<p.a?-1:0, rw=r.h>r.a?1:r.h<r.a?-1:0;
+  return pw===rw ? 2 : 0;
+}
+function fmtTime(iso) {
+  const d = new Date(iso);
+  const local = d.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
+  const utcS = d.toUTCString().replace(' GMT','') + ' UTC';
+  return { local, utcS };
+}
+function mStat(m, results) {
+  const now=Date.now(), st=new Date(m.utc).getTime();
+  if (results[m.id]) return 'done';
+  if (now >= st+7200000) return 'past';
+  if (now >= st) return 'live';
+  return 'soon';
+}
+const genCode = () => Math.random().toString(36).substring(2,8).toUpperCase();
+const genId = () => Date.now().toString(36) + Math.random().toString(36).substring(2,6);
+const WCS = new Date('2026-06-11T19:00:00Z');
+const KOS = new Date('2026-06-28T00:00:00Z');
+const daysTill = d => Math.max(0, Math.ceil((d.getTime()-Date.now())/864e5));
+const shuffle = arr => [...arr].sort(()=>Math.random()-.5);
+
+// ═══ MAIN APP ═══
+function App() {
+  const [scr, setScr] = useState('loading');
+  const [user, setUser] = useState(null);
+  const [users, setUsers] = useState({});
+  const [rooms, setRooms] = useState({});
+  const [preds, setPreds] = useState({});
+  const [tpicks, setTpicks] = useState({});
+  const [results, setResults] = useState({});
+  const [room, setRoom] = useState(null);
+  const [tab, setTab] = useState('matches');
+  const [grp, setGrp] = useState('A');
+  const [authMode, setAuthMode] = useState('login');
+  const [modal, setModal] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [factI, setFactI] = useState(0);
+  const [plyrI, setPlyrI] = useState(0);
+  const [qIdx, setQIdx] = useState(0);
+  const [qScore, setQScore] = useState(0);
+  const [qDone, setQDone] = useState(false);
+  const [qSel, setQSel] = useState(null);
+  const [qSet, setQSet] = useState(shuffle(QQ).slice(0,5));
+
+  useEffect(() => {
+    const sess = Sess.get('wc26s');
+    let first = true;
+
+    Store.listen('users', v => {
+      const uu = v||{};
+      setUsers(uu);
+      if (first) {
+        first = false;
+        if (sess && uu[sess]) { setUser(uu[sess]); setScr('dash'); }
+        else setScr('welcome');
+      }
+    });
+    Store.listen('rooms',   v => setRooms(v||{}));
+    Store.listen('preds',   v => setPreds(v||{}));
+    Store.listen('tpicks',  v => setTpicks(v||{}));
+    Store.listen('results', v => setResults(v||{}));
+
+    const t1 = setInterval(()=>setFactI(i=>(i+1)%FACTS.length), 6000);
+    const t2 = setInterval(()=>setPlyrI(i=>(i+1)%PLY.length), 4000);
+    return () => { clearInterval(t1); clearInterval(t2); };
+  }, []);
+
+  const notify = (msg,t='ok') => { setToast({msg,t}); setTimeout(()=>setToast(null),3000); };
+  const openM = m => setModal(m);
+
+  // ── AUTH ──
+  async function doReg(name,phone,favT,favP) {
+    if (!name.trim()||!phone.trim()) return notify('Name & phone required','err');
+    if (Object.values(users).find(u=>u.phone===phone.trim())) return notify('Phone already registered','err');
+    const id=genId();
+    const nu={...users,[id]:{id,name:name.trim(),phone:phone.trim(),favT,favP,joined:new Date().toISOString()}};
+    await Store.set('users',nu); Sess.set('wc26s',id);
+    setUser(nu[id]); setScr('dash'); notify(`Welcome ${name}! 🎉`);
+  }
+  async function doLogin(name,phone) {
+    const f=Object.values(users).find(u=>u.name.toLowerCase()===name.toLowerCase().trim()&&u.phone===phone.trim());
+    if (!f) return notify('User not found. Check name & phone.','err');
+    Sess.set('wc26s',f.id); setUser(f); setScr('dash'); notify(`Welcome back ${f.name}!`);
+  }
+  function doLogout() { Sess.del('wc26s'); setUser(null); setRoom(null); setScr('welcome'); }
+
+  // ── ROOMS ──
+  async function doCreate(name) {
+    const code=genCode(), id=genId();
+    const nr={...rooms,[id]:{id,name,code,by:user.id,members:[user.id],created:new Date().toISOString()}};
+    await Store.set('rooms',nr); setRoom(nr[id]); setModal(null); setTab('matches'); setScr('room');
+    notify(`Room created! Share code: ${code}`);
+  }
+  async function doJoin(code) {
+    const f=Object.values(rooms).find(r=>r.code===code.toUpperCase().trim());
+    if (!f) return notify('Room not found','err');
+    let upd=f;
+    if (!f.members.includes(user.id)) {
+      upd={...f,members:[...f.members,user.id]};
+      await Store.set('rooms',{...rooms,[f.id]:upd});
+    }
+    setRoom(upd); setModal(null); setTab('matches'); setScr('room'); notify(`Joined "${f.name}"! 🎉`);
+  }
+
+  // ── PREDICTIONS ──
+  async function doPredict(mId,h,a) {
+    const k=`${user.id}_${mId}`;
+    await Store.set(`preds/${k}`,{h,a,ts:new Date().toISOString()});
+    setModal(null); notify('Prediction saved! ⚽');
+  }
+  async function doPickW(team) {
+    if (!room) return;
+    const k=`${user.id}_${room.id}`;
+    await Store.set(`tpicks/${k}`,{team,ts:new Date().toISOString()});
+    setModal(null); notify(`Picked ${F[team]||''} ${team}! 🏆`);
+  }
+  async function doResult(mId,h,a) {
+    await Store.set(`results/${mId}`,{h,a,ts:new Date().toISOString()});
+    setModal(null); notify('Result saved! Points updated ✅');
+  }
+
+  // ── POINTS ──
+  function uPts(uid) { return MS.reduce((t,m)=>t+(calcPts(preds[`${uid}_${m.id}`],results[m.id])||0),0); }
+  function lb() {
+    if (!room) return [];
+    return room.members.map(uid=>({
+      user: users[uid]||{name:'?',id:uid},
+      pts: uPts(uid),
+      nPreds: MS.filter(m=>preds[`${uid}_${m.id}`]).length,
+      pick: tpicks[`${uid}_${room.id}`]?.team||null
+    })).sort((a,b)=>b.pts-a.pts||b.nPreds-a.nPreds);
+  }
+
+  // ── QUIZ ──
+  function newQuiz() { setQSet(shuffle(QQ).slice(0,5)); setQIdx(0); setQScore(0); setQDone(false); setQSel(null); }
+  function ansQ(i) {
+    if (qSel!==null) return;
+    setQSel(i);
+    if (i===qSet[qIdx].a) setQScore(s=>s+1);
+    setTimeout(()=>{ if(qIdx<qSet.length-1){setQIdx(x=>x+1);setQSel(null);}else setQDone(true); },1300);
+  }
+
+  const lboard = room ? lb() : [];
+  const myRooms = user ? Object.values(rooms).filter(r=>r.members?.includes(user.id)) : [];
+  const canPick = Date.now() < KOS.getTime();
+  const myPick = room ? tpicks[`${user?.id}_${room?.id}`]?.team : null;
+  const isAdmin = room && user && room.by === user.id;
+
+  if (scr==='loading') return (
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+      <div style={{fontSize:60}}>⚽</div>
+      <p style={{color:'var(--muted)',fontSize:15}}>Loading World Cup 2026...</p>
+      {!window.db && <p style={{color:'#f59e0b',fontSize:13,textAlign:'center',maxWidth:280}}>⚠ Firebase not configured yet. Add your config to the HTML file.</p>}
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Topbar */}
+      <div className="topbar">
+        <a href="https://wadde.online" className="back-link">
+          <i className="ti ti-arrow-left" style={{fontSize:14}} aria-hidden="true"></i> wadde.online
+        </a>
+        <span className="logo">🏆 WC 2026 Predictions</span>
+        {user && <button className="btn" style={{fontSize:12}} onClick={doLogout}><i className="ti ti-logout" style={{fontSize:14}} aria-hidden="true"></i> Out</button>}
+      </div>
+
+      {/* Toast */}
+      {toast && <div className={`toast toast-${toast.t}`}>{toast.msg}</div>}
+
+      {/* Modal */}
+      {modal && (
+        <div className="overlay" onClick={e=>e.target===e.currentTarget&&setModal(null)}>
+          {modal.t==='pred'    && <PredModal    match={modal.m} existing={preds[`${user?.id}_${modal.m.id}`]} onSave={doPredict} onClose={()=>setModal(null)} />}
+          {modal.t==='create'  && <CreateModal  onSave={doCreate}  onClose={()=>setModal(null)} />}
+          {modal.t==='join'    && <JoinModal    onJoin={doJoin}    onClose={()=>setModal(null)} />}
+          {modal.t==='winner'  && <WinnerModal  current={myPick}   onPick={doPickW} onClose={()=>setModal(null)} />}
+          {modal.t==='result'  && isAdmin && <ResultModal match={modal.m} existing={results[modal.m?.id]} onSave={doResult} onClose={()=>setModal(null)} />}
+        </div>
+      )}
+
+      <div className="page">
+        {scr==='welcome' && <WelcomePage factI={factI} plyrI={plyrI} daysTill={daysTill(WCS)} onLogin={()=>{setAuthMode('login');setScr('auth');}} onReg={()=>{setAuthMode('reg');setScr('auth');}} />}
+        {scr==='auth'    && <AuthPage mode={authMode} setMode={setAuthMode} onLogin={doLogin} onReg={doReg} onBack={()=>setScr('welcome')} />}
+        {scr==='dash'    && user && <DashPage user={user} rooms={myRooms} factI={factI} plyrI={plyrI} daysTill={daysTill(WCS)} onEnter={r=>{setRoom(r);setTab('matches');setScr('room');}} onCreate={()=>openM({t:'create'})} onJoin={()=>openM({t:'join'})} />}
+        {scr==='room'    && room && user && (
+          <RoomPage room={room} user={user} tab={tab} setTab={setTab} grp={grp} setGrp={setGrp}
+            lboard={lboard} canPick={canPick} myPick={myPick} preds={preds} results={results}
+            onBack={()=>setScr('dash')} onPredict={m=>openM({t:'pred',m})} onPickW={()=>openM({t:'winner'})}
+            onResult={m=>openM({t:'result',m})} isAdmin={isAdmin} factI={factI}
+            qIdx={qIdx} qScore={qScore} qDone={qDone} qSel={qSel} qSet={qSet}
+            onAnswer={ansQ} onNewQuiz={newQuiz} onResetQuiz={()=>{setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══ WELCOME PAGE ═══
+function WelcomePage({factI, plyrI, daysTill, onLogin, onReg}) {
+  return (
+    <div>
+      {/* Hero */}
+      <div className="card-dark" style={{padding:'28px 24px',marginBottom:14,textAlign:'center',borderColor:'rgba(240,180,41,0.2)'}}>
+        <div style={{fontSize:48,marginBottom:8}}>🏆</div>
+        <div style={{fontFamily:'Barlow Condensed',fontSize:11,letterSpacing:4,color:'var(--gold)',fontWeight:700,marginBottom:4}}>FIFA WORLD CUP</div>
+        <h1 style={{fontSize:30,marginBottom:4}}>2026 Prediction League</h1>
+        <p style={{color:'var(--muted)',fontSize:14,marginBottom:20}}>USA · Canada · Mexico &nbsp;|&nbsp; Jun 11 – Jul 19</p>
+        {daysTill > 0
+          ? <div style={{display:'inline-flex',alignItems:'center',gap:8,background:'var(--gold-dim)',border:'1px solid rgba(240,180,41,0.25)',borderRadius:20,padding:'7px 18px',marginBottom:24}}>
+              <span>⏱</span><span style={{fontSize:14,color:'var(--gold)',fontWeight:500}}>{daysTill} days until kick-off!</span>
+            </div>
+          : <div style={{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.25)',borderRadius:20,padding:'7px 18px',marginBottom:24}}>
+              <span style={{fontSize:14,color:'var(--red)',fontWeight:500}}>🔴 Tournament is underway!</span>
+            </div>
+        }
+        <div style={{display:'flex',gap:12,justifyContent:'center'}}>
+          <button className="btn" onClick={onLogin}>Log in</button>
+          <button className="btn-gold" onClick={onReg}>Create Profile</button>
+        </div>
+      </div>
+
+      {/* Info cards */}
+      <div className="g2" style={{marginBottom:12}}>
+        <div className="card-dark" style={{borderColor:'rgba(240,180,41,0.15)'}}>
+          <div style={{fontSize:10,color:'var(--muted)',letterSpacing:1.5,marginBottom:10,fontFamily:'Barlow Condensed',fontWeight:600}}>FEATURED PLAYER</div>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:28}}>{F[PLY[plyrI].t]||'⚽'}</span>
+            <div>
+              <div style={{fontWeight:500,fontSize:14,color:'var(--text)'}}>{PLY[plyrI].n}</div>
+              <div style={{fontSize:12,color:'var(--muted)'}}>{PLY[plyrI].t}</div>
+              <div style={{fontSize:11,color:'var(--dim)',marginTop:2}}>{PLY[plyrI].i}</div>
+            </div>
+          </div>
+        </div>
+        <div className="card-dark" style={{borderColor:'rgba(240,180,41,0.15)'}}>
+          <div style={{fontSize:10,color:'var(--muted)',letterSpacing:1.5,marginBottom:10,fontFamily:'Barlow Condensed',fontWeight:600}}>SCORING</div>
+          <div style={{display:'flex',flexDirection:'column',gap:7,fontSize:12}}>
+            <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--muted)'}}>🎯 Exact score</span><span style={{color:'var(--green)',fontWeight:500}}>4 pts</span></div>
+            <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--muted)'}}>✅ Correct winner</span><span style={{color:'var(--blue)',fontWeight:500}}>2 pts</span></div>
+            <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--muted)'}}>🏆 Tournament pick</span><span style={{color:'var(--gold)',fontWeight:500}}>+10 pts</span></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fact */}
+      <div style={{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'9px 14px',marginBottom:16,fontSize:13,color:'#93c5fd'}}>{FACTS[factI]}</div>
+
+      {/* Groups grid */}
+      <h3>2026 World Cup Groups</h3>
+      <div className="g4">
+        {Object.entries(GRP).map(([g,ts])=>(
+          <div key={g} className="card card-sm">
+            <div style={{fontSize:10,fontWeight:600,color:'var(--muted)',marginBottom:6,fontFamily:'Barlow Condensed',letterSpacing:.5}}>GROUP {g}</div>
+            {ts.map(t=>(
+              <div key={t} style={{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'var(--text)',marginBottom:3}}>
+                <span style={{fontSize:13}}>{F[t]||'🏳'}</span>
+                <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══ AUTH PAGE ═══
+function AuthPage({mode, setMode, onLogin, onReg, onBack}) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [favT, setFavT] = useState([]);
+  const [favP, setFavP] = useState(['','','']);
+  const [step, setStep] = useState(1);
+
+  const togT = t => { if(favT.includes(t))setFavT(f=>f.filter(x=>x!==t)); else if(favT.length<3)setFavT(f=>[...f,t]); };
+  const reset = m => { setMode(m); setStep(1); setName(''); setPhone(''); setFavT([]); setFavP(['','','']); };
+  const sub = () => {
+    if (mode==='login') { onLogin(name, phone); return; }
+    if (step===1) { if(!name||!phone)return; setStep(2); }
+    else if (step===2) { if(!favT.length)return; setStep(3); }
+    else onReg(name, phone, favT, favP.filter(Boolean));
+  };
+
+  return (
+    <div style={{maxWidth:480,margin:'0 auto',paddingTop:8}}>
+      <button className="btn" onClick={onBack} style={{marginBottom:14}}>
+        <i className="ti ti-arrow-left" style={{fontSize:14}} aria-hidden="true"></i> Back
+      </button>
+      <div className="card">
+        <div className="tabs" style={{marginLeft:-20,marginRight:-20,paddingLeft:20,marginBottom:24}}>
+          {[['login','Log in'],['reg','Create Profile']].map(([m,l])=>(
+            <button key={m} className={`tab ${mode===m?'on':''}`} onClick={()=>reset(m)}>{l}</button>
+          ))}
+        </div>
+
+        {mode==='login' ? (
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            <h2>Welcome back</h2>
+            <div><label>Name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Your name" /></div>
+            <div><label>Phone number</label><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+1234567890" /></div>
+            <button className="btn-primary" style={{width:'100%',marginTop:4}} onClick={sub}>Log in →</button>
+          </div>
+        ) : (
+          <>
+            {step===1 && (
+              <div style={{display:'flex',flexDirection:'column',gap:14}}>
+                <h2>Create profile <span style={{fontSize:14,color:'var(--muted)',fontWeight:400,fontFamily:'DM Sans'}}>1 of 3</span></h2>
+                <div><label>Your name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Full name" /></div>
+                <div><label>Phone number</label><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+1234567890" /></div>
+                <button className="btn-primary" style={{width:'100%',opacity:(!name||!phone)?0.45:1}} disabled={!name||!phone} onClick={sub}>Next: Pick teams →</button>
+              </div>
+            )}
+            {step===2 && (
+              <div>
+                <h2>Favorite teams <span style={{fontSize:14,color:'var(--muted)',fontWeight:400,fontFamily:'DM Sans'}}>2 of 3 · pick 3</span></h2>
+                <div className="g3" style={{marginBottom:14,maxHeight:280,overflowY:'auto',padding:4}}>
+                  {TEAMS.map(t=>(
+                    <button key={t} onClick={()=>togT(t)} style={{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:favT.includes(t)?'2px solid #1a56db':'1px solid var(--bdr)',background:favT.includes(t)?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--text)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!favT.includes(t)&&favT.length>=3?0.35:1}}>
+                      <span style={{fontSize:20}}>{F[t]||'🏳'}</span>
+                      <span style={{textAlign:'center',fontSize:10,lineHeight:1.2}}>{t}</span>
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button className="btn" style={{flex:1}} onClick={()=>setStep(1)}>← Back</button>
+                  <button className="btn-primary" style={{flex:2,opacity:!favT.length?0.45:1}} disabled={!favT.length} onClick={sub}>Next: Players →</button>
+                </div>
+              </div>
+            )}
+            {step===3 && (
+              <div style={{display:'flex',flexDirection:'column',gap:13}}>
+                <h2>Favorite players <span style={{fontSize:14,color:'var(--muted)',fontWeight:400,fontFamily:'DM Sans'}}>3 of 3</span></h2>
+                {[0,1,2].map(i=>(
+                  <div key={i}><label>Player {i+1}</label><input value={favP[i]} onChange={e=>{const fp=[...favP];fp[i]=e.target.value;setFavP(fp);}} placeholder={`e.g. ${PLY[i]?.n||'Player name'}`} /></div>
+                ))}
+                <div className="card-sm" style={{background:'var(--bg3)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)'}}>
+                  <span style={{fontSize:12,color:'var(--muted)'}}>Teams: {favT.map(t=>F[t]||t).join(' ')}</span>
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button className="btn" style={{flex:1}} onClick={()=>setStep(2)}>← Back</button>
+                  <button className="btn-primary" style={{flex:2}} onClick={sub}>Create Profile 🎉</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══ DASHBOARD ═══
+function DashPage({user, rooms, factI, plyrI, daysTill, onEnter, onCreate, onJoin}) {
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div>
+          <p style={{fontSize:12,color:'var(--muted)',marginBottom:2}}>Welcome back</p>
+          <h1>{user.name} {user.favT?.[0]?F[user.favT[0]]||'⚽':'⚽'}</h1>
+        </div>
+      </div>
+
+      {/* Countdown */}
+      <div className="card-dark" style={{padding:'18px 20px',marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center',borderColor:'rgba(240,180,41,0.2)'}}>
+        <div>
+          <div style={{fontSize:10,color:'var(--gold)',letterSpacing:2,fontFamily:'Barlow Condensed',fontWeight:700,marginBottom:4}}>FIFA WORLD CUP 2026</div>
+          <div style={{fontFamily:'Barlow Condensed',fontSize:22,fontWeight:600}}>{daysTill>0?`${daysTill} DAYS TO KICK-OFF ⏱`:'🔴 TOURNAMENT UNDERWAY!'}</div>
+          <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>June 11 – July 19 · USA, Canada, Mexico</div>
+        </div>
+        <span style={{fontSize:36}}>🏟️</span>
+      </div>
+
+      {/* Fact */}
+      <div style={{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px 14px',marginBottom:20,fontSize:13,color:'#93c5fd'}}>{FACTS[factI]}</div>
+
+      {/* Rooms */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+        <h2 style={{margin:0}}>My Rooms</h2>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn" style={{fontSize:12}} onClick={onJoin}><i className="ti ti-door-enter" style={{fontSize:14}} aria-hidden="true"></i> Join</button>
+          <button className="btn-primary" style={{fontSize:12,padding:'8px 14px'}} onClick={onCreate}><i className="ti ti-plus" style={{fontSize:14}} aria-hidden="true"></i> Create</button>
+        </div>
+      </div>
+
+      {rooms.length===0
+        ? <div className="card" style={{textAlign:'center',padding:32}}>
+            <div style={{fontSize:32,marginBottom:10}}>🏠</div>
+            <p style={{color:'var(--muted)',fontSize:14}}>No rooms yet. Create one or join with a code!</p>
+          </div>
+        : <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:24}}>
+            {rooms.map(r=>(
+              <button key={r.id} className="card" onClick={()=>onEnter(r)} style={{width:'100%',textAlign:'left',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',padding:'13px 16px'}}>
+                <div>
+                  <div style={{fontWeight:500,fontSize:15}}>{r.name}</div>
+                  <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>Code: {r.code} · {r.members?.length||0} members</div>
+                </div>
+                <i className="ti ti-chevron-right" style={{fontSize:18,color:'var(--dim)'}} aria-hidden="true"></i>
+              </button>
+            ))}
+          </div>
+      }
+
+      {/* Players */}
+      <h2>Featured Players</h2>
+      <div className="g4">
+        {PLY.map((p,i)=>(
+          <div key={i} className="card card-sm" style={{textAlign:'center',padding:'11px 6px',borderColor:i===plyrI?'rgba(240,180,41,.35)':undefined,background:i===plyrI?'rgba(240,180,41,.04)':undefined}}>
+            <div style={{fontSize:22,marginBottom:4}}>{F[p.t]||'⚽'}</div>
+            <div style={{fontSize:12,fontWeight:500}}>{p.n}</div>
+            <div style={{fontSize:11,color:'var(--muted)',marginTop:1}}>{p.t}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══ ROOM PAGE ═══
+function RoomPage({room, user, tab, setTab, grp, setGrp, lboard, canPick, myPick, preds, results, onBack, onPredict, onPickW, onResult, isAdmin, factI, qIdx, qScore, qDone, qSel, qSet, onAnswer, onNewQuiz, onResetQuiz}) {
+  const gMs = MS.filter(m=>m.gr===grp);
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+        <button className="btn" style={{padding:'8px 10px'}} onClick={onBack}><i className="ti ti-arrow-left" style={{fontSize:18}} aria-hidden="true"></i></button>
+        <div style={{flex:1,minWidth:0}}>
+          <h1 style={{fontSize:18,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2}}>{room.name}</h1>
+          <p style={{fontSize:12,color:'var(--muted)',margin:0}}>Code: <strong style={{color:'var(--text)'}}>{room.code}</strong> · {room.members?.length||0} members</p>
+        </div>
+        {canPick && (
+          <button className="btn" style={{fontSize:12,background:myPick?'var(--gold-dim)':undefined,borderColor:myPick?'rgba(240,180,41,.35)':undefined,color:myPick?'var(--gold)':undefined,whiteSpace:'nowrap',flexShrink:0}} onClick={onPickW}>
+            🏆 {myPick?(F[myPick]||'')+' '+myPick:'Pick winner'}
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="tabs">
+        {[['matches','⚽ Matches'],['leaderboard','🏆 Standings'],['groups','📊 Groups'],['quiz','🧠 Quiz']].map(([t,l])=>(
+          <button key={t} className={`tab ${tab===t?'on':''}`} onClick={()=>setTab(t)}>{l}</button>
+        ))}
+      </div>
+
+      {/* ── MATCHES ── */}
+      {tab==='matches' && (
+        <div>
+          <div style={{display:'flex',gap:5,marginBottom:14,flexWrap:'wrap'}}>
+            {Object.keys(GRP).map(g=>(
+              <button key={g} className={`pill ${grp===g?'on':''}`} onClick={()=>setGrp(g)}>Grp {g}</button>
+            ))}
+          </div>
+          {gMs.map(m => {
+            const st = mStat(m, results);
+            const pred = preds[`${user.id}_${m.id}`];
+            const res = results[m.id];
+            const ep = calcPts(pred, res);
+            const {local, utcS} = fmtTime(m.utc);
+            const bdrColor = st==='done'?'#22c55e':st==='live'?'#ef4444':st==='past'?'#f59e0b':'var(--bdr)';
+            return (
+              <div key={m.id} className="mcard" style={{borderLeftColor:bdrColor,marginBottom:8}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                  <span className={`badge ${st}`}>{st==='live'?'🔴 LIVE':st==='done'?'✓ FINAL':st==='past'?'ENDED':'⏱ UPCOMING'}</span>
+                  <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                    {isAdmin && st!=='done' && <button className="btn" style={{fontSize:11,padding:'3px 9px'}} onClick={()=>onResult(m)}>Enter result</button>}
+                    {ep!==null && <span style={{fontWeight:500,fontSize:13,color:ep===4?'#22c55e':ep===2?'#60a5fa':'#f87171'}}>{ep>0?`+${ep} pts`:'0 pts'}</span>}
+                  </div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                  <div style={{flex:1,textAlign:'right'}}>
+                    <div style={{fontSize:26}}>{F[m.h]||'🏳'}</div>
+                    <div style={{fontSize:13,fontWeight:500}}>{m.h}</div>
+                  </div>
+                  <div style={{background:'var(--bg3)',borderRadius:'var(--rs)',padding:'6px 14px',minWidth:72,textAlign:'center'}}>
+                    {res ? <span style={{fontFamily:'Barlow Condensed',fontSize:22,fontWeight:700}}>{res.h}–{res.a}</span>
+                         : st==='live' ? <span style={{fontSize:13,color:'var(--red)',fontWeight:500}}>LIVE</span>
+                         : <span style={{fontSize:14,color:'var(--dim)'}}>vs</span>}
+                  </div>
+                  <div style={{flex:1,textAlign:'left'}}>
+                    <div style={{fontSize:26}}>{F[m.a]||'🏳'}</div>
+                    <div style={{fontSize:13,fontWeight:500}}>{m.a}</div>
+                  </div>
+                </div>
+                <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>
+                  <div>{local}</div>
+                  <div style={{color:'var(--dim)'}}>{utcS}</div>
+                  <div style={{marginTop:1}}>{m.v}</div>
+                </div>
+                {st==='soon' ? (
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:8,borderTop:'1px solid var(--bdr)'}}>
+                    {pred ? <span style={{fontSize:13,color:'var(--muted)'}}>Your pick: <strong style={{color:'var(--text)'}}>{pred.h}–{pred.a}</strong></span>
+                           : <span style={{fontSize:12,color:'var(--dim)'}}>No prediction yet</span>}
+                    <button className="btn-primary" style={{fontSize:12,padding:'6px 14px'}} onClick={()=>onPredict(m)}>{pred?'Edit':'Predict ⚽'}</button>
+                  </div>
+                ) : pred && (
+                  <div style={{paddingTop:8,borderTop:'1px solid var(--bdr)',fontSize:12,color:'var(--muted)'}}>
+                    Your prediction: <strong style={{color:'var(--text)'}}>{pred.h}–{pred.a}</strong>
+                    {ep===4&&<span style={{color:'#22c55e'}}> · Exact! 🎯</span>}
+                    {ep===2&&<span style={{color:'#60a5fa'}}> · Correct winner ✓</span>}
+                    {ep===0&&res&&<span style={{color:'#f87171'}}> · Missed ✗</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── STANDINGS ── */}
+      {tab==='leaderboard' && (
+        <div>
+          {lboard[0]?.pts>0 && (
+            <div className="card-dark" style={{padding:'14px 18px',marginBottom:14,display:'flex',alignItems:'center',gap:12,borderColor:'rgba(240,180,41,0.25)'}}>
+              <span style={{fontSize:32}}>🏆</span>
+              <div>
+                <div style={{fontSize:10,color:'var(--gold)',letterSpacing:1.5,fontFamily:'Barlow Condensed',fontWeight:700}}>CURRENT LEADER</div>
+                <div style={{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:600,marginTop:2}}>{lboard[0].user?.name}</div>
+                <div style={{fontSize:12,color:'var(--muted)'}}>{lboard[0].pts} pts · {lboard[0].nPreds} predictions</div>
+              </div>
+            </div>
+          )}
+          {lboard.length===0
+            ? <div className="card" style={{textAlign:'center',padding:32}}><div style={{fontSize:32,marginBottom:10}}>📊</div><p style={{color:'var(--muted)'}}>No members yet</p></div>
+            : <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {lboard.map((e,i)=>(
+                  <div key={e.user?.id||i} className="lb-row" style={{borderColor:i===0?'rgba(240,180,41,.22)':e.user?.id===user.id?'rgba(59,130,246,.3)':undefined,background:i===0?'rgba(240,180,41,.03)':undefined}}>
+                    <div style={{width:32,height:32,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,background:i===0?'rgba(240,180,41,.15)':i===1?'rgba(148,163,184,.1)':i===2?'rgba(180,100,30,.1)':'var(--bg3)'}}>
+                      {i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:500,fontSize:15,display:'flex',alignItems:'center',gap:6}}>
+                        {e.user?.name}
+                        {e.user?.id===user.id&&<span style={{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8}}>you</span>}
+                      </div>
+                      <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>
+                        {e.nPreds} predictions{e.pick?` · picked ${F[e.pick]||''} ${e.pick}`:''}
+                      </div>
+                    </div>
+                    <div style={{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dim)'}}>{e.pts}<span style={{fontSize:13,fontWeight:400}}> pts</span></div>
+                  </div>
+                ))}
+              </div>
+          }
+          <div className="card" style={{marginTop:14,background:'var(--bg3)'}}>
+            <h3>Scoring guide</h3>
+            <div style={{display:'flex',flexDirection:'column',gap:6,fontSize:13,color:'var(--muted)'}}>
+              <div style={{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style={{color:'#22c55e'}}>4 pts</strong></div>
+              <div style={{display:'flex',justifyContent:'space-between'}}>✅ Correct winner / draw<strong style={{color:'#60a5fa'}}>2 pts</strong></div>
+              <div style={{display:'flex',justifyContent:'space-between'}}>❌ Wrong prediction<strong style={{color:'var(--dim)'}}>0 pts</strong></div>
+              <div style={{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style={{color:'var(--gold)'}}>+10 pts</strong></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── GROUPS ── */}
+      {tab==='groups' && (
+        <div>
+          <p style={{fontSize:13,color:'var(--muted)',marginBottom:16}}>All 12 FIFA World Cup 2026 groups</p>
+          <div className="g2">
+            {Object.entries(GRP).map(([g,ts])=>(
+              <div key={g} className="card">
+                <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',marginBottom:8,fontFamily:'Barlow Condensed',letterSpacing:1}}>GROUP {g}</div>
+                {ts.map(t=>(
+                  <div key={t} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:'1px solid var(--bdr)',fontSize:13}}>
+                    <span style={{fontSize:18}}>{F[t]||'🏳'}</span>
+                    <span style={{flex:1}}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── QUIZ ── */}
+      {tab==='quiz' && (
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+            <h2 style={{margin:0}}>Daily Quiz</h2>
+            <button className="btn" style={{fontSize:12}} onClick={onNewQuiz}>
+              <i className="ti ti-refresh" style={{fontSize:14}} aria-hidden="true"></i> New quiz
+            </button>
+          </div>
+          {!qDone ? (
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:12,fontSize:13,color:'var(--muted)'}}>
+                <span>Question {qIdx+1} of {qSet.length}</span>
+                <span>{qScore} correct</span>
+              </div>
+              <div className="card" style={{marginBottom:12}}>
+                <p style={{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:600,lineHeight:1.4,margin:0}}>{qSet[qIdx]?.q}</p>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {qSet[qIdx]?.o.map((opt,i)=>{
+                  const isC=i===qSet[qIdx].a, isSel=qSel===i;
+                  let bg='var(--bg3)', bdr='1px solid var(--bdr)', cl='var(--text)';
+                  if (qSel!==null) {
+                    if (isC) { bg='rgba(34,197,94,.1)'; bdr='1px solid #22c55e'; cl='#4ade80'; }
+                    else if (isSel) { bg='rgba(239,68,68,.1)'; bdr='1px solid #ef4444'; cl='#f87171'; }
+                  }
+                  return (
+                    <button key={i} onClick={()=>onAnswer(i)} style={{padding:'12px 14px',borderRadius:'var(--rs)',border:bdr,background:bg,cursor:'pointer',textAlign:'left',fontSize:14,color:cl,display:'flex',alignItems:'center',gap:10,transition:'all .15s'}}>
+                      <span style={{width:26,height:26,borderRadius:13,background:'rgba(255,255,255,.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:600,flexShrink:0,color:cl}}>
+                        {['A','B','C','D'][i]}
+                      </span>
+                      {opt}
+                      {qSel!==null&&isC&&<span style={{marginLeft:'auto'}}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="card" style={{textAlign:'center',padding:36}}>
+              <div style={{fontSize:52,marginBottom:12}}>{qScore>=4?'🏆':qScore>=3?'⭐':qScore>=2?'👍':'📚'}</div>
+              <h2>Quiz Complete!</h2>
+              <p style={{fontSize:17,color:'var(--muted)',marginBottom:6}}>{qScore} / {qSet.length} correct</p>
+              <p style={{fontSize:14,color:'var(--dim)',marginBottom:24}}>{qScore===5?'Perfect score! Football genius! 🎯':qScore>=3?'Great knowledge! ⚽':'Keep learning the beautiful game! 📖'}</p>
+              <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+                <button className="btn" onClick={onResetQuiz}>Try again</button>
+                <button className="btn-primary" onClick={onNewQuiz}><i className="ti ti-refresh" style={{fontSize:14}} aria-hidden="true"></i> New quiz</button>
+              </div>
+            </div>
+          )}
+          <div style={{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'10px 14px',marginTop:14,fontSize:13,color:'#93c5fd'}}>
+            <strong style={{color:'#60a5fa',fontSize:11,letterSpacing:1,fontFamily:'Barlow Condensed'}}>DID YOU KNOW? &nbsp;</strong>{FACTS[factI]}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══ MODALS ═══
+function ScorePick({val, onChange, label}) {
+  return (
+    <div style={{textAlign:'center'}}>
+      <div style={{fontSize:11,color:'var(--muted)',marginBottom:6}}>{label.split(' ')[0]}</div>
+      <div className="score-picker">
+        <button className="btn" style={{padding:'6px 12px'}} onClick={()=>onChange(Math.max(0,val-1))}><i className="ti ti-minus" style={{fontSize:16}} aria-hidden="true"></i></button>
+        <span className="score-num">{val}</span>
+        <button className="btn" style={{padding:'6px 12px'}} onClick={()=>onChange(Math.min(15,val+1))}><i className="ti ti-plus" style={{fontSize:16}} aria-hidden="true"></i></button>
+      </div>
+    </div>
+  );
+}
+
+function PredModal({match, existing, onSave, onClose}) {
+  const [h, setH] = useState(existing?.h ?? 1);
+  const [a, setA] = useState(existing?.a ?? 1);
+  const {local, utcS} = fmtTime(match.utc);
+  return (
+    <div className="modal">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <h2 style={{margin:0}}>Predict Score</h2>
+        <button className="btn" style={{padding:'4px 8px'}} onClick={onClose}><i className="ti ti-x" style={{fontSize:18}} aria-hidden="true"></i></button>
+      </div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16,marginBottom:12}}>
+        <div style={{textAlign:'center'}}><div style={{fontSize:30}}>{F[match.h]||'🏳'}</div><div style={{fontSize:13,fontWeight:500}}>{match.h}</div></div>
+        <div style={{fontSize:13,color:'var(--muted)'}}>vs</div>
+        <div style={{textAlign:'center'}}><div style={{fontSize:30}}>{F[match.a]||'🏳'}</div><div style={{fontSize:13,fontWeight:500}}>{match.a}</div></div>
+      </div>
+      <div style={{fontSize:12,color:'var(--muted)',textAlign:'center',marginBottom:18}}>{local}<br/><span style={{fontSize:11,color:'var(--dim)'}}>{utcS}</span></div>
+      <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:22,justifyContent:'center'}}>
+        <ScorePick val={h} onChange={setH} label={match.h} />
+        <span style={{fontFamily:'Barlow Condensed',fontSize:28,fontWeight:700,color:'var(--muted)'}}>–</span>
+        <ScorePick val={a} onChange={setA} label={match.a} />
+      </div>
+      <div style={{display:'flex',gap:10}}>
+        <button className="btn" style={{flex:1}} onClick={onClose}>Cancel</button>
+        <button className="btn-primary" style={{flex:2}} onClick={()=>onSave(match.id,h,a)}>Save prediction ⚽</button>
+      </div>
+    </div>
+  );
+}
+
+function CreateModal({onSave, onClose}) {
+  const [name, setName] = useState('');
+  return (
+    <div className="modal">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <h2 style={{margin:0}}>Create Room</h2>
+        <button className="btn" style={{padding:'4px 8px'}} onClick={onClose}><i className="ti ti-x" style={{fontSize:18}} aria-hidden="true"></i></button>
+      </div>
+      <div style={{marginBottom:14}}><label>Room name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder='e.g. Office World Cup 2026' autoFocus /></div>
+      <p style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>A unique 6-character code is generated. Share it with friends to join!</p>
+      <div style={{display:'flex',gap:10}}>
+        <button className="btn" style={{flex:1}} onClick={onClose}>Cancel</button>
+        <button className="btn-primary" style={{flex:2,opacity:!name?0.45:1}} disabled={!name} onClick={()=>onSave(name)}>Create Room 🏠</button>
+      </div>
+    </div>
+  );
+}
+
+function JoinModal({onJoin, onClose}) {
+  const [code, setCode] = useState('');
+  return (
+    <div className="modal">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <h2 style={{margin:0}}>Join Room</h2>
+        <button className="btn" style={{padding:'4px 8px'}} onClick={onClose}><i className="ti ti-x" style={{fontSize:18}} aria-hidden="true"></i></button>
+      </div>
+      <div style={{marginBottom:16}}><label>Room code</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder='XXXXXX' maxLength={6} style={{textTransform:'uppercase',letterSpacing:5,fontSize:22,textAlign:'center'}} autoFocus /></div>
+      <div style={{display:'flex',gap:10}}>
+        <button className="btn" style={{flex:1}} onClick={onClose}>Cancel</button>
+        <button className="btn-primary" style={{flex:2,opacity:code.length!==6?0.45:1}} disabled={code.length!==6} onClick={()=>onJoin(code)}>Join Room 🚪</button>
+      </div>
+    </div>
+  );
+}
+
+function WinnerModal({current, onPick, onClose}) {
+  const [sel, setSel] = useState(current||null);
+  const [filter, setFilter] = useState('');
+  const filtered = TEAMS.filter(t=>t.toLowerCase().includes(filter.toLowerCase()));
+  return (
+    <div className="modal" style={{maxWidth:480}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+        <h2 style={{margin:0}}>🏆 Tournament Winner</h2>
+        <button className="btn" style={{padding:'4px 8px'}} onClick={onClose}><i className="ti ti-x" style={{fontSize:18}} aria-hidden="true"></i></button>
+      </div>
+      <p style={{fontSize:13,color:'var(--muted)',marginBottom:12}}>Pick before Round of 32 starts (June 28). Correct pick = +10 bonus points!</p>
+      <input value={filter} onChange={e=>setFilter(e.target.value)} placeholder='Search team...' style={{marginBottom:10}} />
+      <div className="g3" style={{maxHeight:260,overflowY:'auto',marginBottom:16,padding:2}}>
+        {filtered.map(t=>(
+          <button key={t} onClick={()=>setSel(t)} style={{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:sel===t?'2px solid #1a56db':'1px solid var(--bdr)',background:sel===t?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--text)',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+            <span style={{fontSize:20}}>{F[t]||'🏳'}</span>
+            <span style={{textAlign:'center',lineHeight:1.2}}>{t}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{display:'flex',gap:10}}>
+        <button className="btn" style={{flex:1}} onClick={onClose}>Cancel</button>
+        <button className="btn-primary" style={{flex:2,opacity:!sel?0.45:1}} disabled={!sel} onClick={()=>onPick(sel)}>Pick {sel?(F[sel]||'')+' '+sel:'winner'} 🏆</button>
+      </div>
+    </div>
+  );
+}
+
+function ResultModal({match, existing, onSave, onClose}) {
+  const [h, setH] = useState(existing?.h ?? 0);
+  const [a, setA] = useState(existing?.a ?? 0);
+  return (
+    <div className="modal">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <h2 style={{margin:0}}>Enter Result</h2>
+        <button className="btn" style={{padding:'4px 8px'}} onClick={onClose}><i className="ti ti-x" style={{fontSize:18}} aria-hidden="true"></i></button>
+      </div>
+      <div style={{textAlign:'center',marginBottom:14,fontSize:14,color:'var(--muted)'}}>{F[match.h]||''} {match.h} vs {match.a} {F[match.a]||''}</div>
+      <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:22,justifyContent:'center'}}>
+        <ScorePick val={h} onChange={setH} label={match.h} />
+        <span style={{fontFamily:'Barlow Condensed',fontSize:28,fontWeight:700,color:'var(--muted)'}}>–</span>
+        <ScorePick val={a} onChange={setA} label={match.a} />
+      </div>
+      <div style={{display:'flex',gap:10}}>
+        <button className="btn" style={{flex:1}} onClick={onClose}>Cancel</button>
+        <button className="btn-primary" style={{flex:2}} onClick={()=>onSave(match.id,h,a)}>Save result ✅</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
