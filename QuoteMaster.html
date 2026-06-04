@@ -216,6 +216,27 @@ table{width:100%;border-collapse:collapse}
 .doc .d-foot{margin-top:40px;text-align:center;font-size:11px;color:#9a9ca3}
 .doc .d-stamp{display:inline-block;border:2px solid var(--accent);color:var(--accent-ink);font-family:'Fraunces',serif;font-weight:700;padding:4px 14px;border-radius:8px;transform:rotate(-4deg);font-size:15px;text-transform:uppercase;letter-spacing:.05em}
 
+/* ---- Zakat module ---- */
+.zk-hero{background:linear-gradient(135deg,#0f6d5a,#083d2f);color:#fff;border-radius:14px;padding:22px 24px;margin-bottom:16px;position:relative;overflow:hidden}
+.zk-hero::after{content:"☪";position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.1;line-height:1;pointer-events:none}
+.zk-hero h2{font-size:20px;font-weight:700;margin-bottom:4px}
+.zk-hero .sub{font-size:13px;opacity:.85;margin-top:6px}
+.zk-result{border:2px solid var(--accent);border-radius:14px;padding:18px 22px;margin-bottom:14px;text-align:center}
+.zk-result.none{border-color:var(--line);background:var(--paper)}
+.zk-result .lbl{font-size:12.5px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.zk-result .amt{font-size:38px;font-weight:700;color:var(--accent-ink);font-family:'Spline Sans Mono',monospace;margin:6px 0 4px}
+.zk-result.none .amt{font-size:20px;color:var(--ink-soft)}
+.zk-sec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.zk-sec h4{font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.zk-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.zk-row:last-child{border-bottom:none}
+.zk-row .v{font-family:'Spline Sans Mono',monospace;font-weight:600}
+.zk-total{padding-top:10px;font-weight:700;font-size:15px;border-top:2px solid var(--line)}
+.zk-total .v{color:var(--accent-ink);font-size:16px}
+.zk-deduct .v{color:var(--danger)}
+.auto-tag{font-size:10.5px;background:var(--accent-soft);color:var(--accent-ink);padding:1px 7px;border-radius:20px;font-weight:600;vertical-align:middle;margin-left:5px}
+.nisab-ok{display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;background:var(--accent-soft);color:var(--accent-ink)}
+.nisab-no{display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;background:var(--line);color:var(--ink-soft)}
 /* ---- Stock management ---- */
 .stk-good{background:#e3f0ea;color:#0b5345}
 .stk-low{background:var(--amber-soft);color:var(--amber)}
@@ -236,6 +257,33 @@ table{width:100%;border-collapse:collapse}
 .audit-grid input[type=number]{width:68px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;font-size:14px;text-align:right;background:var(--paper);font-family:inherit}
 .audit-grid .pos-var{color:var(--accent);font-weight:700}.audit-grid .neg-var{color:var(--danger);font-weight:700}
 @media(max-width:900px){.audit-grid{grid-template-columns:1fr 68px 68px 68px 90px}}
+/* ---- Zakat module ---- */
+.zakat-header{background:linear-gradient(135deg,#0f6d5a 0%,#0a4a3d 100%);color:#fff;border-radius:14px;padding:22px 24px;margin-bottom:18px;position:relative;overflow:hidden}
+.zakat-header::after{content:"☪";position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:72px;opacity:.12;line-height:1}
+.zakat-header h2{font-family:'Fraunces',serif;font-size:22px;margin-bottom:4px}
+.zakat-header .nsb{font-size:13px;opacity:.85;margin-top:6px}
+.zakat-due{background:var(--accent-soft);border:2px solid var(--accent);border-radius:14px;padding:18px 22px;text-align:center;margin-bottom:18px}
+.zakat-due .lbl{font-size:13px;color:var(--ink-soft);font-weight:600}
+.zakat-due .amt{font-size:36px;font-weight:700;color:var(--accent-ink);font-family:'Spline Sans Mono',monospace;margin:6px 0}
+.zakat-due.below-nisab{background:var(--paper);border-color:var(--line)}
+.zakat-due.below-nisab .amt{color:var(--ink-soft);font-size:22px}
+.zakat-section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.zakat-section h4{font-size:13px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.zakat-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.zakat-row:last-child{border-bottom:none}
+.zakat-row .lbl{font-size:13.5px}
+.zakat-row .val{font-family:'Spline Sans Mono',monospace;font-weight:600;font-size:14px}
+.zakat-row.total-row{padding-top:10px;margin-top:4px;border-top:2px solid var(--line)}
+.zakat-row.total-row .lbl{font-weight:700;font-size:15px}
+.zakat-row.total-row .val{font-size:16px;color:var(--accent-ink)}
+.zakat-row.deduct .val{color:var(--danger)}
+.nisab-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700}
+.above-nisab{background:var(--accent-soft);color:var(--accent-ink)}
+.below-nisab{background:var(--line);color:var(--ink-soft)}
+.zakat-history-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.zakat-history-row:last-child{border-bottom:none}
+.auto-tag{font-size:11px;background:var(--accent-soft);color:var(--accent-ink);padding:1px 7px;border-radius:20px;font-weight:600;margin-left:6px}
+
 /* ---- Finance / Expenses ---- */
 .margin-pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px}
 .margin-good{background:#e3f0ea;color:#0b5345}
@@ -437,6 +485,8 @@ table{width:100%;border-collapse:collapse}
         <a data-view="employees"><span class="ic" data-i="badge"></span> Employees</a>
         <div class="nav-group">Finance</div>
         <a data-view="expenses"><span class="ic" data-i="wallet"></span> Expenses</a>
+        <a data-view="zakat"><span class="ic" data-i="moon"></span> Zakat ☪</a>
+        <a data-view="zakat"><span class="ic" data-i="moon"></span> Zakat</a>
         <div class="nav-group">Sales</div>
         <a data-view="quotations"><span class="ic" data-i="doc"></span> Quotations</a>
         <a data-view="invoices"><span class="ic" data-i="receipt"></span> Invoices</a>
@@ -519,7 +569,8 @@ const ICONS={
  barcode:'<path d="M3 5v14M7 5v14M11 5v14M15 5v3M15 16v3M19 5v3M19 16v3M15 10v4M19 10v4"/>',
  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M8 12h8"/>',
  layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
- arrowup:'<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>'
+ arrowup:'<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>',
+ moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
 };
 function renderIcons(scope=document){scope.querySelectorAll('.ic[data-i]').forEach(s=>{if(s.dataset.done)return;s.dataset.done=1;s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;width:100%;height:100%">${ICONS[s.dataset.i]||''}</svg>`;});}
 function svg(name,w=16){return `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
@@ -675,6 +726,8 @@ function launchApp(){
   if(State.db && !Array.isArray(State.db.expenses))      State.db.expenses=[];
   if(State.db && !Array.isArray(State.db.stockMovements)) State.db.stockMovements=[];
   if(State.db && !Array.isArray(State.db.stockAudits))    State.db.stockAudits=[];
+  if(State.db && !Array.isArray(State.db.zakatRecords))   State.db.zakatRecords=[];
+  if(State.db){const s=State.db.settings;if(!s.zakatNisabStd)s.zakatNisabStd='silver';if(!s.zakatSilverPrice)s.zakatSilverPrice=32.82;if(!s.zakatGoldPrice)s.zakatGoldPrice=440;}
   const DEFAULT_UOMS=['pc','box','hr','kg','g','L','mL','m','cm','ft','dozen','ream','pair','set','service','month','day','km'];
   if(State.db){ const s=State.db.settings; if(!s.uoms||!s.uoms.length)s.uoms=[...DEFAULT_UOMS]; }
   if(State.db){ const s=State.db.settings; if(!s.senderName)s.senderName=s.businessName||''; if(!s.senderEmail)s.senderEmail=s.email||''; if(!s.posPrefix)s.posPrefix='TXN-'; if(!State.db.counters.pos)State.db.counters.pos=1; if(!s.posToken){s.posToken=uid();setTimeout(()=>persist(),200);} }
@@ -718,7 +771,7 @@ document.getElementById('upgradeBtn').onclick=openUpgrade;
    ROUTER
    ============================================================ */
 const PRO_VIEWS=['deliveries','email','team','expenses'];
-const TITLES={dashboard:'Dashboard',items:'Products',stock:'Stock',customers:'Customers',pos:'Point of Sale',employees:'Employees',expenses:'Expenses',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
+const TITLES={dashboard:'Dashboard',items:'Products',stock:'Stock',customers:'Customers',pos:'Point of Sale',employees:'Employees',expenses:'Expenses',zakat:'Zakat Calculator',quotations:'Quotations',invoices:'Invoices',deliveries:'Deliveries',email:'Email',team:'Team Access',settings:'Settings',admin:'Portal Admin'};
 function go(view){
   if(view==='admin'&&!State.isAdmin){view='dashboard';}
   State.view=view;
@@ -726,7 +779,7 @@ function go(view){
   document.getElementById('pageTitle').textContent=TITLES[view];
   const c=document.getElementById('content');
   if(PRO_VIEWS.includes(view)&&!isPro()){c.innerHTML=lockedView(view);renderIcons(c);return;}
-  ({dashboard:viewDashboard,items:viewItems,stock:viewStock,customers:viewCustomers,pos:viewPOS,employees:viewEmployees,expenses:viewExpenses,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,team:viewTeam,settings:viewSettings,admin:viewAdmin}[view])();
+  ({dashboard:viewDashboard,items:viewItems,stock:viewStock,customers:viewCustomers,pos:viewPOS,employees:viewEmployees,expenses:viewExpenses,zakat:viewZakat,quotations:()=>viewDocs('quote'),invoices:()=>viewDocs('invoice'),deliveries:viewDeliveries,email:viewEmail,team:viewTeam,settings:viewSettings,admin:viewAdmin}[view])();
   renderIcons(c);
 }
 document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a[data-view]');if(a){go(a.dataset.view);toggleNav(false);}});
@@ -1721,6 +1774,511 @@ function saveSettings(){
   s.senderName=val('s_sname')||s.businessName;s.senderEmail=val('s_semail')||s.email;
   if(val('s_pos'))s.posPrefix=val('s_pos');
   persist();refreshChrome();toast('Settings saved');
+}
+
+/* ============================================================
+   ZAKAT CALCULATOR
+   ============================================================ */
+/* ============================================================
+   ZAKAT CALCULATOR  — zakāt al-māl
+   2.5 % on net qualifying wealth above nisab.
+   Maldives: pay via MIRA 510 form.
+   ============================================================ */
+
+function zkHijriYear() {
+  return String(Math.floor((new Date().getFullYear() - 622) * 1.0307)) + ' AH';
+}
+function zkNisab(rec) {
+  var s   = State.db.settings;
+  var std = rec.nisabStd || s.zakatNisabStd || 'silver';
+  var sp  = +(rec.silverPrice  || s.zakatSilverPrice) || 32.82;
+  var gp  = +(rec.goldPrice    || s.zakatGoldPrice)   || 440;
+  return std === 'gold' ? 85 * gp : 595 * sp;
+}
+function zkCalc(rec) {
+  var s   = State.db.settings;
+  var gp  = +(rec.goldPrice   || s.zakatGoldPrice)   || 0;
+  var sp  = +(rec.silverPrice || s.zakatSilverPrice)  || 32.82;
+  var total =
+    (+(rec.inventory    || 0)) +
+    (+(rec.receivables  || 0)) +
+    (+(rec.cashInHand   || 0)) +
+    (+(rec.bankBalance  || 0)) +
+    (+(rec.goldGrams    || 0)) * gp +
+    (+(rec.silverGrams  || 0)) * sp +
+    (+(rec.loanedMoney  || 0)) +
+    (+(rec.investments  || 0)) +
+    (+(rec.otherAssets  || 0));
+  var debts  = (+(rec.immediateDebts || 0)) + (+(rec.otherDebts || 0));
+  var net    = Math.max(0, total - debts);
+  var nisab  = zkNisab(rec);
+  var above  = net >= nisab;
+  var due    = above ? +(net * 0.025).toFixed(2) : 0;
+  return { total: total, debts: debts, net: net, nisab: nisab, above: above, due: due };
+}
+
+/* ---- current edit record (used by calculator form) ---- */
+var _zkRec    = {};
+var _zkEditId = null;
+
+/* ---- main list view ---- */
+function viewZakat() {
+  var s       = State.db.settings;
+  var records = (State.db.zakatRecords || []).slice().sort(function(a, b) {
+    return b.date > a.date ? 1 : -1;
+  });
+  var nisab    = zkNisab({});
+  var stdLabel = (s.zakatNisabStd === 'gold') ? 'Gold (85 g)' : 'Silver (595 g)';
+  var stdPrice = (s.zakatNisabStd === 'gold') ? s.zakatGoldPrice : s.zakatSilverPrice;
+
+  var heroHtml =
+    '<div class="zk-hero">' +
+      '<h2>☪ Zakat al-Māl Calculator</h2>' +
+      '<p style="opacity:.85;font-size:13.5px;margin-top:3px">Annual 2.5 % obligation on net qualifying wealth above the nisab.</p>' +
+      '<div class="sub">' +
+        'Current nisab (' + stdLabel + ' standard): <strong>' + money(nisab) + '</strong>' +
+        ' <span style="opacity:.7;font-size:11.5px;margin-left:6px">(' + stdLabel + ' &times; ' +
+        money(stdPrice).split(' ').pop() + ' / g)</span>' +
+      '</div>' +
+    '</div>';
+
+  var tableRows = '';
+  for (var i = 0; i < records.length; i++) {
+    var r   = records[i];
+    var res = zkCalc(r);
+    var dueCell  = res.above ? money(res.due)   : '<span class="muted">Below nisab</span>';
+    var dueColor = res.above ? 'var(--accent-ink)' : '';
+    var statusHtml = r.paid
+      ? '<span class="pill paid">Paid ✓</span>'
+      : '<span class="pill unpaid">Unpaid</span>';
+    tableRows +=
+      '<tr>' +
+        '<td style="font-weight:600">' + esc(r.hijriYear || '—') + '</td>' +
+        '<td class="muted">' + fmtDate(r.date) + '</td>' +
+        '<td class="muted" style="font-size:12.5px">' +
+          (r.nisabStd === 'gold' ? 'Gold 85 g' : 'Silver 595 g') +
+        '</td>' +
+        '<td class="mono">' + money(res.net) + '</td>' +
+        '<td class="mono" style="font-weight:700;color:' + dueColor + '">' + dueCell + '</td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td><div class="rowacts">' +
+          '<button class="iconbtn" onclick="zkOpenEdit(\'' + r.id + '\')">' + svg('edit') + '</button>' +
+          '<button class="iconbtn" onclick="zkDelete(\'' + r.id + '\')">' + svg('trash') + '</button>' +
+        '</div></td>' +
+      '</tr>';
+  }
+  var tableHtml = records.length
+    ? '<div class="tbl"><table>' +
+        '<thead><tr><th>Hijri Year</th><th>Date</th><th>Standard</th>' +
+        '<th>Net Wealth</th><th>Zakat Due</th><th>Status</th><th></th></tr></thead>' +
+        '<tbody>' + tableRows + '</tbody>' +
+      '</table></div>'
+    : emptyBox('No zakat calculations yet',
+        'Start a new calculation to determine your annual zakat obligation.');
+
+  var infoHtml =
+    '<div class="card pad" style="margin-top:16px;font-size:13px;color:var(--ink-soft)">' +
+      '<b style="color:var(--ink)">&#8505; Paying in the Maldives</b><br>' +
+      'Zakat al-m&#257;l is collected by ' +
+      '<a href="https://www.mira.gov.mv" target="_blank" class="linkish">MIRA</a> ' +
+      'using the <b>MIRA 510 form</b>. Pay online at mira.gov.mv, at the Taxpayer ' +
+      'Service Centre, or at your local island council.<br>' +
+      'Ministry of Islamic Affairs: <b>800&nbsp;300&nbsp;8901</b> &nbsp;&middot;&nbsp; ' +
+      'MIRA hotline: <b>1415</b>' +
+    '</div>';
+
+  var toolbarHtml =
+    '<div class="between" style="margin-bottom:14px">' +
+      '<div></div>' +
+      '<div class="row" style="gap:8px">' +
+        '<button class="btn ghost sm" onclick="zkOpenSettings()">&#9881; Nisab settings</button>' +
+        '<button class="btn accent" onclick="zkStartNew()">+ New Calculation</button>' +
+      '</div>' +
+    '</div>';
+
+  var c = document.getElementById('content');
+  c.innerHTML = heroHtml + toolbarHtml + tableHtml + infoHtml;
+  renderIcons(c);
+}
+
+/* ---- start new / open existing ---- */
+function zkStartNew() {
+  var s = State.db.settings;
+  var inventory = State.db.items
+    .filter(function(i) { return i.trackStock !== false && (i.stockQty || 0) > 0; })
+    .reduce(function(t, i) { return t + (i.stockQty || 0) * (i.costPrice || 0); }, 0);
+  var receivables = State.db.invoices
+    .filter(function(i) { return i.status !== 'paid'; })
+    .reduce(function(t, i) { return t + ((i.totals && i.totals.total) || 0); }, 0);
+  _zkRec = {
+    id: uid(), date: todayISO(), hijriYear: zkHijriYear(),
+    nisabStd: s.zakatNisabStd, silverPrice: s.zakatSilverPrice, goldPrice: s.zakatGoldPrice,
+    inventory: inventory, receivables: receivables,
+    cashInHand: 0, bankBalance: 0, goldGrams: 0, silverGrams: 0,
+    loanedMoney: 0, investments: 0, otherAssets: 0,
+    immediateDebts: 0, otherDebts: 0,
+    paid: false, paidDate: '', paidAmount: 0, paidVia: '', notes: ''
+  };
+  _zkEditId = null;
+  zkRenderCalc();
+}
+function zkOpenEdit(id) {
+  var r = (State.db.zakatRecords || []).find(function(x) { return x.id === id; });
+  if (!r) return;
+  _zkRec    = JSON.parse(JSON.stringify(r));
+  _zkEditId = id;
+  zkRenderCalc();
+}
+
+/* ---- build calculator form ---- */
+function zkInputRow(label, id, hint, oninput) {
+  var v = +(_zkRec[id.replace('zk_', '').replace('zk', '')] || 0);
+  /* map field id to rec key */
+  var keyMap = {
+    zk_inv:  'inventory',  zk_rec:  'receivables', zk_cash: 'cashInHand',
+    zk_bank: 'bankBalance',zk_gg:   'goldGrams',    zk_sg:   'silverGrams',
+    zk_loan: 'loanedMoney',zk_inv2: 'investments',  zk_oth:  'otherAssets',
+    zk_dbt1: 'immediateDebts', zk_dbt2: 'otherDebts',
+    zk_sp:   'silverPrice', zk_gp: 'goldPrice'
+  };
+  v = +(_zkRec[keyMap[id]] || 0);
+  return '<div class="field">' +
+    '<label>' + label + '</label>' +
+    '<input id="' + id + '" type="number" step="0.01" value="' + v + '" oninput="' + oninput + '">' +
+    (hint ? '<div class="muted" style="font-size:12px;margin-top:3px">' + hint + '</div>' : '') +
+    '</div>';
+}
+function zkRenderCalc() {
+  var r   = _zkRec;
+  var res = zkCalc(r);
+  var s   = State.db.settings;
+  var invCount = State.db.items.filter(function(i) {
+    return i.trackStock !== false && (i.stockQty || 0) > 0;
+  }).length;
+  var unpaidCount = State.db.invoices.filter(function(i) { return i.status !== 'paid'; }).length;
+
+  /* --- section: meta --- */
+  var metaSec =
+    '<div class="zk-sec">' +
+      '<h4>' + svg('moon', 13) + ' Hawl & Nisab</h4>' +
+      '<div class="fgrid">' +
+        '<div class="field"><label>Hijri year</label>' +
+          '<input id="zk_yr" value="' + esc(r.hijriYear) + '" oninput="_zkRec.hijriYear=this.value"></div>' +
+        '<div class="field"><label>Calculation date</label>' +
+          '<input type="date" id="zk_dt" value="' + r.date + '" oninput="_zkRec.date=this.value"></div>' +
+        '<div class="field"><label>Nisab standard</label>' +
+          '<select id="zk_std" onchange="_zkRec.nisabStd=this.value;zkUpdateSide()">' +
+            '<option value="silver"' + (r.nisabStd === 'silver' ? ' selected' : '') + '>Silver 595 g &mdash; recommended</option>' +
+            '<option value="gold"'  + (r.nisabStd === 'gold'   ? ' selected' : '') + '>Gold 85 g</option>' +
+          '</select></div>' +
+        '<div class="field"><label>Silver price / g (' + esc(s.currency) + ')</label>' +
+          '<input id="zk_sp" type="number" step="0.01" value="' + r.silverPrice + '" oninput="_zkRec.silverPrice=+this.value;zkUpdateSide()"></div>' +
+        '<div class="field"><label>Gold price / g (' + esc(s.currency) + ')</label>' +
+          '<input id="zk_gp" type="number" step="0.01" value="' + r.goldPrice + '" oninput="_zkRec.goldPrice=+this.value;zkUpdateSide()"></div>' +
+        '<div class="field" style="align-self:end"><label>Nisab at these prices</label>' +
+          '<div id="zk_nisab_val" style="padding:9px 12px;border:1px solid var(--accent);border-radius:10px;font-weight:700;color:var(--accent-ink);background:var(--accent-soft)">' +
+            money(res.nisab) +
+          '</div></div>' +
+      '</div>' +
+    '</div>';
+
+  /* --- section: business --- */
+  var bizSec =
+    '<div class="zk-sec">' +
+      '<h4>&#127978; Business Assets</h4>' +
+      '<div class="fgrid">' +
+        '<div class="field"><label>Inventory cost value <span class="auto-tag">auto</span></label>' +
+          '<input id="zk_inv" type="number" step="0.01" value="' + (+(r.inventory || 0)) + '" oninput="_zkRec.inventory=+this.value;zkUpdateSide()">' +
+          '<div class="muted" style="font-size:12px;margin-top:3px">' + invCount + ' product lines in stock</div></div>' +
+        '<div class="field"><label>Receivables — unpaid invoices <span class="auto-tag">auto</span></label>' +
+          '<input id="zk_rec" type="number" step="0.01" value="' + (+(r.receivables || 0)) + '" oninput="_zkRec.receivables=+this.value;zkUpdateSide()">' +
+          '<div class="muted" style="font-size:12px;margin-top:3px">' + unpaidCount + ' unpaid invoice(s)</div></div>' +
+      '</div>' +
+    '</div>';
+
+  /* --- section: personal assets --- */
+  var persSec =
+    '<div class="zk-sec">' +
+      '<h4>&#128176; Personal &amp; Other Assets</h4>' +
+      '<div class="fgrid">' +
+        '<div class="field"><label>Cash in hand (' + esc(s.currency) + ')</label>' +
+          '<input id="zk_cash" type="number" step="0.01" value="' + (+(r.cashInHand || 0)) + '" oninput="_zkRec.cashInHand=+this.value;zkUpdateSide()"></div>' +
+        '<div class="field"><label>Bank balance(s)</label>' +
+          '<input id="zk_bank" type="number" step="0.01" value="' + (+(r.bankBalance || 0)) + '" oninput="_zkRec.bankBalance=+this.value;zkUpdateSide()"></div>' +
+        '<div class="field"><label>Gold owned (grams)</label>' +
+          '<input id="zk_gg" type="number" step="0.01" value="' + (+(r.goldGrams || 0)) + '" oninput="_zkRec.goldGrams=+this.value;zkUpdateSide()">' +
+          '<div class="muted" style="font-size:12px;margin-top:3px">Value: ' + money((+(r.goldGrams || 0)) * (+(r.goldPrice || s.zakatGoldPrice) || 0)) + '</div></div>' +
+        '<div class="field"><label>Silver owned (grams)</label>' +
+          '<input id="zk_sg" type="number" step="0.01" value="' + (+(r.silverGrams || 0)) + '" oninput="_zkRec.silverGrams=+this.value;zkUpdateSide()">' +
+          '<div class="muted" style="font-size:12px;margin-top:3px">Value: ' + money((+(r.silverGrams || 0)) * (+(r.silverPrice || s.zakatSilverPrice) || 0)) + '</div></div>' +
+        '<div class="field"><label>Money lent out (expected back)</label>' +
+          '<input id="zk_loan" type="number" step="0.01" value="' + (+(r.loanedMoney || 0)) + '" oninput="_zkRec.loanedMoney=+this.value;zkUpdateSide()"></div>' +
+        '<div class="field"><label>Investments &amp; shares</label>' +
+          '<input id="zk_inv2" type="number" step="0.01" value="' + (+(r.investments || 0)) + '" oninput="_zkRec.investments=+this.value;zkUpdateSide()"></div>' +
+        '<div class="field full"><label>Other zakatable assets</label>' +
+          '<input id="zk_oth" type="number" step="0.01" value="' + (+(r.otherAssets || 0)) + '" oninput="_zkRec.otherAssets=+this.value;zkUpdateSide()"></div>' +
+      '</div>' +
+    '</div>';
+
+  /* --- section: debts --- */
+  var debtSec =
+    '<div class="zk-sec">' +
+      '<h4>&#128184; Deductible Debts</h4>' +
+      '<p class="muted" style="font-size:12.5px;margin-bottom:10px">Only debts currently due may be deducted. Long-term debts not yet due are excluded.</p>' +
+      '<div class="fgrid">' +
+        '<div class="field"><label>Immediate debts / bills due now</label>' +
+          '<input id="zk_dbt1" type="number" step="0.01" value="' + (+(r.immediateDebts || 0)) + '" oninput="_zkRec.immediateDebts=+this.value;zkUpdateSide()"></div>' +
+        '<div class="field"><label>Other eligible debts</label>' +
+          '<input id="zk_dbt2" type="number" step="0.01" value="' + (+(r.otherDebts || 0)) + '" oninput="_zkRec.otherDebts=+this.value;zkUpdateSide()"></div>' +
+      '</div>' +
+    '</div>';
+
+  /* --- section: notes --- */
+  var notesSec =
+    '<div class="zk-sec">' +
+      '<h4>&#128203; Notes</h4>' +
+      '<div class="field"><textarea id="zk_notes" rows="2" placeholder="Optional notes about this calculation…" oninput="_zkRec.notes=this.value">' +
+        esc(r.notes || '') +
+      '</textarea></div>' +
+    '</div>';
+
+  var btnHtml =
+    '<div class="row" style="gap:10px;margin-top:8px;flex-wrap:wrap">' +
+      '<button class="btn ghost" onclick="viewZakat()">&#8592; Back</button>' +
+      '<button class="btn accent" onclick="zkSave()">Save calculation</button>' +
+    '</div>';
+
+  var sideHtml = zkBuildSide(res, r);
+
+  var colsCss = isMob() ? '1fr' : '1fr 340px';
+  document.getElementById('content').innerHTML =
+    '<div style="display:grid;grid-template-columns:' + colsCss + ';gap:16px;align-items:start">' +
+      '<div>' + metaSec + bizSec + persSec + debtSec + notesSec + btnHtml + '</div>' +
+      '<div id="zk_side">' + sideHtml + '</div>' +
+    '</div>';
+}
+
+/* ---- sidebar / result panel ---- */
+function zkBuildSide(res, r) {
+  var s   = State.db.settings;
+  var gp  = +(r.goldPrice   || s.zakatGoldPrice)   || 0;
+  var sp  = +(r.silverPrice || s.zakatSilverPrice)  || 32.82;
+
+  /* result card */
+  var resCard;
+  if (res.above) {
+    resCard =
+      '<div class="zk-result">' +
+        '<div class="lbl">&#9728; Zakat due (2.5 %)</div>' +
+        '<div class="amt">' + money(res.due) + '</div>' +
+        '<span class="nisab-ok">&#10003; Above nisab</span>' +
+      '</div>';
+  } else {
+    resCard =
+      '<div class="zk-result none">' +
+        '<div class="lbl">Nisab check</div>' +
+        '<div class="amt">Alhamdulillah</div>' +
+        '<span class="nisab-no">Below nisab — no zakat due</span>' +
+      '</div>';
+  }
+
+  /* breakdown rows */
+  var brkRows = '';
+  var lines = [
+    ['Business inventory',   +(r.inventory    || 0)],
+    ['Receivables',          +(r.receivables  || 0)],
+    ['Cash in hand',         +(r.cashInHand   || 0)],
+    ['Bank balance',         +(r.bankBalance  || 0)],
+    ['Gold (' + (+(r.goldGrams   || 0)) + ' g)',   (+(r.goldGrams   || 0)) * gp],
+    ['Silver (' + (+(r.silverGrams || 0)) + ' g)', (+(r.silverGrams || 0)) * sp],
+    ['Loaned money',         +(r.loanedMoney  || 0)],
+    ['Investments',          +(r.investments  || 0)],
+    ['Other assets',         +(r.otherAssets  || 0)]
+  ];
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i][1] > 0) {
+      brkRows +=
+        '<div class="zk-row"><span>' + lines[i][0] + '</span>' +
+        '<span class="v">' + money(lines[i][1]) + '</span></div>';
+    }
+  }
+  brkRows +=
+    '<div class="zk-row zk-total"><span>Total assets</span>' +
+    '<span class="v">' + money(res.total) + '</span></div>';
+  if (res.debts > 0) {
+    brkRows +=
+      '<div class="zk-row zk-deduct"><span>Less: debts</span>' +
+      '<span class="v">&#8722;' + money(res.debts) + '</span></div>';
+  }
+  brkRows +=
+    '<div class="zk-row" style="border-top:2px solid var(--accent);padding-top:8px;font-weight:700">' +
+    '<span>Net zakatable wealth</span><span class="v" style="color:var(--accent-ink)">' + money(res.net) + '</span></div>';
+  brkRows +=
+    '<div class="zk-row"><span class="muted" style="font-size:12.5px">Nisab threshold</span>' +
+    '<span class="v muted" style="font-size:12.5px">' + money(res.nisab) + '</span></div>';
+  if (res.above) {
+    brkRows +=
+      '<div class="zk-row" style="border-top:2px solid var(--accent);margin-top:4px;padding-top:10px">' +
+      '<span style="font-weight:700;font-size:15px">Zakat (2.5 %)</span>' +
+      '<span class="v" style="font-size:18px;color:var(--accent-ink)">' + money(res.due) + '</span></div>';
+  }
+
+  /* payment button / paid stamp */
+  var payHtml;
+  if (r.paid) {
+    payHtml =
+      '<div class="card pad" style="background:var(--accent-soft);border-color:var(--accent);margin-top:12px;text-align:center">' +
+        '<div style="font-weight:700;color:var(--accent-ink)">&#10003; Paid</div>' +
+        '<div class="muted" style="font-size:12.5px">' +
+          fmtDate(r.paidDate) + ' &middot; ' + money(r.paidAmount) + ' via ' + esc(r.paidVia || '') +
+        '</div>' +
+      '</div>';
+  } else {
+    payHtml = '<button class="btn amber block" style="margin-top:12px" onclick="zkRecordPayment()">Record MIRA payment</button>';
+  }
+
+  /* MIRA guidance */
+  var miraHtml =
+    '<div class="card pad" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft)">' +
+      '<b style="color:var(--ink)">Pay via MIRA (Maldives)</b><br>' +
+      'Form <b>MIRA 510</b> &mdash; pay at ' +
+      '<a href="https://www.mira.gov.mv" target="_blank" class="linkish">mira.gov.mv</a>' +
+      ', Taxpayer Service Centre, or local island council.<br>' +
+      'MIRA hotline: <b>1415</b>' +
+    '</div>';
+
+  var stickyStyle = isMob() ? 'static' : 'sticky';
+  return '<div style="position:' + stickyStyle + ';top:80px">' +
+    resCard +
+    '<div class="zk-sec"><h4>Breakdown</h4>' + brkRows + '</div>' +
+    payHtml + miraHtml +
+  '</div>';
+}
+
+/* ---- live update sidebar ---- */
+function zkUpdateSide() {
+  var side = document.getElementById('zk_side');
+  if (!side) return;
+  side.innerHTML = zkBuildSide(zkCalc(_zkRec), _zkRec);
+  var nd = document.getElementById('zk_nisab_val');
+  if (nd) nd.textContent = money(zkCalc(_zkRec).nisab);
+}
+
+/* ---- save ---- */
+function zkSave() {
+  if (!State.db.zakatRecords) State.db.zakatRecords = [];
+  var res = zkCalc(_zkRec);
+  var rec = JSON.parse(JSON.stringify(_zkRec));
+  rec.calcTotal = res.total;
+  rec.calcDebts = res.debts;
+  rec.calcNet   = res.net;
+  rec.calcNisab = res.nisab;
+  rec.calcAbove = res.above;
+  rec.calcDue   = res.due;
+  if (_zkEditId) {
+    var ix = State.db.zakatRecords.findIndex(function(x) { return x.id === _zkEditId; });
+    if (ix >= 0) { State.db.zakatRecords[ix] = rec; }
+    else { State.db.zakatRecords.unshift(rec); }
+  } else {
+    State.db.zakatRecords.unshift(rec);
+  }
+  /* persist nisab settings for next time */
+  State.db.settings.zakatNisabStd   = _zkRec.nisabStd;
+  State.db.settings.zakatSilverPrice = +(_zkRec.silverPrice) || 32.82;
+  State.db.settings.zakatGoldPrice   = +(_zkRec.goldPrice)   || 0;
+  persist();
+  toast('Zakat calculation saved');
+  viewZakat();
+}
+
+/* ---- record payment ---- */
+function zkRecordPayment() {
+  var res = zkCalc(_zkRec);
+  var amtVal = res.due;
+  var s = State.db.settings;
+  var bodyHtml =
+    '<div class="fgrid">' +
+      '<div class="field"><label>Payment date</label>' +
+        '<input id="zp_dt" type="date" value="' + todayISO() + '"></div>' +
+      '<div class="field"><label>Amount paid (' + esc(s.currency) + ')</label>' +
+        '<input id="zp_amt" type="number" step="0.01" value="' + amtVal + '"></div>' +
+      '<div class="field"><label>Paid via</label>' +
+        '<select id="zp_via">' +
+          '<option value="MIRA 510">MIRA (MIRA 510 form)</option>' +
+          '<option value="Local Council">Island / Local Council</option>' +
+          '<option value="Direct">Direct to recipients</option>' +
+          '<option value="Other">Other</option>' +
+        '</select></div>' +
+      '<div class="field"><label>Reference / MIRA receipt no.</label>' +
+        '<input id="zp_ref" placeholder="Optional"></div>' +
+    '</div>';
+  openModal('Record Zakat Payment', bodyHtml, [
+    { label: 'Cancel', cls: 'ghost', fn: closeModal },
+    { label: 'Mark as paid ✓', cls: 'accent', fn: function() {
+      _zkRec.paid      = true;
+      _zkRec.paidDate  = val('zp_dt');
+      _zkRec.paidAmount = +(val('zp_amt')) || 0;
+      _zkRec.paidVia   = val('zp_via');
+      if (val('zp_ref')) _zkRec.notes = (_zkRec.notes ? _zkRec.notes + '\n' : '') + val('zp_ref');
+      closeModal();
+      zkSave();
+      toast('Payment recorded. JazakAllah Khair. \uD83E\uDD32');
+    }}
+  ]);
+}
+
+/* ---- delete ---- */
+function zkDelete(id) {
+  confirmDel('Delete this zakat calculation?', function() {
+    State.db.zakatRecords = (State.db.zakatRecords || []).filter(function(x) { return x.id !== id; });
+    persist();
+    viewZakat();
+    toast('Calculation deleted');
+  });
+}
+
+/* ---- nisab settings modal ---- */
+function zkOpenSettings() {
+  var s = State.db.settings;
+  var nisabSilver = 595 * (+s.zakatSilverPrice || 0);
+  var nisabGold   = 85  * (+s.zakatGoldPrice   || 0);
+  var bodyHtml =
+    '<p class="muted" style="margin-bottom:12px;font-size:13.5px">' +
+      'Enter today\'s metal prices to get the correct nisab. ' +
+      'Check <a href="https://www.mira.gov.mv" target="_blank" class="linkish">MIRA</a> or a live price source.' +
+    '</p>' +
+    '<div class="fgrid">' +
+      '<div class="field"><label>Nisab standard</label>' +
+        '<select id="zs_std">' +
+          '<option value="silver"' + (s.zakatNisabStd === 'silver' ? ' selected' : '') + '>Silver 595 g &mdash; recommended (more inclusive)</option>' +
+          '<option value="gold"'   + (s.zakatNisabStd === 'gold'   ? ' selected' : '') + '>Gold 85 g</option>' +
+        '</select></div>' +
+      '<div class="field"><label>Silver price per gram (' + esc(s.currency) + ')</label>' +
+        '<input id="zs_sp" type="number" step="0.01" value="' + s.zakatSilverPrice + '"></div>' +
+      '<div class="field"><label>Gold price per gram (' + esc(s.currency) + ')</label>' +
+        '<input id="zs_gp" type="number" step="0.01" value="' + s.zakatGoldPrice + '"></div>' +
+      '<div class="field"><label>Resulting nisab values</label>' +
+        '<div style="padding:9px 12px;border:1px solid var(--accent);border-radius:10px;font-size:13.5px">' +
+          'Silver: <b>' + money(nisabSilver) + '</b><br>' +
+          'Gold: <b>' + money(nisabGold) + '</b>' +
+        '</div></div>' +
+    '</div>' +
+    '<div class="muted" style="font-size:12px;margin-top:10px">' +
+      'Dec 2025 MIRA official nisab: <b>MVR 19,527.90</b> (silver 595 g &times; MVR 32.82/g). ' +
+      'This changes when global silver prices move &mdash; verify before each calculation.' +
+    '</div>';
+  openModal('Nisab Settings', bodyHtml, [
+    { label: 'Cancel', cls: 'ghost', fn: closeModal },
+    { label: 'Save', cls: 'accent', fn: function() {
+      State.db.settings.zakatNisabStd    = val('zs_std');
+      State.db.settings.zakatSilverPrice = +(val('zs_sp')) || 32.82;
+      State.db.settings.zakatGoldPrice   = +(val('zs_gp')) || 0;
+      persist();
+      closeModal();
+      viewZakat();
+      toast('Nisab settings saved');
+    }}
+  ]);
 }
 
 /* ============================================================
