@@ -65,7 +65,9 @@ input{font-family:inherit;font-size:16px;color:var(--ink)}
 .item-tile:hover,.item-tile:active{background:var(--accent-soft);border-color:var(--accent)}
 .item-tile .t-name{font-weight:600;font-size:13px;line-height:1.3;margin-bottom:5px}
 .item-tile .t-price{font-size:14px;font-weight:700;color:var(--accent);font-family:'Spline Sans Mono',monospace}
-.item-tile .t-unit{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+.item-tile .t-stk{position:absolute;top:5px;right:6px;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px}
+.stk-good{background:#e3f0ea;color:#0b5345}.stk-low{background:#fbe7d2;color:#b45309}.stk-out{background:#f7dedc;color:#b3261e}
+.stk-dim{opacity:.35;cursor:not-allowed!important}
 .item-tile .t-badge{position:absolute;top:-7px;right:-7px;background:var(--accent);color:#fff;border-radius:20px;font-size:11px;font-weight:700;padding:2px 8px;min-width:24px;text-align:center}
 /* Cart panel */
 .pos-cart{width:340px;background:var(--card);border-left:1.5px solid var(--line);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
@@ -309,8 +311,15 @@ function renderItems(q) {
   const fmt = n => s.currencySymbol+' '+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('itemGrid').innerHTML = items.map(i => {
     const inCart = cart.find(c=>c.itemId===i.id);
-    return `<div class="item-tile" onclick="addToCart('${i.id}')">
+    const tracked = i.trackStock!==false;
+    const qty = i.stockQty||0;
+    const oos = tracked && qty<=0;
+    const low = tracked && i.reorderLevel>0 && qty<=i.reorderLevel && qty>0;
+    const stkCls = !tracked?'':oos?'stk-out':low?'stk-low':'stk-good';
+    const stkLabel = !tracked?'':oos?'Out':String(qty);
+    return `<div class="item-tile${oos?' stk-dim':''}" onclick="${oos?'':'addToCart(\''+i.id+'\')'}">
       ${inCart?`<div class="t-badge">${inCart.qty}</div>`:''}
+      ${tracked?`<div class="t-stk ${stkCls}">${stkLabel}</div>`:''}
       <div class="t-name">${esc(i.name)}</div>
       <div class="t-price">${fmt(i.unitPrice)}</div>
       <div class="t-unit">${esc(i.unit||'pc')}</div>
@@ -320,6 +329,13 @@ function renderItems(q) {
 
 function addToCart(itemId) {
   const item = (ctx.items||[]).find(i=>i.id===itemId); if(!item) return;
+  if (item.trackStock!==false) {
+    const inCart = cart.find(c=>c.itemId===itemId);
+    const cartQty = inCart ? inCart.qty : 0;
+    if ((item.stockQty||0) - cartQty <= 0) {
+      alert(item.name + ' is out of stock'); return;
+    }
+  }
   const ex = cart.find(c=>c.itemId===itemId);
   if (ex) ex.qty++; else cart.push({itemId, name:item.name, unitPrice:item.unitPrice, taxable:item.taxable!==false, qty:1, amount:item.unitPrice});
   calcCart(); updateCart(); renderItems(document.getElementById('posSearch').value);
