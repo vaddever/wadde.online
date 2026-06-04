@@ -1733,15 +1733,31 @@ function viewSettings(){
       </div>
     </div>
     <div class="card pad" style="grid-column:1/-1">
-      <h3 style="margin-bottom:4px">POS Staff Access Link</h3>
-      <p class="muted" style="font-size:12.5px;margin-bottom:12px">Share this link with your staff. They open it on any device to access the POS directly — no portal account needed, just their PIN.</p>
-      <div class="row" style="gap:8px;flex-wrap:wrap">
-        <input id="s_poslink" readonly onclick="this.select()" style="flex:1;min-width:200px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;background:var(--paper);cursor:text" value="${(location.href.split('?')[0].split('/').slice(0,-1).join('/')+'/')+'pos.html?t='+esc(s.posToken||'')}">
-        <button class="btn ghost sm" onclick="navigator.clipboard?.writeText(document.getElementById('s_poslink').value).then(()=>toast('POS link copied!'))">Copy link</button>
-        <button class="btn accent sm" onclick="window.open(document.getElementById('s_poslink').value,'_blank')">Open POS ↗</button>
-        <button class="btn ghost sm" onclick="resetPosToken()">Reset</button>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div>
+          <h3 style="margin-bottom:3px">POS Staff Access</h3>
+          <p class="muted" style="font-size:12.5px">Share this link with staff. They open it on any device and sign in with their PIN — no portal account needed.</p>
+        </div>
+        <button class="btn ghost tiny" style="flex-shrink:0;color:var(--danger);border-color:var(--danger)" onclick="resetPosToken()">Reset</button>
       </div>
-      <p class="muted" style="font-size:12px;margin-top:8px">Resetting the link immediately invalidates the old one — staff will need the new URL.</p>
+      <!-- URL display — tap to copy on mobile -->
+      <div onclick="copyPosLink()" title="Tap to copy" style="background:var(--paper);border:1.5px solid var(--line);border-radius:11px;padding:13px 14px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:10px;-webkit-user-select:none;user-select:none">
+        <span style="font-size:16px;flex-shrink:0">🔗</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:3px">Staff POS link — tap to copy</div>
+          <div style="font-size:12px;font-family:monospace;color:var(--accent-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(location.href.split('?')[0].split('/').slice(0,-1).join('/')+'/')+'pos.html?t='+esc(s.posToken||'')}</div>
+        </div>
+        <span style="font-size:18px;flex-shrink:0;opacity:.4">⎘</span>
+      </div>
+      <!-- hidden input for clipboard fallback -->
+      <input id="s_poslink" readonly style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px" value="${(location.href.split('?')[0].split('/').slice(0,-1).join('/')+'/')+'pos.html?t='+esc(s.posToken||'')}">
+      <!-- action buttons — stacked on mobile -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn accent" style="padding:13px" onclick="copyPosLink()">${svg('copy',15)} Copy link</button>
+        <button class="btn ghost" style="padding:13px" onclick="window.open(document.getElementById('s_poslink').value,'_blank')">Open POS ↗</button>
+      </div>
+      <button id="posShareBtn" style="display:none;width:100%;margin-top:8px;padding:11px" class="btn ghost" onclick="sharePosLink()">↑ Share link…</button>
+      <p class="muted" style="font-size:11.5px;margin-top:10px">Resetting the link immediately revokes all current staff access. Staff will need to bookmark the new URL.</p>
     </div>
     <div class="card pad" style="grid-column:1/-1">
       <h3 style="margin-bottom:4px">Units of measure (UOM)</h3>
@@ -1764,6 +1780,8 @@ function viewSettings(){
     </div>
    </div>`;
   document.getElementById('logoFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{State.db.settings.logo=r.result;document.getElementById('logoPrev').innerHTML=`<img src="${r.result}">`;persist();refreshChrome();};r.readAsDataURL(f);};
+  // Show native share button on mobile devices that support it
+  const sb=document.getElementById('posShareBtn');if(sb&&navigator.share)sb.style.display='block';
 }
 function saveSettings(){
   const s=State.db.settings;
@@ -2719,6 +2737,23 @@ async function removeInvite(email){
   });
 }
 
+function copyPosLink(){
+  var link=document.getElementById('s_poslink').value;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(link).then(function(){toast('POS link copied! Share it with staff.');}).catch(function(){fallbackCopyPosLink(link);});
+  } else { fallbackCopyPosLink(link); }
+}
+function fallbackCopyPosLink(link){
+  var el=document.getElementById('s_poslink');
+  el.style.cssText='position:fixed;top:50%;left:50%;opacity:1;width:80%;font-size:14px;padding:8px';
+  el.select();document.execCommand('copy');
+  el.style.cssText='position:absolute;opacity:0;pointer-events:none;width:1px;height:1px';
+  toast('POS link copied!');
+}
+function sharePosLink(){
+  var link=document.getElementById('s_poslink').value;
+  navigator.share({title:'POS Access Link',text:'Use this link to open the POS register:',url:link}).catch(function(){});
+}
 function addUOM(){const v=val('s_newuom').trim();if(!v)return;if(!State.db.settings.uoms)State.db.settings.uoms=[];if(State.db.settings.uoms.includes(v))return toast('Already in list');State.db.settings.uoms.push(v);persist();viewSettings();toast('Unit added');}
 function removeUOM(u){State.db.settings.uoms=(State.db.settings.uoms||[]).filter(x=>x!==u);persist();const tags=document.getElementById('uomTagList');if(tags)tags.innerHTML=State.db.settings.uoms.map(x=>`<span class="uom-tag">${esc(x)}<button onclick="removeUOM('${esc(x)}')">×</button></span>`).join('');}
 function resetPosToken(){confirmDel('Reset the POS link? All staff will need to bookmark the new URL.',()=>{State.db.settings.posToken=uid();persist();viewSettings();toast('POS access link has been reset.');});}
