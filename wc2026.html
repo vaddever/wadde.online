@@ -452,7 +452,7 @@ var QQ=[
   {q:'How many groups in 2026 group stage?',o:['8','10','12','16'],a:2},
   {q:'Which match kicks off WC 2026?',o:['USA vs Mexico','Brazil vs Argentina','Mexico vs South Africa','England vs France'],a:2},
 ];
-var FACTS=['The 2026 World Cup is the first with 48 teams!','104 matches across 16 venues in USA, Canada and Mexico.','Argentina are the defending champions from Qatar 2022.','Opens June 11 with Mexico vs South Africa.','Final: July 19 at MetLife Stadium, New York/NJ.','The Round of 32 is a brand-new knockout round for 2026!','Three co-hosts: USA, Canada and Mexico.','4 pts exact score · 2 pts correct winner · +10 pts tournament pick!'];
+var FACTS=['The 2026 World Cup is the first with 48 teams!','104 matches across 16 venues in USA, Canada and Mexico.','Argentina are the defending champions from Qatar 2022.','Opens June 11 with Mexico vs South Africa.','Final: July 19 at MetLife Stadium, New York/NJ.','The Round of 32 is a brand-new knockout round for 2026!','Three co-hosts: USA, Canada and Mexico.','2 pts correct result · 2 pts exact score · +5 pts tournament winner!'];
 var PLY=[{n:'Lionel Messi',t:'Argentina',i:'2022 WC winner'},{n:'Kylian Mbappe',t:'France',i:'Golden Boot favorite'},{n:'Erling Haaland',t:'Norway',i:'Premier League top scorer'},{n:'Vinicius Jr.',t:'Brazil',i:'Champions League star'},{n:'Pedri',t:'Spain',i:'Barcelona midfield maestro'},{n:'Jude Bellingham',t:'England',i:'Real Madrid star'},{n:'Cristiano Ronaldo',t:'Portugal',i:'All-time top scorer'},{n:'Kevin De Bruyne',t:'Belgium',i:'World-class playmaker'}];
 
 // WC 2026 full player database
@@ -559,6 +559,79 @@ var WC_PLAYERS=[
 var _cache = {};
 var _listeners = {};
 
+// Team primary colors (for avatars)
+var TC = {
+  'Argentina':'#74acdf','Australia':'#00843d','Austria':'#ed2939','Belgium':'#1a1a1a',
+  'Bosnia & Herzegovina':'#003da5','Brazil':'#009c3b','Canada':'#d80621',
+  'Cape Verde':'#003893','Colombia':'#fcd116','Croatia':'#e40521',
+  'Czechia':'#d7141a','Curaçao':'#003087','DR Congo':'#007fff',
+  'Ecuador':'#ffd100','Egypt':'#ce1126','England':'#cf081f',
+  'France':'#002395','Germany':'#1a1a1a','Ghana':'#006b3f',
+  'Haiti':'#00209f','Iran':'#239f40','Iraq':'#ce1126',
+  'Ivory Coast':'#f77f00','Japan':'#bc002d','Jordan':'#007a3d',
+  'Mexico':'#006847','Morocco':'#c1272d','Netherlands':'#f36c21',
+  'New Zealand':'#00247d','Norway':'#ef2b2d','Panama':'#db121a',
+  'Paraguay':'#0038a8','Portugal':'#006600','Qatar':'#8d1b3d',
+  'Saudi Arabia':'#006c35','Scotland':'#003f7f','Senegal':'#00853f',
+  'South Africa':'#007a4d','South Korea':'#003478','Spain':'#aa151b',
+  'Sweden':'#006aa7','Switzerland':'#ff0000','Tunisia':'#e70013',
+  'Türkiye':'#e30a17','United States':'#002868','Uruguay':'#5aaaa8',
+  'Uzbekistan':'#1eb53a','Algeria':'#006233','Jordan':'#007a3d',
+  'DR Congo':'#007a3d'
+};
+
+// Typical formations
+var FORMATIONS = {
+  'Argentina':'4-3-3','France':'4-3-3','Brazil':'4-2-3-1','England':'4-3-3',
+  'Spain':'4-3-3','Germany':'4-2-3-1','Portugal':'4-3-3','Netherlands':'4-3-3',
+  'Belgium':'3-4-3','Mexico':'4-3-3','United States':'4-3-3','Canada':'4-2-3-1',
+  'Japan':'4-2-3-1','Morocco':'4-3-3','Senegal':'4-3-3','Croatia':'4-3-3',
+  'Uruguay':'4-3-3','Switzerland':'4-2-3-1','Norway':'4-3-3','South Korea':'4-2-3-1',
+  'Colombia':'4-3-3','Ecuador':'4-3-3','Australia':'4-2-3-1','Türkiye':'4-1-4-1',
+  'Serbia':'3-4-2-1','Egypt':'4-2-3-1','Tunisia':'4-3-3','Ghana':'4-2-3-1',
+  'Iran':'4-3-3','Scotland':'4-3-3','Poland':'4-2-3-1','Sweden':'4-2-3-1',
+};
+
+// SVG letter avatar as data URI
+function playerAvatar(name, team) {
+  var parts = name.split(' ');
+  var initials = ((parts[0]||'?')[0] + ((parts[1]||'')[0]||'')).toUpperCase();
+  var bg = TC[team] || '#1a56db';
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">'
+    + '<circle cx="24" cy="24" r="24" fill="' + bg + '"/>'
+    + '<text x="24" y="31" text-anchor="middle" fill="rgba(255,255,255,0.95)" '
+    + 'font-size="17" font-weight="700" font-family="Arial,sans-serif">' + initials + '</text>'
+    + '</svg>';
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+
+// Get key players for a team (top 6 by position order FW/MF/DF/GK)
+function getTeamPlayers(team) {
+  var order = {FW:0, MF:1, DF:2, GK:3};
+  return WC_PLAYERS.filter(function(p){ return p.t === team; })
+    .sort(function(a,b){ return (order[a.p]||0)-(order[b.p]||0); })
+    .slice(0, 6);
+}
+
+// Get today's and next 24h matches
+function getUpcomingMatchDay() {
+  var now = Date.now();
+  var soon = now + 86400000 * 2; // next 2 days
+  return MS.filter(function(m) {
+    var mt = new Date(m.utc).getTime();
+    return mt >= now - 7200000 && mt <= soon;
+  }).slice(0, 8);
+}
+
+// Check if any match is currently live
+function anyLive() {
+  var now = Date.now();
+  return MS.some(function(m) {
+    var st = new Date(m.utc).getTime();
+    return now >= st && now <= st + 7200000;
+  });
+}
+
 var Store = {
   _ready: function() {
     return typeof GS_URL === 'string' && GS_URL.indexOf('script.google.com') !== -1;
@@ -645,7 +718,7 @@ var Store = {
     }
 
     load();
-    var timer = setInterval(load, 8000);
+    var timer = setInterval(load, anyLive() ? 3000 : 5000);
     return function() {
       clearInterval(timer);
       _listeners[key] = (_listeners[key] || []).filter(function(x) { return x !== cb; });
@@ -662,7 +735,7 @@ var Sess = {
 // Helpers
 function calcPts(p, r) {
   if (!p || !r) return null;
-  if (p.h === r.h && p.a === r.a) return 4;
+  if (p.h === r.h && p.a === r.a) return 2;
   var pw = p.h > p.a ? 1 : p.h < p.a ? -1 : 0;
   var rw = r.h > r.a ? 1 : r.h < r.a ? -1 : 0;
   return pw === rw ? 2 : 0;
@@ -689,6 +762,115 @@ var KOS = new Date('2026-06-28T00:00:00Z');
 function daysTill(d) { return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 864e5)); }
 
 // Score picker component
+// ── Match Detail Modal ────────────────────────────────────────
+function MatchDetailModal(props) {
+  var m = props.match;
+  var res = props.results[m.id];
+  var pred = props.pred;
+  var ep = calcPts(pred, res);
+  var t = fmtTime(m.utc);
+  var st = mStat(m, props.results);
+  var homePlayers = getTeamPlayers(m.h);
+  var awayPlayers = getTeamPlayers(m.a);
+  var homeFm = FORMATIONS[m.h] || '4-3-3';
+  var awayFm = FORMATIONS[m.a] || '4-3-3';
+  var as = useState(false); var loading = as[0]; var setLoading = as[1];
+  var cs = useState(''); var commentary = cs[0]; var setCommentary = cs[1];
+
+  function loadCommentary() {
+    if (loading || commentary) return;
+    setLoading(true);
+    fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:250,
+        messages:[{role:'user', content:'Write a punchy 3-sentence pre-match preview for ' + m.h + ' vs ' + m.a + ' at FIFA World Cup 2026. Mention likely tactics (' + homeFm + ' vs ' + awayFm + '), one key player each side, and give a bold prediction. Be exciting and concise.'}]
+      })
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){setCommentary((d.content||[{text:''}])[0].text||'');setLoading(false);})
+    .catch(function(){setLoading(false);});
+  }
+
+  var POS_C = {FW:'rgba(239,68,68,.18)',MF:'rgba(59,130,246,.18)',DF:'rgba(34,197,94,.18)',GK:'rgba(245,158,11,.18)'};
+  var POS_T = {FW:'#f87171',MF:'#60a5fa',DF:'#4ade80',GK:'#fbbf24'};
+
+  return html`<div class="modal" style=${{maxWidth:520,padding:'1.25rem'}}>
+    <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+      <h2 style=${{margin:0,fontSize:18}}>Match Details</h2>
+      <button class="btn" style=${{padding:'4px 8px'}} onClick=${props.onClose}><i class="ti ti-x"></i></button>
+    </div>
+
+    <!-- Score banner -->
+    <div style=${{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'16px',marginBottom:12,textAlign:'center'}}>
+      <div style=${{display:'flex',alignItems:'center',justifyContent:'center',gap:16}}>
+        <div style=${{textAlign:'center',flex:1}}>
+          <img src=${playerAvatar(m.h, m.h)} style=${{width:48,height:48,borderRadius:24,marginBottom:4}} />
+          <div style=${{fontSize:14,fontWeight:600}}>${F[m.h]||''} ${m.h}</div>
+          <div style=${{fontSize:11,color:'var(--mu)',marginTop:2}}>${homeFm}</div>
+        </div>
+        <div style=${{textAlign:'center',minWidth:80}}>
+          ${res
+            ? html`<div style=${{fontFamily:'Barlow Condensed',fontSize:32,fontWeight:700,color:'var(--tx)'}}>${res.h} – ${res.a}</div>`
+            : st==='live'
+              ? html`<div style=${{fontSize:13,color:'#ef4444',fontWeight:600,animation:'pulse 1s infinite'}}>🔴 LIVE</div>`
+              : html`<div style=${{fontFamily:'Barlow Condensed',fontSize:22,color:'var(--mu)'}}>vs</div>`
+          }
+          <div class=${'bdg '+(st==='done'?'bdn':st==='live'?'blv':st==='past'?'bpa':'bup')} style=${{marginTop:6}}>
+            ${st==='live'?'LIVE':st==='done'?'FULL TIME':st==='past'?'ENDED':'UPCOMING'}
+          </div>
+        </div>
+        <div style=${{textAlign:'center',flex:1}}>
+          <img src=${playerAvatar(m.a, m.a)} style=${{width:48,height:48,borderRadius:24,marginBottom:4}} />
+          <div style=${{fontSize:14,fontWeight:600}}>${F[m.a]||''} ${m.a}</div>
+          <div style=${{fontSize:11,color:'var(--mu)',marginTop:2}}>${awayFm}</div>
+        </div>
+      </div>
+      <div style=${{marginTop:10,fontSize:12,color:'var(--mu)'}}>${t.local} · ${m.v}</div>
+    </div>
+
+    <!-- Your prediction -->
+    ${pred&&html`<div style=${{background:'rgba(26,86,219,.08)',border:'1px solid rgba(26,86,219,.25)',borderRadius:'var(--rs)',padding:'8px 14px',marginBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+      <span style=${{fontSize:13,color:'var(--mu)'}}>Your prediction: <strong style=${{color:'var(--tx)'}}>${pred.h}–${pred.a}</strong></span>
+      ${ep!==null&&html`<span style=${{fontWeight:600,color:ep>0?'#22c55e':'#f87171'}}>${ep>0?'+'+ep+' pts':'0 pts'}</span>`}
+    </div>`}
+
+    <!-- Key players -->
+    <div class="g2" style=${{marginBottom:12,gap:8}}>
+      <div>
+        <div style=${{fontSize:11,fontWeight:600,color:'var(--mu)',letterSpacing:1,marginBottom:8,fontFamily:'Barlow Condensed'}}>KEY PLAYERS · ${m.h.split(' ')[0].toUpperCase()}</div>
+        ${homePlayers.map(function(p){ return html`<div key=${p.n} style=${{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+          <img src=${playerAvatar(p.n, p.t)} style=${{width:32,height:32,borderRadius:16,flexShrink:0}} />
+          <div style=${{flex:1,minWidth:0}}>
+            <div style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
+          </div>
+          <span style=${{fontSize:10,fontWeight:600,padding:'1px 6px',borderRadius:8,background:POS_C[p.p]||'transparent',color:POS_T[p.p]||'var(--mu)'}}>${p.p}</span>
+        </div>`; })}
+      </div>
+      <div>
+        <div style=${{fontSize:11,fontWeight:600,color:'var(--mu)',letterSpacing:1,marginBottom:8,fontFamily:'Barlow Condensed'}}>KEY PLAYERS · ${m.a.split(' ')[0].toUpperCase()}</div>
+        ${awayPlayers.map(function(p){ return html`<div key=${p.n} style=${{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+          <img src=${playerAvatar(p.n, p.t)} style=${{width:32,height:32,borderRadius:16,flexShrink:0}} />
+          <div style=${{flex:1,minWidth:0}}>
+            <div style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
+          </div>
+          <span style=${{fontSize:10,fontWeight:600,padding:'1px 6px',borderRadius:8,background:POS_C[p.p]||'transparent',color:POS_T[p.p]||'var(--mu)'}}>${p.p}</span>
+        </div>`; })}
+      </div>
+    </div>
+
+    <!-- AI Commentary -->
+    <div style=${{background:'var(--bg3)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',padding:'12px 14px'}}>
+      <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:commentary?10:0}}>
+        <span style=${{fontSize:11,fontWeight:600,color:'var(--mu)',letterSpacing:1,fontFamily:'Barlow Condensed'}}>🎙 MATCH PREVIEW</span>
+        ${!commentary&&html`<button class="btn-p" style=${{fontSize:11,padding:'5px 12px'}} onClick=${loadCommentary} disabled=${loading}>${loading?'Generating...':'Generate AI Preview'}</button>`}
+      </div>
+      ${commentary&&html`<p style=${{fontSize:13,color:'var(--tx)',lineHeight:1.6,margin:0}}>${commentary}</p>`}
+    </div>
+  </div>`;
+}
+
 function ScorePick(props) {
   return html`<div style=${{textAlign:'center'}}>
     <div style=${{fontSize:11,color:'var(--mu)',marginBottom:6}}>${props.label.split(' ')[0]}</div>
@@ -836,9 +1018,9 @@ function WelcomePage(props) {
       <div class="card-dark" style=${{borderColor:'rgba(240,180,41,.15)'}}>
         <div style=${{fontSize:10,color:'var(--mu)',letterSpacing:1.5,marginBottom:10,fontFamily:'Barlow Condensed',fontWeight:600}}>SCORING</div>
         <div style=${{display:'flex',flexDirection:'column',gap:7,fontSize:12}}>
-          <div style=${{display:'flex',justifyContent:'space-between'}}><span style=${{color:'var(--mu)'}}>🎯 Exact score</span><span style=${{color:'var(--gn)',fontWeight:500}}>4 pts</span></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}><span style=${{color:'var(--mu)'}}>🎯 Exact score</span><span style=${{color:'var(--gn)',fontWeight:500}}>2 pts</span></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}><span style=${{color:'var(--mu)'}}>✅ Correct winner</span><span style=${{color:'var(--bl)',fontWeight:500}}>2 pts</span></div>
-          <div style=${{display:'flex',justifyContent:'space-between'}}><span style=${{color:'var(--mu)'}}>🏆 Tournament pick</span><span style=${{color:'var(--gold)',fontWeight:500}}>+10 pts</span></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}><span style=${{color:'var(--mu)'}}>🏆 Tournament pick</span><span style=${{color:'var(--gold)',fontWeight:500}}>+5 pts</span></div>
         </div>
       </div>
     </div>
@@ -867,7 +1049,7 @@ function PlayerPicker(props) {
     var cur = props.selected || [];
     if (cur.includes(player.n)) {
       props.onSelect(cur.filter(function(x){return x!==player.n;}));
-    } else if (cur.length < 3) {
+    } else if (cur.length < 1) {
       props.onSelect(cur.concat([player.n]));
     }
   }
@@ -915,10 +1097,10 @@ function PlayerPicker(props) {
               border:'none',borderBottom:'1px solid var(--bdr)',cursor:disabled?'not-allowed':'pointer',
               textAlign:'left',opacity:disabled?0.4:1,transition:'background .1s'
             }}>
-              <span style=${{fontSize:20,flexShrink:0}}>${F[p.t]||'🏳'}</span>
+              <img src=${playerAvatar(p.n,p.t)} style=${{width:36,height:36,borderRadius:18,flexShrink:0}} />
               <div style=${{flex:1,minWidth:0}}>
                 <div style=${{fontSize:14,fontWeight:500,color:picked?'#60a5fa':'var(--tx)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
-                <div style=${{fontSize:11,color:'var(--mu)',marginTop:1}}>${p.t}</div>
+                <div style=${{fontSize:11,color:'var(--mu)',marginTop:1}}>${F[p.t]||'🏳'} ${p.t}</div>
               </div>
               <span style=${{fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:10,background:POS_COLOR[p.p]||'rgba(148,163,184,.15)',color:POS_TEXT[p.p]||'var(--mu)',flexShrink:0}}>${p.p}</span>
               ${picked&&html`<i class="ti ti-check" style=${{color:'#60a5fa',fontSize:16,flexShrink:0}}></i>`}
@@ -928,7 +1110,7 @@ function PlayerPicker(props) {
     </div>
 
     <div style=${{fontSize:12,color:'var(--mu)',textAlign:'center'}}>
-      ${sel.length}/3 players selected · Teams: ${props.favT.map(function(t){return F[t]||t;}).join(' ')}
+      ${sel.length}/1 player selected · Teams: ${props.favT.map(function(t){return F[t]||t;}).join(' ')}
     </div>
 
     <div style=${{display:'flex',gap:8}}>
@@ -947,7 +1129,7 @@ function AuthPage(props) {
   var fp=useState([]); var favP=fp[0]; var setFavP=fp[1];
   var ss=useState(1); var step=ss[0]; var setStep=ss[1];
 
-  function togT(t){ if(favT.includes(t))setFavT(favT.filter(function(x){return x!==t;}));else if(favT.length<3)setFavT(favT.concat([t])); }
+  function togT(t){ if(favT.includes(t))setFavT(favT.filter(function(x){return x!==t;}));else if(favT.length<1)setFavT(favT.concat([t])); }
   function reset(m){ props.setMode(m); setStep(1); setName(''); setPhone(''); setFavT([]); setFavP(['','','']); }
   function sub(){
     if(props.mode==='login'){props.onLogin(name,phone);return;}
@@ -974,9 +1156,9 @@ function AuthPage(props) {
           <button class="btn-p" style=${{width:'100%',opacity:(!name||!phone)?0.45:1}} disabled=${!name||!phone} onClick=${sub}>Next: Pick teams →</button>
         </div>`}
         ${step===2&&html`<div>
-          <h2>Favorite teams <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>2 of 3 · pick 3</span></h2>
+          <h2>Favorite teams <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>2 of 3 · pick 1</span></h2>
           <div class="g3" style=${{marginBottom:14,maxHeight:260,overflowY:'auto',padding:4}}>
-            ${TEAMS.map(function(t){ return html`<button key=${t} onClick=${function(){togT(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:favT.includes(t)?'2px solid #1a56db':'1px solid var(--bdr)',background:favT.includes(t)?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!favT.includes(t)&&favT.length>=3?0.35:1}}>
+            ${TEAMS.map(function(t){ return html`<button key=${t} onClick=${function(){togT(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:favT.includes(t)?'2px solid #1a56db':'1px solid var(--bdr)',background:favT.includes(t)?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!favT.includes(t)&&favT.length>=1?0.35:1}}>
               <span style=${{fontSize:20}}>${F[t]||'🏳'}</span>
               <span style=${{textAlign:'center',fontSize:10,lineHeight:1.2}}>${t}</span>
             </button>`; })}
@@ -993,6 +1175,7 @@ function AuthPage(props) {
 }
 
 function DashPage(props) {
+  var todayMs = getUpcomingMatchDay();
   return html`<div>
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
       <div>
@@ -1008,7 +1191,35 @@ function DashPage(props) {
       </div>
       <span style=${{fontSize:36}}>🏟️</span>
     </div>
-    <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px 14px',marginBottom:20,fontSize:13,color:'#93c5fd'}}>⚽ ${FACTS[props.factI]}</div>
+    <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px 14px',marginBottom:16,fontSize:13,color:'#93c5fd'}}>⚽ ${FACTS[props.factI]}</div>
+
+    <!-- Today / Next matches -->
+    ${todayMs.length>0&&html`<div style=${{marginBottom:20}}>
+      <h2 style=${{marginBottom:12}}>📅 Match Day Schedule</h2>
+      <div style=${{display:'flex',flexDirection:'column',gap:8}}>
+        ${todayMs.map(function(m){
+          var t=fmtTime(m.utc); var now=Date.now(); var st=new Date(m.utc).getTime();
+          var isLive=now>=st&&now<=st+7200000;
+          return html`<div key=${m.id} class="card" style=${{padding:'12px 14px',borderLeft:'3px solid '+(isLive?'#ef4444':'rgba(240,180,41,.5)')}}>
+            <div style=${{display:'flex',alignItems:'center',gap:10}}>
+              <div style=${{display:'flex',alignItems:'center',gap:6,flex:1}}>
+                <img src=${playerAvatar(m.h,m.h)} style=${{width:28,height:28,borderRadius:14}} />
+                <span style=${{fontSize:13,fontWeight:500}}>${F[m.h]||''} ${m.h}</span>
+              </div>
+              <div style=${{fontSize:11,fontWeight:600,color:isLive?'#ef4444':'var(--mu)',textAlign:'center',minWidth:40}}>
+                ${isLive?'🔴 LIVE':'vs'}
+              </div>
+              <div style=${{display:'flex',alignItems:'center',gap:6,flex:1,justifyContent:'flex-end'}}>
+                <span style=${{fontSize:13,fontWeight:500}}>${m.a} ${F[m.a]||''}</span>
+                <img src=${playerAvatar(m.a,m.a)} style=${{width:28,height:28,borderRadius:14}} />
+              </div>
+            </div>
+            <div style=${{fontSize:11,color:'var(--mu)',marginTop:6,textAlign:'center'}}>${t.local} · Group ${m.gr}</div>
+          </div>`;
+        })}
+      </div>
+    </div>`}
+
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
       <h2 style=${{margin:0}}>My Rooms</h2>
       <div style=${{display:'flex',gap:8}}>
@@ -1029,10 +1240,12 @@ function DashPage(props) {
         </div>`
     }
     <h2>Featured Players</h2>
-    <div class="g4">${PLY.map(function(p,i){ return html`<div key=${i} class="card card-sm" style=${{textAlign:'center',padding:'11px 6px',borderColor:i===props.plyrI?'rgba(240,180,41,.35)':undefined,background:i===props.plyrI?'rgba(240,180,41,.04)':undefined}}>
-      <div style=${{fontSize:22,marginBottom:4}}>${F[p.t]||'⚽'}</div>
-      <div style=${{fontSize:12,fontWeight:500}}>${p.n}</div>
-      <div style=${{fontSize:11,color:'var(--mu)',marginTop:1}}>${p.t}</div>
+    <div class="g4">${PLY.map(function(p,i){ return html`<div key=${i} class="card card-sm" style=${{textAlign:'center',padding:'12px 6px',borderColor:i===props.plyrI?'rgba(240,180,41,.35)':undefined,background:i===props.plyrI?'rgba(240,180,41,.04)':undefined}}>
+      <img src=${playerAvatar(p.n,p.t)} style=${{width:44,height:44,borderRadius:22,marginBottom:4,border:'2px solid '+(i===props.plyrI?'rgba(240,180,41,.5)':'rgba(255,255,255,.08)')}} />
+      <div style=${{fontSize:16,lineHeight:1}}>${F[p.t]||'⚽'}</div>
+      <div style=${{fontSize:11,fontWeight:600,color:'var(--tx)',marginTop:3,lineHeight:1.2}}>${p.n}</div>
+      <div style=${{fontSize:10,color:'var(--mu)',marginTop:2}}>${p.t}</div>
+      <div style=${{fontSize:10,color:'var(--dm)',marginTop:1}}>${p.i}</div>
     </div>`; })}
     </div>
   </div>`;
@@ -1065,15 +1278,24 @@ function RoomPage(props) {
             <span class=${'bdg '+(st==='live'?'blv':st==='done'?'bdn':st==='past'?'bpa':'bup')}>${st==='live'?'🔴 LIVE':st==='done'?'✓ FINAL':st==='past'?'ENDED':'⏱ UPCOMING'}</span>
             <div style=${{display:'flex',gap:8,alignItems:'center'}}>
               ${props.isAdmin&&st!=='done'&&html`<button class="btn" style=${{fontSize:11,padding:'3px 9px'}} onClick=${function(){props.onResult(m);}}>Enter result</button>`}
+              <button class="btn" style=${{fontSize:11,padding:'3px 9px'}} onClick=${function(){props.onShowMatch(m);}}>Details</button>
               ${ep!==null&&html`<span style=${{fontWeight:500,fontSize:13,color:ep===4?'#22c55e':ep===2?'#60a5fa':'#f87171'}}>${ep>0?'+'+ep+' pts':'0 pts'}</span>`}
             </div>
           </div>
           <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
-            <div style=${{flex:1,textAlign:'right'}}><div style=${{fontSize:26}}>${F[m.h]||'🏳'}</div><div style=${{fontSize:13,fontWeight:500}}>${m.h}</div></div>
+            <div style=${{flex:1,textAlign:'right'}}>
+              <img src=${playerAvatar(m.h,m.h)} style=${{width:36,height:36,borderRadius:18,marginBottom:3}} />
+              <div style=${{fontSize:20}}>${F[m.h]||'🏳'}</div>
+              <div style=${{fontSize:12,fontWeight:500}}>${m.h}</div>
+            </div>
             <div style=${{background:'var(--bg3)',borderRadius:'var(--rs)',padding:'6px 14px',minWidth:72,textAlign:'center'}}>
               ${res?html`<span style=${{fontFamily:'Barlow Condensed',fontSize:22,fontWeight:700}}>${res.h}–${res.a}</span>`:st==='live'?html`<span style=${{fontSize:13,color:'var(--rd)',fontWeight:500}}>LIVE</span>`:html`<span style=${{fontSize:14,color:'var(--dm)'}}>vs</span>`}
             </div>
-            <div style=${{flex:1,textAlign:'left'}}><div style=${{fontSize:26}}>${F[m.a]||'🏳'}</div><div style=${{fontSize:13,fontWeight:500}}>${m.a}</div></div>
+            <div style=${{flex:1,textAlign:'left'}}>
+              <img src=${playerAvatar(m.a,m.a)} style=${{width:36,height:36,borderRadius:18,marginBottom:3}} />
+              <div style=${{fontSize:20}}>${F[m.a]||'🏳'}</div>
+              <div style=${{fontSize:12,fontWeight:500}}>${m.a}</div>
+            </div>
           </div>
           <div style=${{fontSize:11,color:'var(--mu)',marginBottom:st==='soon'||pred?8:0}}>
             <div>${t.local}</div><div style=${{color:'var(--dm)'}}>${t.utcS}</div><div style=${{marginTop:1}}>${m.v}</div>
@@ -1119,10 +1341,10 @@ function RoomPage(props) {
       <div class="card" style=${{marginTop:14,background:'var(--bg3)'}}>
         <h3>Scoring guide</h3>
         <div style=${{display:'flex',flexDirection:'column',gap:6,fontSize:13,color:'var(--mu)'}}>
-          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}>4 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}>2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner / draw<strong style=${{color:'#60a5fa'}}>2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>❌ Wrong prediction<strong style=${{color:'var(--dm)'}}>0 pts</strong></div>
-          <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style=${{color:'var(--gold)'}}>+10 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style=${{color:'var(--gold)'}}>+5 pts</strong></div>
         </div>
       </div>
       <div class="card" style=${{marginTop:10,background:'var(--bg3)'}}>
@@ -1254,6 +1476,7 @@ function App() {
   var s9=useState('A'); var grp=s9[0]; var setGrp=s9[1];
   var s10=useState('login'); var authMode=s10[0]; var setAuthMode=s10[1];
   var s11=useState(null); var modal=s11[0]; var setModal=s11[1];
+  var s11b=useState(null); var matchDetail=s11b[0]; var setMatchDetail=s11b[1];
   var s12=useState(null); var toast=s12[0]; var setToast=s12[1];
   var s13=useState(0); var factI=s13[0]; var setFactI=s13[1];
   var s14=useState(0); var plyrI=s14[0]; var setPlyrI=s14[1];
@@ -1370,32 +1593,6 @@ function App() {
   var isAdmin = room && user && room.by === user.id;
   var dl = daysTill(WCS);
 
-  // Show setup screen if GS_URL not configured
-  if (!Store._ready()) return html`<${SetupScreen} />`;
-
-  if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}><div style=${{fontSize:60}}>⚽</div><p style=${{color:'var(--mu)',fontSize:15,fontFamily:'sans-serif'}}>Loading...</p></div>`;
-
-  return html`<div>
-    <div class="topbar">
-      <a href="https://wadde.online" class="back-a"><i class="ti ti-arrow-left" style=${{fontSize:14}}></i> wadde.online</a>
-      <span class="logo">🏆 WC 2026 Predictions</span>
-      ${user&&html`<button class="btn" style=${{fontSize:12}} onClick=${doLogout}><i class="ti ti-logout"></i> Out</button>`}
-    </div>
-
-    ${toast&&html`<div class=${'toast '+(toast.t==='err'?'ter':'tok')}>${toast.msg}</div>`}
-
-    ${modal&&html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)setModal(null);}}>
-      ${modal.t==='pred'&&html`<${PredModal} match=${modal.m} existing=${preds[user&&user.id+'_'+modal.m.id]} onSave=${doPredict} onClose=${function(){setModal(null);}} />`}
-      ${modal.t==='create'&&html`<${CreateModal} onSave=${doCreate} onClose=${function(){setModal(null);}} />`}
-      ${modal.t==='join'&&html`<${JoinModal} onJoin=${doJoin} onClose=${function(){setModal(null);}} />`}
-      ${modal.t==='winner'&&html`<${WinnerModal} current=${myPick} onPick=${doPickW} onClose=${function(){setModal(null);}} />`}
-      ${modal.t==='result'&&isAdmin&&html`<${ResultModal} match=${modal.m} existing=${results[modal.m&&modal.m.id]} onSave=${doResult} onClose=${function(){setModal(null);}} />`}
-    </div>`}
-
-    <div class="page">
-      ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
-      ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} />`}
   function doExport() {
     if (!room) return;
 
@@ -1438,7 +1635,39 @@ function App() {
     notify('CSV downloaded! Open in Google Sheets via File → Import 📊');
   }
 
-      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} isAdmin=${isAdmin} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} />`}
+
+  // Show setup screen if GS_URL not configured
+  if (!Store._ready()) return html`<${SetupScreen} />`;
+
+  if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}><div style=${{fontSize:60}}>⚽</div><p style=${{color:'var(--mu)',fontSize:15,fontFamily:'sans-serif'}}>Loading...</p></div>`;
+
+  return html`<div>
+    <div class="topbar">
+      
+      <span class="logo">🏆 WC 2026 Predictions</span>
+      ${user&&html`<button class="btn" style=${{fontSize:12}} onClick=${doLogout}><i class="ti ti-logout"></i> Out</button>`}
+    </div>
+
+    ${toast&&html`<div class=${'toast '+(toast.t==='err'?'ter':'tok')}>${toast.msg}</div>`}
+
+    ${modal&&html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)setModal(null);}}>
+      ${modal.t==='pred'&&html`<${PredModal} match=${modal.m} existing=${preds[user&&user.id+'_'+modal.m.id]} onSave=${doPredict} onClose=${function(){setModal(null);}} />`}
+      ${modal.t==='create'&&html`<${CreateModal} onSave=${doCreate} onClose=${function(){setModal(null);}} />`}
+      ${modal.t==='join'&&html`<${JoinModal} onJoin=${doJoin} onClose=${function(){setModal(null);}} />`}
+      ${modal.t==='winner'&&html`<${WinnerModal} current=${myPick} onPick=${doPickW} onClose=${function(){setModal(null);}} />`}
+      ${modal.t==='result'&&isAdmin&&html`<${ResultModal} match=${modal.m} existing=${results[modal.m&&modal.m.id]} onSave=${doResult} onClose=${function(){setModal(null);}} />`}
+    </div>`}
+
+    ${matchDetail&&html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)setMatchDetail(null);}}>
+      <${MatchDetailModal} match=${matchDetail} results=${results} pred=${preds[user&&user.id+'_'+matchDetail.id]} onClose=${function(){setMatchDetail(null);}} />
+    </div>`}
+
+    <div class="page">
+      ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
+      ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
+      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} />`}
+
+      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} isAdmin=${isAdmin} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} />`}
     </div>
   </div>`;
 }
