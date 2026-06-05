@@ -71,37 +71,17 @@
 <!--
 SETUP INSTRUCTIONS
 ==================
-1. Go to console.firebase.google.com
-2. Create a project → click </> web icon → register app
-3. Paste the firebaseConfig values below
-4. Build → Realtime Database → Create database → Test mode
-5. Push this file to GitHub → live at wadde.online/wc2026.html
+1. Open your Google Sheet (create a new one at sheets.google.com)
+2. Click Extensions → Apps Script
+3. Delete all existing code and paste the contents of google-apps-script.js
+4. Save, then click Deploy → New deployment
+5. Type: Web app | Execute as: Me | Who has access: Anyone
+6. Click Deploy → copy the Web App URL
+7. Paste the URL below as GS_URL
+8. Push this file to GitHub → live at wadde.online/wc2026.html
 -->
 <script>
-window.FIREBASE_CONFIG = {
-  apiKey:            "PASTE_YOUR_API_KEY_HERE",
-  authDomain:        "your-project.firebaseapp.com",
-  databaseURL:       "https://your-project-default-rtdb.firebaseio.com",
-  projectId:         "your-project",
-  storageBucket:     "your-project.appspot.com",
-  messagingSenderId: "000000000000",
-  appId:             "1:000000000000:web:000000000000"
-};
-window.DB = null;
-</script>
-
-<!-- Firebase via unpkg (not gstatic) -->
-<script crossorigin="anonymous" src="https://unpkg.com/firebase@9.22.2/firebase-app-compat.js"></script>
-<script crossorigin="anonymous" src="https://unpkg.com/firebase@9.22.2/firebase-database-compat.js"></script>
-<script>
-try {
-  firebase.initializeApp(window.FIREBASE_CONFIG);
-  window.DB = firebase.database();
-  console.log('Firebase connected');
-} catch(e) {
-  console.warn('Firebase not configured yet. Running without database.');
-  window.DB = null;
-}
+var GS_URL = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
 </script>
 
 <!-- React + ReactDOM + htm: INLINED (no CDN needed) -->
@@ -570,27 +550,108 @@ var WC_PLAYERS=[
   {n:'Eldor Shomurodov',t:'Uzbekistan',p:'FW'},{n:'Jaloliddin Masharipov',t:'Uzbekistan',p:'MF'},
 ];
 
-// Storage
+// ── Google Sheets Store ──────────────────────────────────────────
+// Reads/writes to a Google Apps Script web app backed by a Sheet.
+// Each data type is one row: key=wc26_X, value=JSON string.
+// Writes use sub-path merge (read-modify-write) so individual
+// predictions don't overwrite the whole predictions object.
+var _cache = {};
+var _listeners = {};
+
 var Store = {
+  _ready: function() {
+    return typeof GS_URL === 'string' && GS_URL.indexOf('script.google.com') !== -1;
+  },
+
+  // Read one key from the Sheet
+  _read: function(key) {
+    return fetch(GS_URL + '?action=get&key=' + encodeURIComponent(key) + '&_=' + Date.now(), {
+      redirect: 'follow'
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) { return d.ok ? d.value : null; })
+    .catch(function() { return null; });
+  },
+
+  // Write one key to the Sheet (POST with text/plain avoids CORS preflight)
+  _write: function(key, val) {
+    return fetch(GS_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'set', key: key, value: val })
+    })
+    .then(function(r) { return r.json(); })
+    .catch(function(e) { console.warn('Sheet write error:', e); });
+  },
+
+  // Public: get a value
   get: function(path) {
-    return new Promise(function(res) {
-      if (!window.DB) { res(null); return; }
-      window.DB.ref('wc26/' + path).once('value')
-        .then(function(s) { res(s.val()); })
-        .catch(function() { res(null); });
+    if (!this._ready()) return Promise.resolve(null);
+    var key = 'wc26_' + path.replace(/\//g,'_');
+    return this._read(key).then(function(v) {
+      if (v !== null) _cache[key] = v;
+      return _cache[key] !== undefined ? _cache[key] : null;
     });
   },
+
+  // Public: set a value (supports sub-paths like 'preds/userId_matchId')
   set: function(path, val) {
-    if (!window.DB) return Promise.resolve();
-    return window.DB.ref('wc26/' + path).set(val).catch(function(){});
+    if (!this._ready()) return Promise.resolve();
+    var self = this;
+    var parts  = path.split('/');
+    var rootKey = 'wc26_' + parts[0];
+
+    if (parts.length === 1) {
+      // Simple set
+      _cache[rootKey] = val;
+      (_listeners[rootKey] || []).forEach(function(cb) { cb(val || {}); });
+      return self._write(rootKey, val);
+    } else {
+      // Sub-path merge: read → patch → write
+      var childKey = parts.slice(1).join('_');
+      var parent = _cache[rootKey] || {};
+      if (!_cache[rootKey]) {
+        return self._read(rootKey).then(function(existing) {
+          var obj = existing || {};
+          obj[childKey] = val;
+          _cache[rootKey] = obj;
+          (_listeners[rootKey] || []).forEach(function(cb) { cb(obj); });
+          return self._write(rootKey, obj);
+        });
+      } else {
+        parent[childKey] = val;
+        _cache[rootKey] = parent;
+        (_listeners[rootKey] || []).forEach(function(cb) { cb(parent); });
+        return self._write(rootKey, parent);
+      }
+    }
   },
+
+  // Public: subscribe to a key with polling (fires immediately + every 8s)
   listen: function(path, cb) {
-    if (!window.DB) { setTimeout(function(){ cb({}); }, 0); return function(){}; }
-    var r = window.DB.ref('wc26/' + path);
-    r.on('value', function(s) { cb(s.val() || {}); });
-    return function() { r.off('value'); };
+    if (!this._ready()) { setTimeout(function() { cb({}); }, 0); return function() {}; }
+    var self = this;
+    var key = 'wc26_' + path.replace(/\//g,'_');
+    if (!_listeners[key]) _listeners[key] = [];
+    _listeners[key].push(cb);
+
+    function load() {
+      self._read(key).then(function(v) {
+        if (v !== null) _cache[key] = v;
+        cb(_cache[key] || {});
+      }).catch(function() { cb(_cache[key] || {}); });
+    }
+
+    load();
+    var timer = setInterval(load, 8000);
+    return function() {
+      clearInterval(timer);
+      _listeners[key] = (_listeners[key] || []).filter(function(x) { return x !== cb; });
+    };
   }
 };
+
 var Sess = {
   get: function(k) { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } },
   set: function(k,v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} },
@@ -882,7 +943,7 @@ function AuthPage(props) {
   var ns=useState(''); var name=ns[0]; var setName=ns[1];
   var ps=useState(''); var phone=ps[0]; var setPhone=ps[1];
   var fs=useState([]); var favT=fs[0]; var setFavT=fs[1];
-  var fp=useState(['','','']); var favP=fp[0]; var setFavP=fp[1];
+  var fp=useState([]); var favP=fp[0]; var setFavP=fp[1];
   var ss=useState(1); var step=ss[0]; var setStep=ss[1];
 
   function togT(t){ if(favT.includes(t))setFavT(favT.filter(function(x){return x!==t;}));else if(favT.length<3)setFavT(favT.concat([t])); }
@@ -1063,6 +1124,20 @@ function RoomPage(props) {
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style=${{color:'var(--gold)'}}>+10 pts</strong></div>
         </div>
       </div>
+      <div class="card" style=${{marginTop:10,background:'var(--bg3)'}}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+          <div>
+            <h3 style=${{margin:0}}>📊 Export to Google Sheets</h3>
+            <p style=${{fontSize:12,color:'var(--mu)',margin:'4px 0 0'}}>Download a CSV of all predictions and the leaderboard.</p>
+          </div>
+          <button class="btn-p" style=${{fontSize:12,padding:'8px 14px',flexShrink:0}} onClick=${function(){props.onExport();}}>
+            <i class="ti ti-download"></i> Download CSV
+          </button>
+        </div>
+        <div style=${{fontSize:11,color:'var(--dm)'}}>
+          Open in Google Sheets: <strong style=${{color:'var(--mu)'}}>File → Import → Upload → select the downloaded CSV</strong>
+        </div>
+      </div>
     </div>`}
 
     ${props.tab==='groups'&&html`<div>
@@ -1109,6 +1184,54 @@ function RoomPage(props) {
         <strong style=${{color:'#60a5fa',fontSize:11,letterSpacing:1,fontFamily:'Barlow Condensed'}}>DID YOU KNOW? </strong>${FACTS[props.factI]}
       </div>
     </div>`}
+  </div>`;
+}
+
+// ── Setup Screen ─────────────────────────────────────────────────
+function SetupScreen() {
+  var steps = [
+    {n:1, t:'Create a Google Sheet', d:'Go to sheets.google.com → click the + button to create a blank sheet. Give it any name like "WC 2026 Predictions".'},
+    {n:2, t:'Open Apps Script', d:'Inside your Sheet click Extensions → Apps Script. A new editor tab opens.'},
+    {n:3, t:'Paste the backend code', d:'Delete all existing code in the editor. Copy the entire contents of google-apps-script.js (included in the download) and paste it in. Press Ctrl+S to save.'},
+    {n:4, t:'Deploy as Web App', d:'Click Deploy → New deployment. Set Type = Web app, Execute as = Me, Who has access = Anyone. Click Deploy and copy the URL that appears.'},
+    {n:5, t:'Paste URL into wc2026.html', d:'Open wc2026.html in a text editor. Find the line that says GS_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE" near the top. Replace the placeholder with your copied URL. Save the file.'},
+    {n:6, t:'Push to GitHub', d:'Commit and push both wc2026.html to your repo. Your site reloads automatically at wadde.online/wc2026.html and data is live in your Sheet!'},
+  ];
+  return html`<div style=${{minHeight:'100vh',background:'var(--bg)',padding:'0 0 60px'}}>
+    <div style=${{background:'var(--bg)',borderBottom:'1px solid var(--bdr)',padding:'14px 20px',display:'flex',alignItems:'center',gap:10}}>
+      <span style=${{fontFamily:'Barlow Condensed',fontSize:18,fontWeight:700,color:'var(--gold)',letterSpacing:1.5}}>🏆 WC 2026 Predictions</span>
+    </div>
+    <div style=${{maxWidth:620,margin:'0 auto',padding:'28px 20px'}}>
+      <div style=${{textAlign:'center',marginBottom:28}}>
+        <div style=${{fontSize:48,marginBottom:12}}>📊</div>
+        <h1 style=${{fontSize:24,marginBottom:8}}>Connect Google Sheets</h1>
+        <p style=${{color:'var(--mu)',fontSize:14,lineHeight:1.6}}>Your app is ready — it just needs a Google Sheet to store data. Takes about 5 minutes, no account needed beyond a Google account.</p>
+      </div>
+
+      <div style=${{display:'flex',flexDirection:'column',gap:10,marginBottom:24}}>
+        ${steps.map(function(step) { return html`<div key=${step.n} class="card" style=${{display:'flex',gap:14,padding:'14px 16px'}}>
+          <div style=${{width:30,height:30,borderRadius:15,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#fff',flexShrink:0}}>${step.n}</div>
+          <div>
+            <div style=${{fontWeight:500,fontSize:14,marginBottom:3}}>${step.t}</div>
+            <div style=${{fontSize:12,color:'var(--mu)',lineHeight:1.5}}>${step.d}</div>
+          </div>
+        </div>`; })}
+      </div>
+
+      <div class="card" style=${{background:'rgba(240,180,41,.06)',borderColor:'rgba(240,180,41,.25)',padding:'14px 16px',marginBottom:16}}>
+        <div style=${{fontFamily:'Barlow Condensed',fontSize:11,letterSpacing:1.5,color:'var(--gold)',marginBottom:6}}>WHERE TO FIND GS_URL IN THE FILE</div>
+        <div style=${{fontFamily:'monospace',fontSize:13,background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:6,padding:'10px 14px',color:'var(--tx)',lineHeight:1.8}}>
+          <span style=${{color:'var(--mu)'}}>//&nbsp;near the top of wc2026.html:</span><br/>
+          var GS_URL&nbsp;=&nbsp;<span style=${{color:'#f87171'}}>'PASTE_YOUR_APPS_SCRIPT_URL_HERE'</span>;<br/>
+          <span style=${{color:'var(--mu)'}}>//&nbsp;replace with your URL:</span><br/>
+          var GS_URL&nbsp;=&nbsp;<span style=${{color:'#4ade80'}}>'https://script.google.com/macros/s/AKfycby5N5jQoNDf-HjmOx22SbSH2ZN0i_3BK2rQ_gYzZE3-DDbM0Ryza0Z9VIk39QgvUXrA/exec'</span>;
+        </div>
+      </div>
+
+      <div style=${{fontSize:12,color:'var(--mu)',textAlign:'center'}}>
+        Need help? The google-apps-script.js file is included in the download alongside wc2026.html.
+      </div>
+    </div>
   </div>`;
 }
 
@@ -1242,6 +1365,9 @@ function App() {
   var isAdmin = room && user && room.by === user.id;
   var dl = daysTill(WCS);
 
+  // Show setup screen if GS_URL not configured
+  if (!Store._ready()) return html`<${SetupScreen} />`;
+
   if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}><div style=${{fontSize:60}}>⚽</div><p style=${{color:'var(--mu)',fontSize:15,fontFamily:'sans-serif'}}>Loading...</p></div>`;
 
   return html`<div>
@@ -1265,7 +1391,49 @@ function App() {
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
       ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} />`}
-      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} isAdmin=${isAdmin} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} />`}
+  function doExport() {
+    if (!room) return;
+
+    // ── Sheet 1: Leaderboard ──
+    var csvLB = 'Rank,Name,Points,Predictions Made,Tournament Pick\n';
+    lboard.forEach(function(e, i) {
+      csvLB += [(i+1), '"'+(e.user.name||'?')+'"', e.pts, e.np, '"'+(e.pick||'-')+'"'].join(',') + '\n';
+    });
+
+    // ── Sheet 2: Match predictions grid ──
+    var headers = ['Match ID','Group','Home','Away','Date (UTC)','Result'];
+    lboard.forEach(function(e){ headers.push('"'+(e.user.name||'?')+' pick"'); });
+    var csvPreds = headers.join(',') + '\n';
+    MS.forEach(function(m) {
+      var res = results[m.id];
+      var resStr = res ? (res.h+'-'+res.a) : 'TBD';
+      var d = new Date(m.utc).toUTCString().replace(' GMT','');
+      var row = [m.id, m.gr, '"'+m.h+'"', '"'+m.a+'"', '"'+d+'"', resStr];
+      lboard.forEach(function(e) {
+        var pred = preds[(e.user.id||'')+'_'+m.id];
+        row.push(pred ? (pred.h+'-'+pred.a) : '-');
+      });
+      csvPreds += row.join(',') + '\n';
+    });
+
+    // ── Sheet 3: Player profiles ──
+    var csvUsers = 'Name,Phone,Fav Teams,Fav Players,Joined\n';
+    lboard.forEach(function(e) {
+      var u = e.user;
+      csvUsers += ['"'+(u.name||'')+'"', '"'+(u.phone||'')+'"', '"'+((u.favT||[]).join(', '))+'"', '"'+((u.favP||[]).join(', '))+'"', '"'+(u.joined||'')+'"'].join(',') + '\n';
+    });
+
+    var full = 'LEADERBOARD — '+room.name+'\n'+csvLB+'\n\nMATCH PREDICTIONS\n'+csvPreds+'\n\nMEMBER PROFILES\n'+csvUsers;
+    var blob = new Blob([full], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = room.name.replace(/\s+/g,'_')+'_WC2026.csv';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    notify('CSV downloaded! Open in Google Sheets via File → Import 📊');
+  }
+
+      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} isAdmin=${isAdmin} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} />`}
     </div>
   </div>`;
 }
