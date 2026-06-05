@@ -81,7 +81,8 @@ SETUP INSTRUCTIONS
 8. Push this file to GitHub → live at wadde.online/wc2026.html
 -->
 <script>
-var GS_URL = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+var GS_URL = 'https://script.google.com/macros/s/AKfycby5N5jQoNDf-HjmOx22SbSH2ZN0i_3BK2rQ_gYzZE3-DDbM0Ryza0Z9VIk39QgvUXrA/exec';
+var GS_SHEET_ID = '1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw'; // View your data: https://docs.google.com/spreadsheets/d/1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw
 </script>
 
 <!-- React + ReactDOM + htm: INLINED (no CDN needed) -->
@@ -395,7 +396,7 @@ var html = htm.bind(React.createElement);
 var useState = React.useState;
 var useEffect = React.useEffect;
 
-var F={Mexico:'🇲🇽','South Africa':'🇿🇦','South Korea':'🇰🇷',Czechia:'🇨🇿',Canada:'🇨🇦','Bosnia & Herzegovina':'🇧🇦',Qatar:'🇶🇦',Switzerland:'🇨🇭',Brazil:'🇧🇷',Morocco:'🇲🇦',Haiti:'🇭🇹',Scotland:'🏴󠁧󠁢󠁳󠁣󠁴󠁿','United States':'🇺🇸',Paraguay:'🇵🇾',Australia:'🇦🇺',Türkiye:'🇹🇷',Germany:'🇩🇪','Curaçao':'🇨🇼','Ivory Coast':'🇨🇮',Ecuador:'🇪🇨',Netherlands:'🇳🇱',Japan:'🇯🇵',Sweden:'🇸🇪',Tunisia:'🇹🇳',Belgium:'🇧🇪',Egypt:'🇪🇬',Iran:'🇮🇷','New Zealand':'🇳🇿',Spain:'🇪🇸','Cape Verde':'🇨🇻','Saudi Arabia':'🇸🇦',Uruguay:'🇺🇾',France:'🇫🇷',Senegal:'🇸🇳',Iraq:'🇮🇶',Norway:'🇳🇴',Argentina:'🇦🇷',Algeria:'🇩🇿',Austria:'🇦🇹',Jordan:'🇯🇴',Portugal:'🇵🇹','DR Congo':'🇨🇩',Uzbekistan:'🇺🇿',Colombia:'🇨🇴',England:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',Croatia:'🇭🇷',Ghana:'🇬🇭',Panama:'🇵🇦'};
+var F={Mexico:'🇲🇽','South Africa':'🇿🇦','South Korea':'🇰🇷',Czechia:'🇨🇿',Canada:'🇨🇦','Bosnia & Herzegovina':'🇧🇦',Qatar:'🇶🇦',Switzerland:'🇨🇭',Brazil:'🇧🇷',Morocco:'🇲🇦',Haiti:'🇭🇹',Scotland:'\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F','United States':'🇺🇸',Paraguay:'🇵🇾',Australia:'🇦🇺',Türkiye:'🇹🇷',Germany:'🇩🇪','Curaçao':'🇨🇼','Ivory Coast':'🇨🇮',Ecuador:'🇪🇨',Netherlands:'🇳🇱',Japan:'🇯🇵',Sweden:'🇸🇪',Tunisia:'🇹🇳',Belgium:'🇧🇪',Egypt:'🇪🇬',Iran:'🇮🇷','New Zealand':'🇳🇿',Spain:'🇪🇸','Cape Verde':'🇨🇻','Saudi Arabia':'🇸🇦',Uruguay:'🇺🇾',France:'🇫🇷',Senegal:'🇸🇳',Iraq:'🇮🇶',Norway:'🇳🇴',Argentina:'🇦🇷',Algeria:'🇩🇿',Austria:'🇦🇹',Jordan:'🇯🇴',Portugal:'🇵🇹','DR Congo':'🇨🇩',Uzbekistan:'🇺🇿',Colombia:'🇨🇴',England:'\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F',Croatia:'🇭🇷',Ghana:'🇬🇭',Panama:'🇵🇦'};
 var GRP={A:['Mexico','South Africa','South Korea','Czechia'],B:['Canada','Bosnia & Herzegovina','Qatar','Switzerland'],C:['Brazil','Morocco','Haiti','Scotland'],D:['United States','Paraguay','Australia','Türkiye'],E:['Germany','Curaçao','Ivory Coast','Ecuador'],F:['Netherlands','Japan','Sweden','Tunisia'],G:['Belgium','Egypt','Iran','New Zealand'],H:['Spain','Cape Verde','Saudi Arabia','Uruguay'],I:['France','Senegal','Iraq','Norway'],J:['Argentina','Algeria','Austria','Jordan'],K:['Portugal','DR Congo','Uzbekistan','Colombia'],L:['England','Croatia','Ghana','Panama']};
 var TEAMS=Object.values(GRP).flat();
 var MS=[
@@ -1128,11 +1129,16 @@ function RoomPage(props) {
         <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
           <div>
             <h3 style=${{margin:0}}>📊 Export to Google Sheets</h3>
-            <p style=${{fontSize:12,color:'var(--mu)',margin:'4px 0 0'}}>Download a CSV of all predictions and the leaderboard.</p>
+            <p style=${{fontSize:12,color:'var(--mu)',margin:'4px 0 0'}}>Download a CSV or open your live data Sheet.</p>
           </div>
-          <button class="btn-p" style=${{fontSize:12,padding:'8px 14px',flexShrink:0}} onClick=${function(){props.onExport();}}>
-            <i class="ti ti-download"></i> Download CSV
-          </button>
+          <div style=${{display:'flex',gap:8,flexShrink:0}}>
+            <a href="https://docs.google.com/spreadsheets/d/1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw" target="_blank" style=${{padding:'8px 12px',borderRadius:'var(--rs)',border:'1px solid rgba(91,139,184,.3)',background:'transparent',color:'var(--mu)',fontSize:12,textDecoration:'none',display:'inline-flex',alignItems:'center',gap:5}}>
+              <i class="ti ti-table"></i> Open Sheet
+            </a>
+            <button class="btn-p" style=${{fontSize:12,padding:'8px 14px'}} onClick=${function(){props.onExport();}}>
+              <i class="ti ti-download"></i> CSV
+            </button>
+          </div>
         </div>
         <div style=${{fontSize:11,color:'var(--dm)'}}>
           Open in Google Sheets: <strong style=${{color:'var(--mu)'}}>File → Import → Upload → select the downloaded CSV</strong>
@@ -1194,7 +1200,7 @@ function SetupScreen() {
     {n:2, t:'Open Apps Script', d:'Inside your Sheet click Extensions → Apps Script. A new editor tab opens.'},
     {n:3, t:'Paste the backend code', d:'Delete all existing code in the editor. Copy the entire contents of google-apps-script.js (included in the download) and paste it in. Press Ctrl+S to save.'},
     {n:4, t:'Deploy as Web App', d:'Click Deploy → New deployment. Set Type = Web app, Execute as = Me, Who has access = Anyone. Click Deploy and copy the URL that appears.'},
-    {n:5, t:'Paste URL into wc2026.html', d:'Open wc2026.html in a text editor. Find the line that says GS_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE" near the top. Replace the placeholder with your copied URL. Save the file.'},
+    {n:5, t:'Paste URL into wc2026.html', d:'Already done — your Apps Script URL is pre-configured in this file. Your Sheet ID is 1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw.'},
     {n:6, t:'Push to GitHub', d:'Commit and push both wc2026.html to your repo. Your site reloads automatically at wadde.online/wc2026.html and data is live in your Sheet!'},
   ];
   return html`<div style=${{minHeight:'100vh',background:'var(--bg)',padding:'0 0 60px'}}>
@@ -1221,10 +1227,9 @@ function SetupScreen() {
       <div class="card" style=${{background:'rgba(240,180,41,.06)',borderColor:'rgba(240,180,41,.25)',padding:'14px 16px',marginBottom:16}}>
         <div style=${{fontFamily:'Barlow Condensed',fontSize:11,letterSpacing:1.5,color:'var(--gold)',marginBottom:6}}>WHERE TO FIND GS_URL IN THE FILE</div>
         <div style=${{fontFamily:'monospace',fontSize:13,background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:6,padding:'10px 14px',color:'var(--tx)',lineHeight:1.8}}>
-          <span style=${{color:'var(--mu)'}}>//&nbsp;near the top of wc2026.html:</span><br/>
-          var GS_URL&nbsp;=&nbsp;<span style=${{color:'#f87171'}}>'PASTE_YOUR_APPS_SCRIPT_URL_HERE'</span>;<br/>
-          <span style=${{color:'var(--mu)'}}>//&nbsp;replace with your URL:</span><br/>
-          var GS_URL&nbsp;=&nbsp;<span style=${{color:'#4ade80'}}>'https://script.google.com/macros/s/AKfycby5N5jQoNDf-HjmOx22SbSH2ZN0i_3BK2rQ_gYzZE3-DDbM0Ryza0Z9VIk39QgvUXrA/exec'</span>;
+          <span style=${{color:'var(--mu)'}}>//&nbsp;Already configured in your file:</span><br/>
+          var GS_URL&nbsp;=&nbsp;<span style=${{color:'#4ade80'}}>'https://script.google.com/macros/s/AKfycby5...'</span>;<br/>
+          <span style=${{color:'var(--mu)'}}>//&nbsp;Sheet&nbsp;ID:&nbsp;</span><span style=${{color:'#93c5fd'}}>1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw</span>
         </div>
       </div>
 
