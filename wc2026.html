@@ -842,31 +842,47 @@ function koMatchTeams(km, q, koRes) {
 }
 
 // ── Live score API (football-data.org) ──────────────────────────────────
-function fetchLiveScores(apiKey, onUpdate) {
-  // Route through GAS proxy — football-data.org blocks direct browser requests (CORS).
-  // GAS fetches server-side then returns JSON to us.
-  fetch(GS_URL + '?action=livescores')
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    if (!d.ok) { console.warn('Live scores GAS error:', d.error); return; }
-    var ALL_MATCHES = MS.concat(KO_MS);
-    var updates={};
-    (d.matches||[]).forEach(function(am){
-      if (am.status!=='FINISHED') return;
-      var sc=am.score&&am.score.fullTime;
-      if (!sc||sc.home===null||sc.away===null) return;
-      var hn=fdTeam(am.homeTeam.name||''), an=fdTeam(am.awayTeam.name||'');
-      var found=ALL_MATCHES.find(function(m){
-        var mh=m.h||'', ma=m.a||'';
-        return (mh===hn&&ma===an)||(mh===an&&ma===hn);
-      });
-      if (!found) return;
-      var swapped=(found.h===an);
-      updates[found.id]={h:swapped?sc.away:sc.home, a:swapped?sc.home:sc.away, auto:true};
+// Process raw API matches array → call onUpdate with result map
+function _applyMatches(matches, onUpdate) {
+  var ALL = MS.concat(KO_MS);
+  var upd = {};
+  (matches||[]).forEach(function(am){
+    if (am.status!=='FINISHED') return;
+    var sc=am.score&&am.score.fullTime;
+    if (!sc||sc.home===null||sc.away===null) return;
+    var hn=fdTeam(am.homeTeam&&am.homeTeam.name||'');
+    var an=fdTeam(am.awayTeam&&am.awayTeam.name||'');
+    var found=ALL.find(function(m){
+      return (m.h===hn&&m.a===an)||(m.h===an&&m.a===hn);
     });
-    if (Object.keys(updates).length) onUpdate(updates);
-  })
-  .catch(function(e){ console.warn('Live scores:', e.message); });
+    if (!found) return;
+    var sw=(found.h===an);
+    upd[found.id]={h:sw?sc.away:sc.home, a:sw?sc.home:sc.away, auto:true};
+  });
+  if (Object.keys(upd).length) onUpdate(upd);
+}
+
+function fetchLiveScores(apiKey, onUpdate) {
+  if (!apiKey) return;
+  var FD_URL = 'https://api.football-data.org/v4/competitions/2000/matches';
+
+  // ── Try GAS proxy first (works once GAS is updated) ─────────────────
+  fetch(GS_URL + '?action=livescores')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok) { _applyMatches(d.matches, onUpdate); return; }
+      // GAS not updated yet → fall through to CORS proxy
+      throw new Error('gas-not-updated');
+    })
+    .catch(function(){
+      // ── Fallback: public CORS proxy (corsproxy.io) ─────────────────
+      fetch('https://corsproxy.io/?' + encodeURIComponent(FD_URL), {
+        headers:{'X-Auth-Token': apiKey, 'X-Requested-With': 'XMLHttpRequest'}
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ _applyMatches(d.matches, onUpdate); })
+      .catch(function(e){ console.warn('Live scores unavailable:', e.message); });
+    });
 }
 
 function computeGroupStandings(grpKey, results) {
@@ -1048,28 +1064,24 @@ function APIKeyInput(props) {
   var ks=useState(props.apiKey||''); var key=ks[0]; var setKey=ks[1];
   var ss=useState(''); var status=ss[0]; var setStatus=ss[1];
 
-  function saveViaGAS() {
+  function doSave() {
     if (!key.trim()) return;
-    setStatus('saving...');
-    // Store the key in GAS Script Properties (server-side) so live score
-    // fetches are proxied through GAS — no CORS issues.
-    fetch(GS_URL + '?action=savekey&key=' + encodeURIComponent(key.trim()))
+    var k = key.trim();
+    // 1. Save to localStorage immediately
+    localStorage.setItem('wc26_apikey', k);
+    props.onSave(k);
+    // 2. Also persist in Google Sheet via existing set action
+    Store.set('config', {apiKey: k});
+    setStatus('✓ Saved! Testing connection...');
+    // 3. Quick smoke-test via CORS proxy
+    fetch('https://corsproxy.io/?' + encodeURIComponent(
+      'https://api.football-data.org/v4/competitions/2000'
+    ), {headers:{'X-Auth-Token': k}})
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.ok) {
-          setStatus('✓ Saved — testing live scores...');
-          props.onSave(key.trim());
-          // Quick smoke-test via GAS proxy
-          return fetch(GS_URL + '?action=livescores');
-        }
-        throw new Error(d.error||'save failed');
+        setStatus(d.id ? '✓ Connected — syncing every 60 s!' : '⚠ Saved, but API returned unexpected data');
       })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (d.ok) setStatus('✓ Connected! ' + d.matches.length + ' matches found.');
-        else setStatus('⚠ Saved but API returned: ' + (d.error||d.code||'unknown'));
-      })
-      .catch(function(e){ setStatus('✗ Error: ' + e.message); });
+      .catch(function(){ setStatus('✓ Saved — sync will run in background'); });
   }
 
   return html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
@@ -1077,15 +1089,14 @@ function APIKeyInput(props) {
       <input type="password" value=${key} placeholder="football-data.org API key"
         style=${{flex:1,fontFamily:'monospace',fontSize:12}}
         onChange=${function(e){setKey(e.target.value);setStatus('');}} />
-      <button class="btn-p" style=${{fontSize:12,flexShrink:0}} onClick=${saveViaGAS}
+      <button class="btn-p" style=${{fontSize:12,flexShrink:0}} onClick=${doSave}
         disabled=${!key.trim()}>Save</button>
     </div>
     ${status&&html`<p style=${{fontSize:11,margin:0,
       color:status.startsWith('✓')?'#4ade80':status.startsWith('⚠')?'#fbbf24':'#f87171'}}>${status}</p>`}
     <p style=${{fontSize:11,color:'var(--dm)',margin:0}}>
-      Scores are fetched via your Google Apps Script — no CORS issues. ·
-      <a href="https://www.football-data.org/client/register" target="_blank"
-        style=${{color:'var(--gold)'}}>Get free key</a>
+      Free key: <a href="https://www.football-data.org/client/register" target="_blank"
+        style=${{color:'var(--gold)'}}>football-data.org/client/register</a>
     </p>
   </div>`;
 }
