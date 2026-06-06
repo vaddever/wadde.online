@@ -4,10 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WC 2026 Predictions — wadde.online</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 64'><rect width='56' height='64' rx='8' fill='%230a1628'/><path d='M10 8 H46 L42 38 Q39 47 28 50 Q17 47 14 38 Z' fill='%23f0b429'/><path d='M14 13 Q4 13 4 23 Q4 33 14 33' fill='none' stroke='%23f0b429' stroke-width='5' stroke-linecap='round'/><path d='M42 13 Q52 13 52 23 Q52 33 42 33' fill='none' stroke='%23f0b429' stroke-width='5' stroke-linecap='round'/><rect x='25' y='50' width='6' height='8' fill='%23f0b429'/><rect x='16' y='58' width='24' height='6' rx='3' fill='%23f0b429'/><text x='28' y='37' text-anchor='middle' fill='%230a1628' font-size='13' font-weight='900' font-family='Arial Black'>26</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <style>
+  /* Tabler-icons replacement — no external CDN needed */
+  .ti { font-style:normal; font-family:Arial,sans-serif; line-height:1; display:inline-flex; align-items:center; justify-content:center; }
+  .ti-arrow-left::before  { content:'←'; font-size:1.1em; }
+  .ti-x::before           { content:'×'; font-size:1.3em; font-weight:300; }
+  .ti-plus::before        { content:'+'; font-size:1.2em; }
+  .ti-minus::before       { content:'−'; font-size:1.3em; }
+  .ti-check::before       { content:'✓'; }
+  .ti-logout::before      { content:'↩'; }
+  .ti-door-enter::before  { content:'↪'; }
+  .ti-refresh::before     { content:'↻'; }
+  .ti-download::before    { content:'↓'; font-size:1.1em; }
+  .ti-external-link::before { content:'↗'; }
+  .ti-search::before      { content:'⌕'; font-size:1.1em; }
+  .ti-pencil::before      { content:'✎'; }
+  .ti-chevron-right::before { content:'›'; font-size:1.4em; }
+  .ti-table::before       { content:'⊞'; }
+  .ti-sparkles::before    { content:'✦'; }
+</style>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--bg:#080f1e;--bg2:#0d1a2e;--bg3:#0f2140;--bdr:rgba(28,55,100,.7);--gold:#f0b429;--gdim:rgba(240,180,41,.12);--tx:#dce8f5;--mu:#5b8bb8;--dm:#2a4d6e;--gn:#22c55e;--rd:#ef4444;--bl:#3b82f6;--r:12px;--rs:8px}
@@ -642,38 +661,51 @@ function PlayerAvatar(props) {
   }}>${initials}</div>`;
 }
 
-// TeamCircle: round flag image with letter fallback
+// TeamCircle: CSS-layered flag — no hooks, no state
+// Initial letter always renders as background; flag image layered on top.
+// If the image fails to load, onError removes it and letter shows through.
 function TeamCircle(props) {
   var size = props.size || 40;
-  var url = teamFlagUrl(props.team);
-  var s16 = useState(false); var err = s16[0]; var setErr = s16[1];
-  if (!url || err) {
-    var initial = (props.team||'?')[0].toUpperCase();
-    return html`<div style=${{
-      width:size, height:size, borderRadius:size/2, flexShrink:0,
-      background: teamBg(props.team),
-      display:'flex', alignItems:'center', justifyContent:'center',
-      fontSize: Math.round(size*0.4), fontWeight:700, color:'white',
-      fontFamily:'Arial,sans-serif', border:'1px solid rgba(255,255,255,.12)'
-    }}>${initial}</div>`;
-  }
-  return html`<img src=${url}
-    style=${{width:size, height:size, borderRadius:size/2, objectFit:'cover', flexShrink:0, border:'1px solid rgba(255,255,255,.12)', display:'block'}}
-    alt=${props.team}
-    onError=${function(){setErr(true);}} />`;
+  var url  = teamFlagUrl(props.team);
+  var init = (props.team||'?')[0].toUpperCase();
+  return html`<div style=${{
+    width:size, height:size, borderRadius:size/2, flexShrink:0,
+    position:'relative', overflow:'hidden',
+    background: teamBg(props.team),
+    border:'1px solid rgba(255,255,255,.12)'
+  }}>
+    <div style=${{
+      position:'absolute', inset:0, display:'flex',
+      alignItems:'center', justifyContent:'center',
+      fontSize:Math.round(size*0.4), fontWeight:700,
+      color:'rgba(255,255,255,.9)', fontFamily:'Arial,sans-serif'
+    }}>${init}</div>
+    ${url&&html`<img src=${url}
+      style=${{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}
+      alt=${props.team}
+      onError=${function(e){e.target.remove();}} />`}
+  </div>`;
 }
 
-// FlagImg: rectangular flag with fallback emoji
+// FlagImg: rectangular flag — no hooks, no state
 function FlagImg(props) {
-  var w = props.w || 24; var h = props.h || Math.round(w*0.65);
+  var w = props.w || 24;
+  var h = props.h || Math.round(w * 0.65);
   var url = teamFlagUrl(props.team);
-  var s17 = useState(false); var err = s17[0]; var setErr = s17[1];
-  if (!url || err) return html`<span style=${{fontSize:h+4}}>${F[props.team]||'🏳'}</span>`;
+  if (!url) return html`<span style=${{fontSize:h+4,lineHeight:1,flexShrink:0}}>${F[props.team]||'🏳'}</span>`;
   return html`<img src=${url}
-    style=${{width:w, height:h, borderRadius:3, objectFit:'cover', flexShrink:0, display:'inline-block', verticalAlign:'middle'}}
+    style=${{width:w, height:h, borderRadius:3, objectFit:'cover',
+             flexShrink:0, display:'inline-block', verticalAlign:'middle'}}
     alt=${props.team}
-    onError=${function(){setErr(true);}} />`;
+    onError=${function(e){
+      var sp = document.createElement('span');
+      sp.textContent = F[props.team]||'🏳';
+      sp.style.fontSize = (h+4)+'px';
+      sp.style.lineHeight = '1';
+      e.target.replaceWith(sp);
+    }} />`;
 }
+
 
 // Legacy shim — kept so existing code that calls playerAvatar() still works
 function playerAvatar(name, team) {
@@ -919,7 +951,7 @@ function MatchDetailModal(props) {
     <div style=${{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'16px',marginBottom:12,textAlign:'center'}}>
       <div style=${{display:'flex',alignItems:'center',justifyContent:'center',gap:16}}>
         <div style=${{textAlign:'center',flex:1}}>
-          html`<${TeamCircle} team=${m.h} size=${48} />`
+          <${TeamCircle} team=${m.h} size=${48} />
           <div style=${{fontSize:14,fontWeight:600}}>${m.h}</div>
           <div style=${{fontSize:11,color:'var(--mu)',marginTop:2}}>${homeFm}</div>
         </div>
@@ -935,7 +967,7 @@ function MatchDetailModal(props) {
           </div>
         </div>
         <div style=${{textAlign:'center',flex:1}}>
-          html`<${TeamCircle} team=${m.a} size=${48} />`
+          <${TeamCircle} team=${m.a} size=${48} />
           <div style=${{fontSize:14,fontWeight:600}}>${m.a}</div>
           <div style=${{fontSize:11,color:'var(--mu)',marginTop:2}}>${awayFm}</div>
         </div>
@@ -954,7 +986,7 @@ function MatchDetailModal(props) {
       <div>
         <div style=${{fontSize:11,fontWeight:600,color:'var(--mu)',letterSpacing:1,marginBottom:8,fontFamily:'Barlow Condensed'}}>KEY PLAYERS · ${m.h.split(' ')[0].toUpperCase()}</div>
         ${homePlayers.map(function(p){ return html`<div key=${p.n} style=${{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-          html`<${PlayerAvatar} name=${p.n} team=${p.t} size=${32} />`
+          <${PlayerAvatar} name=${p.n} team=${p.t} size=${32} />
           <div style=${{flex:1,minWidth:0}}>
             <div style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
           </div>
@@ -964,7 +996,7 @@ function MatchDetailModal(props) {
       <div>
         <div style=${{fontSize:11,fontWeight:600,color:'var(--mu)',letterSpacing:1,marginBottom:8,fontFamily:'Barlow Condensed'}}>KEY PLAYERS · ${m.a.split(' ')[0].toUpperCase()}</div>
         ${awayPlayers.map(function(p){ return html`<div key=${p.n} style=${{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-          html`<${PlayerAvatar} name=${p.n} team=${p.t} size=${32} />`
+          <${PlayerAvatar} name=${p.n} team=${p.t} size=${32} />
           <div style=${{flex:1,minWidth:0}}>
             <div style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
           </div>
@@ -1075,7 +1107,7 @@ function WinnerModal(props) {
     <input value=${filter} onChange=${function(e){setFilter(e.target.value);}} placeholder="Search team..." style=${{marginBottom:10}} />
     <div class="g3" style=${{maxHeight:260,overflowY:'auto',marginBottom:16,padding:2}}>
       ${filtered.map(function(t){ return html`<button key=${t} onClick=${function(){setSel(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:sel===t?'2px solid #1a56db':'1px solid var(--bdr)',background:sel===t?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-        html`<${FlagImg} team=${t} w=${32} />`
+        <${FlagImg} team=${t} w=${32} />
         <span style=${{textAlign:'center',lineHeight:1.2}}>${t}</span>
       </button>`; })}
     </div>
@@ -1149,7 +1181,7 @@ function WelcomePage(props) {
     <h3>2026 World Cup Groups</h3>
     <div class="g4">${Object.entries(GRP).map(function(e){ var g=e[0]; var ts=e[1]; return html`<div key=${g} class="card card-sm">
       <div style=${{fontSize:10,fontWeight:600,color:'var(--mu)',marginBottom:6,fontFamily:'Barlow Condensed',letterSpacing:.5}}>GROUP ${g}</div>
-      ${ts.map(function(t){ return html`<div key=${t} style=${{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'var(--tx)',marginBottom:3}}>html`<${FlagImg} team=${t} w=${18} />`<span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${t}</span></div>`; })}
+      ${ts.map(function(t){ return html`<div key=${t} style=${{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'var(--tx)',marginBottom:3}}><${FlagImg} team=${t} w=${18} /><span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${t}</span></div>`; })}
     </div>`; })}
     </div>
   </div>`;
@@ -1218,7 +1250,7 @@ function PlayerPicker(props) {
               border:'none',borderBottom:'1px solid var(--bdr)',cursor:disabled?'not-allowed':'pointer',
               textAlign:'left',opacity:disabled?0.4:1,transition:'background .1s'
             }}>
-              html`<${PlayerAvatar} name=${p.n} team=${p.t} size=${36} />`
+              <${PlayerAvatar} name=${p.n} team=${p.t} size=${36} />
               <div style=${{flex:1,minWidth:0}}>
                 <div style=${{fontSize:14,fontWeight:500,color:picked?'#60a5fa':'var(--tx)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
                 <div style=${{fontSize:11,color:'var(--mu)',marginTop:1}}>${F[p.t]||'🏳'} ${p.t}</div>
@@ -1280,7 +1312,7 @@ function AuthPage(props) {
           <h2>Favorite teams <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>2 of 3 · pick 1</span></h2>
           <div class="g3" style=${{marginBottom:14,maxHeight:260,overflowY:'auto',padding:4}}>
             ${TEAMS.map(function(t){ return html`<button key=${t} onClick=${function(){togT(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:favT.includes(t)?'2px solid #1a56db':'1px solid var(--bdr)',background:favT.includes(t)?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!favT.includes(t)&&favT.length>=1?0.35:1}}>
-              html`<${FlagImg} team=${t} w=${32} />`
+              <${FlagImg} team=${t} w=${32} />
               <span style=${{textAlign:'center',fontSize:10,lineHeight:1.2}}>${t}</span>
             </button>`; })}
           </div>
@@ -1324,7 +1356,7 @@ function DashPage(props) {
           return html`<div key=${m.id} class="card" style=${{padding:'12px 14px',borderLeft:'3px solid '+(isLive?'#ef4444':'rgba(240,180,41,.5)')}}>
             <div style=${{display:'flex',alignItems:'center',gap:10}}>
               <div style=${{display:'flex',alignItems:'center',gap:6,flex:1}}>
-                ${html`<${TeamCircle} team=${m.h} size=${28} />`}
+                <${TeamCircle} team=${m.h} size=${28} />
                 <span style=${{fontSize:13,fontWeight:500}}>${F[m.h]||''} ${m.h}</span>
               </div>
               <div style=${{fontSize:11,fontWeight:600,color:isLive?'#ef4444':'var(--mu)',textAlign:'center',minWidth:40}}>
@@ -1332,7 +1364,7 @@ function DashPage(props) {
               </div>
               <div style=${{display:'flex',alignItems:'center',gap:6,flex:1,justifyContent:'flex-end'}}>
                 <span style=${{fontSize:13,fontWeight:500}}>${m.a} ${F[m.a]||''}</span>
-                ${html`<${TeamCircle} team=${m.a} size=${28} />`}
+                <${TeamCircle} team=${m.a} size=${28} />
               </div>
             </div>
             <div style=${{fontSize:11,color:'var(--mu)',marginTop:6,textAlign:'center'}}>${t.local} · Group ${m.gr}</div>
@@ -1362,7 +1394,7 @@ function DashPage(props) {
     }
     <h2>Featured Players</h2>
     <div class="g4">${PLY.map(function(p,i){ return html`<div key=${i} class="card card-sm" style=${{textAlign:'center',padding:'12px 6px',borderColor:i===props.plyrI?'rgba(240,180,41,.35)':undefined,background:i===props.plyrI?'rgba(240,180,41,.04)':undefined}}>
-      html`<${PlayerAvatar} name=${p.n} team=${p.t} size=${44} />`
+      <${PlayerAvatar} name=${p.n} team=${p.t} size=${44} />
       <div style=${{fontSize:16,lineHeight:1}}>${F[p.t]||'⚽'}</div>
       <div style=${{fontSize:11,fontWeight:600,color:'var(--tx)',marginTop:3,lineHeight:1.2}}>${p.n}</div>
       <div style=${{fontSize:10,color:'var(--mu)',marginTop:2}}>${p.t}</div>
@@ -1435,14 +1467,14 @@ function RoomPage(props) {
           </div>
           <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
             <div style=${{flex:1,textAlign:'right'}}>
-              html`<${TeamCircle} team=${m.h} size=${40} />`
+              <${TeamCircle} team=${m.h} size=${40} />
               <div style=${{fontSize:12,fontWeight:500,marginTop:3}}>${m.h}</div>
             </div>
             <div style=${{background:'var(--bg3)',borderRadius:'var(--rs)',padding:'6px 14px',minWidth:72,textAlign:'center'}}>
               ${res?html`<span style=${{fontFamily:'Barlow Condensed',fontSize:22,fontWeight:700}}>${res.h}–${res.a}</span>`:st==='live'?html`<span style=${{fontSize:13,color:'var(--rd)',fontWeight:500}}>LIVE</span>`:html`<span style=${{fontSize:14,color:'var(--dm)'}}>vs</span>`}
             </div>
             <div style=${{flex:1,textAlign:'left'}}>
-              html`<${TeamCircle} team=${m.a} size=${40} />`
+              <${TeamCircle} team=${m.a} size=${40} />
               <div style=${{fontSize:12,fontWeight:500,marginTop:3}}>${m.a}</div>
             </div>
           </div>
@@ -1481,7 +1513,10 @@ function RoomPage(props) {
                 ${e.user&&e.user.name}
                 ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8}}>you</span>`}
               </div>
-              <div style=${{fontSize:12,color:'var(--mu)',marginTop:2}}>${e.np} predictions${e.pick?html` · ${teamFlagUrl(e.pick)?html`<img src=${teamFlagUrl(e.pick)} style=${{width:18,height:12,borderRadius:2,objectFit:'cover',verticalAlign:'middle'}} />`:F[e.pick]||''} ${e.pick}`:''}</div>
+              <div style=${{fontSize:12,color:'var(--mu)',marginTop:2}}>
+                ${e.np} predictions
+                ${e.pick&&html` · <${FlagImg} team=${e.pick} w=${18} /> ${e.pick}`}
+              </div>
             </div>
             <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
           </div>`; })}
@@ -1503,7 +1538,7 @@ function RoomPage(props) {
       <div class="g2">
         ${Object.entries(GRP).map(function(e){ var g=e[0]; var ts=e[1]; return html`<div key=${g} class="card">
           <div style=${{fontSize:11,fontWeight:700,color:'var(--mu)',marginBottom:8,fontFamily:'Barlow Condensed',letterSpacing:1}}>GROUP ${g}</div>
-          ${ts.map(function(t){ return html`<div key=${t} style=${{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:'1px solid var(--bdr)',fontSize:13}}>html`<${FlagImg} team=${t} w=${24} />`<span style=${{flex:1}}>${t}</span></div>`; })}
+          ${ts.map(function(t){ return html`<div key=${t} style=${{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:'1px solid var(--bdr)',fontSize:13}}><${FlagImg} team=${t} w=${24} /><span style=${{flex:1}}>${t}</span></div>`; })}
         </div>`; })}
       </div>
     </div>`}
@@ -1599,10 +1634,10 @@ function RoomPage(props) {
             var st=mStat(m,props.results); var t=fmtTime(m.utc);
             return html`<div key=${m.id} style=${{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'var(--bg3)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)'}}>
               <div style=${{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0}}>
-                html`<${FlagImg} team=${m.h} w=${20} />`
+                <${FlagImg} team=${m.h} w=${20} />
                 <span style=${{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
                 <span style=${{fontSize:11,color:'var(--mu)',flexShrink:0}}>vs</span>
-                html`<${FlagImg} team=${m.a} w=${20} />`
+                <${FlagImg} team=${m.a} w=${20} />
                 <span style=${{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.a}</span>
               </div>
               <span class=${'bdg '+(st==='live'?'blv':'bpa')} style=${{fontSize:10,flexShrink:0}}>${st==='live'?'LIVE':'PAST'}</span>
@@ -1632,7 +1667,7 @@ function RoomPage(props) {
                 <div style=${{fontSize:11,color:'var(--mu)'}}>${u.phone||''}</div>
               </div>
               ${isOwner&&html`<span style=${{fontSize:10,background:'rgba(240,180,41,.12)',color:'var(--gold)',border:'1px solid rgba(240,180,41,.3)',padding:'2px 8px',borderRadius:10}}>Admin</span>`}
-              html`<${FlagImg} team=${u.favT&&u.favT[0]||''} w=${24} />`
+              <${FlagImg} team=${u.favT&&u.favT[0]||''} w=${24} />
             </div>`;
           })}
         </div>
@@ -1924,14 +1959,14 @@ function App() {
   if (!Store._ready()) return html`<${SetupScreen} />`;
 
   if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,background:'var(--bg)'}}>
-    <div dangerouslySetInnerHTML=${{__html:'<svg viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg" width="56" height="64" style="display:block">
-  <path d="M10 8 H46 L42 38 Q39 47 28 50 Q17 47 14 38 Z" fill="#f0b429"/>
-  <path d="M14 13 Q4 13 4 23 Q4 33 14 33" fill="none" stroke="#f0b429" stroke-width="5" stroke-linecap="round"/>
-  <path d="M42 13 Q52 13 52 23 Q52 33 42 33" fill="none" stroke="#f0b429" stroke-width="5" stroke-linecap="round"/>
-  <rect x="25" y="50" width="6" height="8" fill="#f0b429"/>
-  <rect x="16" y="58" width="24" height="6" rx="3" fill="#f0b429"/>
-  <text x="28" y="37" text-anchor="middle" fill="#0a1628" font-size="13" font-weight="900" font-family="Arial Black,Impact,sans-serif">26</text>
-</svg>'}}></div>
+    <svg viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg" width="56" height="64">
+      <path d="M10 8 H46 L42 38 Q39 47 28 50 Q17 47 14 38 Z" fill="#f0b429"/>
+      <path d="M14 13 Q4 13 4 23 Q4 33 14 33" fill="none" stroke="#f0b429" stroke-width="5" stroke-linecap="round"/>
+      <path d="M42 13 Q52 13 52 23 Q52 33 42 33" fill="none" stroke="#f0b429" stroke-width="5" stroke-linecap="round"/>
+      <rect x="25" y="50" width="6" height="8" fill="#f0b429"/>
+      <rect x="16" y="58" width="24" height="6" rx="3" fill="#f0b429"/>
+      <text x="28" y="37" text-anchor="middle" fill="#0a1628" font-size="13" font-weight="900" font-family="Arial Black,sans-serif">26</text>
+    </svg>
     <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:22,fontWeight:700,color:'var(--gold)',letterSpacing:3}}>FIFA WORLD CUP 2026</div>
     <p style=${{color:'var(--mu)',fontSize:13}}>Loading predictions...</p>
   </div>`;
@@ -1939,14 +1974,10 @@ function App() {
   return html`<div>
     <div class="topbar">
       
-      <span class="logo" style=${{display:"flex",alignItems:"center",gap:6}}><span dangerouslySetInnerHTML=${{__html:'<svg viewBox="0 0 32 36" xmlns="http://www.w3.org/2000/svg" width="22" height="24" style="display:inline-block;vertical-align:middle">
-  <path d="M6 4 H26 L24 21 Q22 26 16 28 Q10 26 8 21 Z" fill="#f0b429"/>
-  <path d="M8 7 Q2 7 2 13 Q2 19 8 19" fill="none" stroke="#f0b429" stroke-width="3" stroke-linecap="round"/>
-  <path d="M24 7 Q30 7 30 13 Q30 19 24 19" fill="none" stroke="#f0b429" stroke-width="3" stroke-linecap="round"/>
-  <rect x="14" y="28" width="4" height="5" fill="#f0b429"/>
-  <rect x="9" y="33" width="14" height="3" rx="1.5" fill="#f0b429"/>
-  <text x="16" y="21" text-anchor="middle" fill="#0a1628" font-size="8" font-weight="900" font-family="Arial Black,Impact,sans-serif">26</text>
-</svg>'}}></span>WC 2026 Predictions</span>
+      <span class="logo" style=${{display:'flex',alignItems:'center',gap:6}}>
+        <svg viewBox="0 0 32 36" xmlns="http://www.w3.org/2000/svg" width="20" height="23" style=${{display:'block'}}><path d="M6 4 H26 L24 21 Q22 26 16 28 Q10 26 8 21 Z" fill="#f0b429"/><path d="M8 7 Q2 7 2 13 Q2 19 8 19" fill="none" stroke="#f0b429" stroke-width="3" stroke-linecap="round"/><path d="M24 7 Q30 7 30 13 Q30 19 24 19" fill="none" stroke="#f0b429" stroke-width="3" stroke-linecap="round"/><rect x="14" y="28" width="4" height="5" fill="#f0b429"/><rect x="9" y="33" width="14" height="3" rx="1.5" fill="#f0b429"/><text x="16" y="21" text-anchor="middle" fill="#0a1628" font-size="8" font-weight="900" font-family="Arial Black,sans-serif">26</text></svg>
+        WC 2026 Predictions
+      </span>WC 2026 Predictions</span>
       ${user&&html`<button class="btn" style=${{fontSize:12}} onClick=${doLogout}><i class="ti ti-logout"></i> Out</button>`}
     </div>
 
