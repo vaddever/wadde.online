@@ -579,6 +579,37 @@ var TC = {
   'Uzbekistan':'#1eb53a','Algeria':'#006233','Jordan':'#007a3d',
   'DR Congo':'#007a3d'
 };
+// ISO country codes for flagcdn.com
+var TEAM_CODES = {
+  'Mexico':'mx','South Africa':'za','South Korea':'kr','Czechia':'cz',
+  'Canada':'ca','Bosnia & Herzegovina':'ba','Qatar':'qa','Switzerland':'ch',
+  'Brazil':'br','Morocco':'ma','Haiti':'ht','Scotland':'gb-sct',
+  'United States':'us','Paraguay':'py','Australia':'au','Türkiye':'tr',
+  'Germany':'de','Curaçao':'cw','Ivory Coast':'ci','Ecuador':'ec',
+  'Netherlands':'nl','Japan':'jp','Sweden':'se','Tunisia':'tn',
+  'Belgium':'be','Egypt':'eg','Iran':'ir','New Zealand':'nz',
+  'Spain':'es','Cape Verde':'cv','Saudi Arabia':'sa','Uruguay':'uy',
+  'France':'fr','Senegal':'sn','Iraq':'iq','Norway':'no',
+  'Argentina':'ar','Algeria':'dz','Austria':'at','Jordan':'jo',
+  'Portugal':'pt','DR Congo':'cd','Uzbekistan':'uz','Colombia':'co',
+  'England':'gb-eng','Croatia':'hr','Ghana':'gh','Panama':'pa'
+};
+function teamFlagUrl(team) {
+  var c = TEAM_CODES[team];
+  return c ? 'https://flagcdn.com/w80/' + c + '.png' : null;
+}
+// Circle-cropped flag (replaces letter avatar for teams)
+function teamAvatar(team) {
+  return teamFlagUrl(team) || playerAvatar(team, team);
+}
+// Rectangular flag image element string (for inline use)
+function flagImg(team, size) {
+  var url = teamFlagUrl(team);
+  var s = size || 28;
+  return url
+    ? '<img src="' + url + '" width="' + s + '" style="height:' + Math.round(s*0.65) + 'px;border-radius:3px;object-fit:cover;vertical-align:middle" />'
+    : (F[team] || '🏳');
+}
 
 // Typical formations
 var FORMATIONS = {
@@ -592,18 +623,72 @@ var FORMATIONS = {
   'Iran':'4-3-3','Scotland':'4-3-3','Poland':'4-2-3-1','Sweden':'4-2-3-1',
 };
 
-// SVG letter avatar as data URI
-function playerAvatar(name, team) {
-  var parts = name.split(' ');
-  var initials = ((parts[0]||'?')[0] + ((parts[1]||'')[0]||'')).toUpperCase();
-  var bg = TC[team] || '#1a56db';
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">'
-    + '<circle cx="24" cy="24" r="24" fill="' + bg + '"/>'
-    + '<text x="24" y="31" text-anchor="middle" fill="rgba(255,255,255,0.95)" '
-    + 'font-size="17" font-weight="700" font-family="Arial,sans-serif">' + initials + '</text>'
-    + '</svg>';
-  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+// ── Avatar components (CSS-only — no data URIs, no CORS issues) ──────────
+// Returns CSS background colour for a team
+function teamBg(team) { return TC[team] || '#1a56db'; }
+
+// PlayerAvatar: coloured circle with initials
+function PlayerAvatar(props) {
+  var parts = (props.name||'?').split(' ');
+  var initials = ((parts[0]||'?')[0] + ((parts[1]||' ')[0]||'')).toUpperCase();
+  var size = props.size || 36;
+  return html`<div style=${{
+    width:size, height:size, borderRadius:size/2, flexShrink:0,
+    background: teamBg(props.team),
+    display:'flex', alignItems:'center', justifyContent:'center',
+    fontSize: Math.round(size*0.37), fontWeight:700,
+    color:'rgba(255,255,255,0.95)', fontFamily:'Arial,sans-serif',
+    letterSpacing:0.5, userSelect:'none'
+  }}>${initials}</div>`;
 }
+
+// TeamCircle: round flag image with letter fallback
+function TeamCircle(props) {
+  var size = props.size || 40;
+  var url = teamFlagUrl(props.team);
+  var s16 = useState(false); var err = s16[0]; var setErr = s16[1];
+  if (!url || err) {
+    var initial = (props.team||'?')[0].toUpperCase();
+    return html`<div style=${{
+      width:size, height:size, borderRadius:size/2, flexShrink:0,
+      background: teamBg(props.team),
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontSize: Math.round(size*0.4), fontWeight:700, color:'white',
+      fontFamily:'Arial,sans-serif', border:'1px solid rgba(255,255,255,.12)'
+    }}>${initial}</div>`;
+  }
+  return html`<img src=${url}
+    style=${{width:size, height:size, borderRadius:size/2, objectFit:'cover', flexShrink:0, border:'1px solid rgba(255,255,255,.12)', display:'block'}}
+    alt=${props.team}
+    onError=${function(){setErr(true);}} />`;
+}
+
+// FlagImg: rectangular flag with fallback emoji
+function FlagImg(props) {
+  var w = props.w || 24; var h = props.h || Math.round(w*0.65);
+  var url = teamFlagUrl(props.team);
+  var s17 = useState(false); var err = s17[0]; var setErr = s17[1];
+  if (!url || err) return html`<span style=${{fontSize:h+4}}>${F[props.team]||'🏳'}</span>`;
+  return html`<img src=${url}
+    style=${{width:w, height:h, borderRadius:3, objectFit:'cover', flexShrink:0, display:'inline-block', verticalAlign:'middle'}}
+    alt=${props.team}
+    onError=${function(){setErr(true);}} />`;
+}
+
+// Legacy shim — kept so existing code that calls playerAvatar() still works
+function playerAvatar(name, team) {
+  var parts = (name||'?').split(' ');
+  var bg = teamBg(team);
+  return 'data:image/svg+xml;base64,' + btoa(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">'
+    +'<circle cx="24" cy="24" r="24" fill="'+bg+'"/>'
+    +'<text x="24" y="31" text-anchor="middle" fill="rgba(255,255,255,.95)" '
+    +'font-size="17" font-weight="700" font-family="Arial">'+
+    ((parts[0]||'?')[0]+((parts[1]||' ')[0]||'')).toUpperCase()
+    +'</text></svg>'
+  );
+}
+function teamAvatar(team) { return teamFlagUrl(team) || playerAvatar(team, team); }
 
 // Get key players for a team (top 6 by position order FW/MF/DF/GK)
 function getTeamPlayers(team) {
@@ -762,6 +847,34 @@ var KOS = new Date('2026-06-28T00:00:00Z');
 function daysTill(d) { return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 864e5)); }
 
 // Score picker component
+// ── Admin Lock Screen ───────────────────────────────────────────────────
+function AdminLock(props) {
+  var ps = useState(''); var pass = ps[0]; var setPass = ps[1];
+  var es = useState(''); var err = es[0]; var setErr = es[1];
+  function tryUnlock() {
+    if (!pass.trim()) return;
+    if (props.onUnlock(pass)) {
+      setErr('');
+    } else {
+      setErr('Incorrect passphrase. Try again.');
+      setPass('');
+    }
+  }
+  return html`<div style=${{textAlign:'center',padding:'32px 16px'}}>
+    <div style=${{fontSize:48,marginBottom:12}}>🔐</div>
+    <h2 style=${{marginBottom:6}}>Admin Access</h2>
+    <p style=${{fontSize:13,color:'var(--mu)',marginBottom:20}}>Enter the room passphrase to unlock admin features.</p>
+    <div style=${{maxWidth:280,margin:'0 auto',display:'flex',flexDirection:'column',gap:10}}>
+      <input type="password" value=${pass} onChange=${function(e){setPass(e.target.value);setErr('');}}
+        onKeyDown=${function(e){if(e.key==='Enter')tryUnlock();}}
+        placeholder="Admin passphrase" autoFocus />
+      ${err&&html`<p style=${{fontSize:12,color:'var(--rd)',margin:0}}>${err}</p>`}
+      <button class="btn-p" onClick=${tryUnlock} disabled=${!pass.trim()}>Unlock Admin ⚙️</button>
+    </div>
+    <p style=${{fontSize:11,color:'var(--dm)',marginTop:20}}>Passphrase was set by the room creator.</p>
+  </div>`;
+}
+
 // ── Match Detail Modal ────────────────────────────────────────
 function MatchDetailModal(props) {
   var m = props.match;
@@ -806,8 +919,8 @@ function MatchDetailModal(props) {
     <div style=${{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'16px',marginBottom:12,textAlign:'center'}}>
       <div style=${{display:'flex',alignItems:'center',justifyContent:'center',gap:16}}>
         <div style=${{textAlign:'center',flex:1}}>
-          <img src=${playerAvatar(m.h, m.h)} style=${{width:48,height:48,borderRadius:24,marginBottom:4}} />
-          <div style=${{fontSize:14,fontWeight:600}}>${F[m.h]||''} ${m.h}</div>
+          html`<${TeamCircle} team=${m.h} size=${48} />`
+          <div style=${{fontSize:14,fontWeight:600}}>${m.h}</div>
           <div style=${{fontSize:11,color:'var(--mu)',marginTop:2}}>${homeFm}</div>
         </div>
         <div style=${{textAlign:'center',minWidth:80}}>
@@ -822,8 +935,8 @@ function MatchDetailModal(props) {
           </div>
         </div>
         <div style=${{textAlign:'center',flex:1}}>
-          <img src=${playerAvatar(m.a, m.a)} style=${{width:48,height:48,borderRadius:24,marginBottom:4}} />
-          <div style=${{fontSize:14,fontWeight:600}}>${F[m.a]||''} ${m.a}</div>
+          html`<${TeamCircle} team=${m.a} size=${48} />`
+          <div style=${{fontSize:14,fontWeight:600}}>${m.a}</div>
           <div style=${{fontSize:11,color:'var(--mu)',marginTop:2}}>${awayFm}</div>
         </div>
       </div>
@@ -841,7 +954,7 @@ function MatchDetailModal(props) {
       <div>
         <div style=${{fontSize:11,fontWeight:600,color:'var(--mu)',letterSpacing:1,marginBottom:8,fontFamily:'Barlow Condensed'}}>KEY PLAYERS · ${m.h.split(' ')[0].toUpperCase()}</div>
         ${homePlayers.map(function(p){ return html`<div key=${p.n} style=${{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-          <img src=${playerAvatar(p.n, p.t)} style=${{width:32,height:32,borderRadius:16,flexShrink:0}} />
+          html`<${PlayerAvatar} name=${p.n} team=${p.t} size=${32} />`
           <div style=${{flex:1,minWidth:0}}>
             <div style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
           </div>
@@ -851,7 +964,7 @@ function MatchDetailModal(props) {
       <div>
         <div style=${{fontSize:11,fontWeight:600,color:'var(--mu)',letterSpacing:1,marginBottom:8,fontFamily:'Barlow Condensed'}}>KEY PLAYERS · ${m.a.split(' ')[0].toUpperCase()}</div>
         ${awayPlayers.map(function(p){ return html`<div key=${p.n} style=${{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-          <img src=${playerAvatar(p.n, p.t)} style=${{width:32,height:32,borderRadius:16,flexShrink:0}} />
+          html`<${PlayerAvatar} name=${p.n} team=${p.t} size=${32} />`
           <div style=${{flex:1,minWidth:0}}>
             <div style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
           </div>
@@ -912,16 +1025,24 @@ function PredModal(props) {
 
 function CreateModal(props) {
   var ns = useState(''); var name = ns[0]; var setName = ns[1];
+  var ps = useState(''); var pass = ps[0]; var setPass = ps[1];
+  var canCreate = name.trim().length > 0 && pass.trim().length >= 4;
   return html`<div class="modal">
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
       <h2 style=${{margin:0}}>Create Room</h2>
       <button class="btn" style=${{padding:'4px 8px'}} onClick=${props.onClose}><i class="ti ti-x"></i></button>
     </div>
-    <div style=${{marginBottom:14}}><label>Room name</label><input value=${name} onChange=${function(e){setName(e.target.value);}} placeholder="e.g. Office World Cup 2026" /></div>
-    <p style=${{fontSize:12,color:'var(--mu)',marginBottom:16}}>A unique 6-character code is generated automatically. Share it with friends to join!</p>
+    <div style=${{marginBottom:12}}><label>Room name</label><input value=${name} onChange=${function(e){setName(e.target.value);}} placeholder="e.g. Office World Cup 2026" autoFocus /></div>
+    <div style=${{marginBottom:6}}>
+      <label>Admin passphrase <span style=${{color:'var(--dm)',fontWeight:400}}>(min 4 characters)</span></label>
+      <input type="password" value=${pass} onChange=${function(e){setPass(e.target.value);}} placeholder="Set a secret passphrase for admin access" />
+    </div>
+    <div style=${{background:'rgba(240,180,41,.07)',border:'1px solid rgba(240,180,41,.2)',borderRadius:'var(--rs)',padding:'8px 12px',marginBottom:16,fontSize:12,color:'var(--mu)'}}>
+      🔑 Anyone with this passphrase can access admin features: enter results, view all data, manage members.
+    </div>
     <div style=${{display:'flex',gap:10}}>
       <button class="btn" style=${{flex:1}} onClick=${props.onClose}>Cancel</button>
-      <button class="btn-p" style=${{flex:2,opacity:!name?0.45:1}} disabled=${!name} onClick=${function(){props.onSave(name);}}>Create Room 🏠</button>
+      <button class="btn-p" style=${{flex:2,opacity:!canCreate?0.45:1}} disabled=${!canCreate} onClick=${function(){props.onSave(name.trim(), pass.trim());}}>Create Room 🏠</button>
     </div>
   </div>`;
 }
@@ -954,7 +1075,7 @@ function WinnerModal(props) {
     <input value=${filter} onChange=${function(e){setFilter(e.target.value);}} placeholder="Search team..." style=${{marginBottom:10}} />
     <div class="g3" style=${{maxHeight:260,overflowY:'auto',marginBottom:16,padding:2}}>
       ${filtered.map(function(t){ return html`<button key=${t} onClick=${function(){setSel(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:sel===t?'2px solid #1a56db':'1px solid var(--bdr)',background:sel===t?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-        <span style=${{fontSize:20}}>${F[t]||'🏳'}</span>
+        html`<${FlagImg} team=${t} w=${32} />`
         <span style=${{textAlign:'center',lineHeight:1.2}}>${t}</span>
       </button>`; })}
     </div>
@@ -1028,7 +1149,7 @@ function WelcomePage(props) {
     <h3>2026 World Cup Groups</h3>
     <div class="g4">${Object.entries(GRP).map(function(e){ var g=e[0]; var ts=e[1]; return html`<div key=${g} class="card card-sm">
       <div style=${{fontSize:10,fontWeight:600,color:'var(--mu)',marginBottom:6,fontFamily:'Barlow Condensed',letterSpacing:.5}}>GROUP ${g}</div>
-      ${ts.map(function(t){ return html`<div key=${t} style=${{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'var(--tx)',marginBottom:3}}><span style=${{fontSize:13}}>${F[t]||'🏳'}</span><span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${t}</span></div>`; })}
+      ${ts.map(function(t){ return html`<div key=${t} style=${{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'var(--tx)',marginBottom:3}}>html`<${FlagImg} team=${t} w=${18} />`<span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${t}</span></div>`; })}
     </div>`; })}
     </div>
   </div>`;
@@ -1097,7 +1218,7 @@ function PlayerPicker(props) {
               border:'none',borderBottom:'1px solid var(--bdr)',cursor:disabled?'not-allowed':'pointer',
               textAlign:'left',opacity:disabled?0.4:1,transition:'background .1s'
             }}>
-              <img src=${playerAvatar(p.n,p.t)} style=${{width:36,height:36,borderRadius:18,flexShrink:0}} />
+              html`<${PlayerAvatar} name=${p.n} team=${p.t} size=${36} />`
               <div style=${{flex:1,minWidth:0}}>
                 <div style=${{fontSize:14,fontWeight:500,color:picked?'#60a5fa':'var(--tx)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
                 <div style=${{fontSize:11,color:'var(--mu)',marginTop:1}}>${F[p.t]||'🏳'} ${p.t}</div>
@@ -1159,7 +1280,7 @@ function AuthPage(props) {
           <h2>Favorite teams <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>2 of 3 · pick 1</span></h2>
           <div class="g3" style=${{marginBottom:14,maxHeight:260,overflowY:'auto',padding:4}}>
             ${TEAMS.map(function(t){ return html`<button key=${t} onClick=${function(){togT(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:favT.includes(t)?'2px solid #1a56db':'1px solid var(--bdr)',background:favT.includes(t)?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!favT.includes(t)&&favT.length>=1?0.35:1}}>
-              <span style=${{fontSize:20}}>${F[t]||'🏳'}</span>
+              html`<${FlagImg} team=${t} w=${32} />`
               <span style=${{textAlign:'center',fontSize:10,lineHeight:1.2}}>${t}</span>
             </button>`; })}
           </div>
@@ -1203,7 +1324,7 @@ function DashPage(props) {
           return html`<div key=${m.id} class="card" style=${{padding:'12px 14px',borderLeft:'3px solid '+(isLive?'#ef4444':'rgba(240,180,41,.5)')}}>
             <div style=${{display:'flex',alignItems:'center',gap:10}}>
               <div style=${{display:'flex',alignItems:'center',gap:6,flex:1}}>
-                <img src=${playerAvatar(m.h,m.h)} style=${{width:28,height:28,borderRadius:14}} />
+                ${html`<${TeamCircle} team=${m.h} size=${28} />`}
                 <span style=${{fontSize:13,fontWeight:500}}>${F[m.h]||''} ${m.h}</span>
               </div>
               <div style=${{fontSize:11,fontWeight:600,color:isLive?'#ef4444':'var(--mu)',textAlign:'center',minWidth:40}}>
@@ -1211,7 +1332,7 @@ function DashPage(props) {
               </div>
               <div style=${{display:'flex',alignItems:'center',gap:6,flex:1,justifyContent:'flex-end'}}>
                 <span style=${{fontSize:13,fontWeight:500}}>${m.a} ${F[m.a]||''}</span>
-                <img src=${playerAvatar(m.a,m.a)} style=${{width:28,height:28,borderRadius:14}} />
+                ${html`<${TeamCircle} team=${m.a} size=${28} />`}
               </div>
             </div>
             <div style=${{fontSize:11,color:'var(--mu)',marginTop:6,textAlign:'center'}}>${t.local} · Group ${m.gr}</div>
@@ -1241,12 +1362,42 @@ function DashPage(props) {
     }
     <h2>Featured Players</h2>
     <div class="g4">${PLY.map(function(p,i){ return html`<div key=${i} class="card card-sm" style=${{textAlign:'center',padding:'12px 6px',borderColor:i===props.plyrI?'rgba(240,180,41,.35)':undefined,background:i===props.plyrI?'rgba(240,180,41,.04)':undefined}}>
-      <img src=${playerAvatar(p.n,p.t)} style=${{width:44,height:44,borderRadius:22,marginBottom:4,border:'2px solid '+(i===props.plyrI?'rgba(240,180,41,.5)':'rgba(255,255,255,.08)')}} />
+      html`<${PlayerAvatar} name=${p.n} team=${p.t} size=${44} />`
       <div style=${{fontSize:16,lineHeight:1}}>${F[p.t]||'⚽'}</div>
       <div style=${{fontSize:11,fontWeight:600,color:'var(--tx)',marginTop:3,lineHeight:1.2}}>${p.n}</div>
       <div style=${{fontSize:10,color:'var(--mu)',marginTop:2}}>${p.t}</div>
       <div style=${{fontSize:10,color:'var(--dm)',marginTop:1}}>${p.i}</div>
     </div>`; })}
+    </div>
+
+    <!-- Live WC 2026 News -->
+    <div style=${{marginTop:20}}>
+      <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+        <h2 style=${{margin:0}}>📰 WC 2026 News</h2>
+        <button class="btn" style=${{fontSize:12,display:'flex',alignItems:'center',gap:5}} onClick=${props.onFetchNews} disabled=${props.newsLoading}>
+          <i class="ti ti-refresh" style=${{fontSize:14}}></i>${props.newsLoading?' Fetching...':' Refresh'}
+        </button>
+      </div>
+      ${props.news&&props.news.length>0
+        ?html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
+          ${props.news.map(function(item,i){
+            var tagColors={'LIVE':'rgba(239,68,68,.15)','RESULT':'rgba(34,197,94,.15)','PREVIEW':'rgba(59,130,246,.15)','UPDATE':'rgba(245,158,11,.15)'};
+            var tagText={'LIVE':'#f87171','RESULT':'#4ade80','PREVIEW':'#60a5fa','UPDATE':'#fbbf24'};
+            var tag=item.tag||'UPDATE';
+            return html`<div key=${i} class="card" style=${{padding:'12px 14px',borderLeft:'3px solid '+(tagText[tag]||'#5b8bb8')}}>
+              <div style=${{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:4}}>
+                <div style=${{fontSize:14,fontWeight:500,color:'var(--tx)',lineHeight:1.3,flex:1}}>${item.title}</div>
+                <span style=${{fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:10,background:tagColors[tag]||tagColors.UPDATE,color:tagText[tag]||tagText.UPDATE,flexShrink:0,whiteSpace:'nowrap'}}>${tag}</span>
+              </div>
+              <p style=${{fontSize:12,color:'var(--mu)',margin:0,lineHeight:1.5}}>${item.summary}</p>
+            </div>`;
+          })}`
+        :html`<div class="card" style=${{textAlign:'center',padding:24}}>
+          <div style=${{fontSize:28,marginBottom:8}}>📡</div>
+          <p style=${{color:'var(--mu)',fontSize:13,margin:'0 0 12px'}}>Get the latest WC 2026 news powered by AI search.</p>
+          <button class="btn-p" style=${{fontSize:13}} onClick=${props.onFetchNews} disabled=${props.newsLoading}>${props.newsLoading?'Fetching news...':'Load Latest News ↗'}</button>
+        </div>`
+      }
     </div>
   </div>`;
 }
@@ -1263,7 +1414,7 @@ function RoomPage(props) {
       ${props.canPick&&html`<button class="btn" style=${{fontSize:12,background:props.myPick?'var(--gdim)':undefined,borderColor:props.myPick?'rgba(240,180,41,.35)':undefined,color:props.myPick?'var(--gold)':undefined,whiteSpace:'nowrap',flexShrink:0}} onClick=${props.onPickW}>🏆 ${props.myPick?(F[props.myPick]||'')+' '+props.myPick:'Pick winner'}</button>`}
     </div>
     <div class="tabs">
-      ${[['matches','⚽ Matches'],['leaderboard','🏆 Standings'],['groups','📊 Groups'],['quiz','🧠 Quiz']].map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
+      ${[['matches','⚽ Matches'],['leaderboard','🏆 Standings'],['groups','📊 Groups'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
     </div>
 
     ${props.tab==='matches'&&html`<div>
@@ -1284,17 +1435,15 @@ function RoomPage(props) {
           </div>
           <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
             <div style=${{flex:1,textAlign:'right'}}>
-              <img src=${playerAvatar(m.h,m.h)} style=${{width:36,height:36,borderRadius:18,marginBottom:3}} />
-              <div style=${{fontSize:20}}>${F[m.h]||'🏳'}</div>
-              <div style=${{fontSize:12,fontWeight:500}}>${m.h}</div>
+              html`<${TeamCircle} team=${m.h} size=${40} />`
+              <div style=${{fontSize:12,fontWeight:500,marginTop:3}}>${m.h}</div>
             </div>
             <div style=${{background:'var(--bg3)',borderRadius:'var(--rs)',padding:'6px 14px',minWidth:72,textAlign:'center'}}>
               ${res?html`<span style=${{fontFamily:'Barlow Condensed',fontSize:22,fontWeight:700}}>${res.h}–${res.a}</span>`:st==='live'?html`<span style=${{fontSize:13,color:'var(--rd)',fontWeight:500}}>LIVE</span>`:html`<span style=${{fontSize:14,color:'var(--dm)'}}>vs</span>`}
             </div>
             <div style=${{flex:1,textAlign:'left'}}>
-              <img src=${playerAvatar(m.a,m.a)} style=${{width:36,height:36,borderRadius:18,marginBottom:3}} />
-              <div style=${{fontSize:20}}>${F[m.a]||'🏳'}</div>
-              <div style=${{fontSize:12,fontWeight:500}}>${m.a}</div>
+              html`<${TeamCircle} team=${m.a} size=${40} />`
+              <div style=${{fontSize:12,fontWeight:500,marginTop:3}}>${m.a}</div>
             </div>
           </div>
           <div style=${{fontSize:11,color:'var(--mu)',marginBottom:st==='soon'||pred?8:0}}>
@@ -1332,7 +1481,7 @@ function RoomPage(props) {
                 ${e.user&&e.user.name}
                 ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8}}>you</span>`}
               </div>
-              <div style=${{fontSize:12,color:'var(--mu)',marginTop:2}}>${e.np} predictions${e.pick?' · picked '+(F[e.pick]||'')+' '+e.pick:''}</div>
+              <div style=${{fontSize:12,color:'var(--mu)',marginTop:2}}>${e.np} predictions${e.pick?html` · ${teamFlagUrl(e.pick)?html`<img src=${teamFlagUrl(e.pick)} style=${{width:18,height:12,borderRadius:2,objectFit:'cover',verticalAlign:'middle'}} />`:F[e.pick]||''} ${e.pick}`:''}</div>
             </div>
             <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
           </div>`; })}
@@ -1347,25 +1496,6 @@ function RoomPage(props) {
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style=${{color:'var(--gold)'}}>+5 pts</strong></div>
         </div>
       </div>
-      <div class="card" style=${{marginTop:10,background:'var(--bg3)'}}>
-        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <div>
-            <h3 style=${{margin:0}}>📊 Export to Google Sheets</h3>
-            <p style=${{fontSize:12,color:'var(--mu)',margin:'4px 0 0'}}>Download a CSV or open your live data Sheet.</p>
-          </div>
-          <div style=${{display:'flex',gap:8,flexShrink:0}}>
-            <a href="https://docs.google.com/spreadsheets/d/1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw" target="_blank" style=${{padding:'8px 12px',borderRadius:'var(--rs)',border:'1px solid rgba(91,139,184,.3)',background:'transparent',color:'var(--mu)',fontSize:12,textDecoration:'none',display:'inline-flex',alignItems:'center',gap:5}}>
-              <i class="ti ti-table"></i> Open Sheet
-            </a>
-            <button class="btn-p" style=${{fontSize:12,padding:'8px 14px'}} onClick=${function(){props.onExport();}}>
-              <i class="ti ti-download"></i> CSV
-            </button>
-          </div>
-        </div>
-        <div style=${{fontSize:11,color:'var(--dm)'}}>
-          Open in Google Sheets: <strong style=${{color:'var(--mu)'}}>File → Import → Upload → select the downloaded CSV</strong>
-        </div>
-      </div>
     </div>`}
 
     ${props.tab==='groups'&&html`<div>
@@ -1373,7 +1503,7 @@ function RoomPage(props) {
       <div class="g2">
         ${Object.entries(GRP).map(function(e){ var g=e[0]; var ts=e[1]; return html`<div key=${g} class="card">
           <div style=${{fontSize:11,fontWeight:700,color:'var(--mu)',marginBottom:8,fontFamily:'Barlow Condensed',letterSpacing:1}}>GROUP ${g}</div>
-          ${ts.map(function(t){ return html`<div key=${t} style=${{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:'1px solid var(--bdr)',fontSize:13}}><span style=${{fontSize:18}}>${F[t]||'🏳'}</span><span style=${{flex:1}}>${t}</span></div>`; })}
+          ${ts.map(function(t){ return html`<div key=${t} style=${{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:'1px solid var(--bdr)',fontSize:13}}>html`<${FlagImg} team=${t} w=${24} />`<span style=${{flex:1}}>${t}</span></div>`; })}
         </div>`; })}
       </div>
     </div>`}
@@ -1411,6 +1541,116 @@ function RoomPage(props) {
       <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'10px 14px',marginTop:14,fontSize:13,color:'#93c5fd'}}>
         <strong style=${{color:'#60a5fa',fontSize:11,letterSpacing:1,fontFamily:'Barlow Condensed'}}>DID YOU KNOW? </strong>${FACTS[props.factI]}
       </div>
+    </div>`}
+
+    ${props.tab==='admin'&&html`<div>
+      ${!props.isAdmin
+        ? html`<${AdminLock} onUnlock=${props.onAdminUnlock} />`
+        : html`<div style=${{display:'flex',flexDirection:'column',gap:12}}>
+      <!-- Room overview -->
+      <div class="card-dark" style=${{borderColor:'rgba(240,180,41,.2)',padding:'16px 18px'}}>
+        <div style=${{fontSize:10,color:'var(--gold)',letterSpacing:2,fontFamily:'Barlow Condensed',fontWeight:700,marginBottom:10}}>⚙️ ROOM CONFIGURATION</div>
+        <div style=${{display:'flex',flexDirection:'column',gap:8,fontSize:13}}>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style=${{color:'var(--mu)'}}>Room name</span>
+            <strong>${props.room.name}</strong>
+          </div>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style=${{color:'var(--mu)'}}>Invite code</span>
+            <span style=${{fontFamily:'monospace',fontSize:16,letterSpacing:3,background:'rgba(255,255,255,.05)',padding:'3px 10px',borderRadius:'var(--rs)',color:'var(--gold)',fontWeight:600}}>${props.room.code}</span>
+          </div>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style=${{color:'var(--mu)'}}>Members</span>
+            <strong>${(props.room.members||[]).length} joined</strong>
+          </div>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style=${{color:'var(--mu)'}}>Created</span>
+            <span style=${{fontSize:12,color:'var(--mu)'}}>${props.room.created?new Date(props.room.created).toLocaleDateString():'-'}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Google Sheet access -->
+      <div class="card" style=${{background:'rgba(34,197,94,.04)',borderColor:'rgba(34,197,94,.2)'}}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+          <div>
+            <h3 style=${{margin:'0 0 4px',color:'#4ade80'}}>📊 Google Sheet Database</h3>
+            <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Your live data — users, rooms, predictions, results.</p>
+          </div>
+          <a href="https://docs.google.com/spreadsheets/d/1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw" target="_blank" style=${{padding:'8px 14px',borderRadius:'var(--rs)',background:'rgba(34,197,94,.15)',border:'1px solid rgba(34,197,94,.3)',color:'#4ade80',fontSize:13,fontWeight:500,textDecoration:'none',display:'inline-flex',alignItems:'center',gap:6,flexShrink:0}}>
+            <i class="ti ti-external-link"></i> Open Sheet
+          </a>
+        </div>
+        <div style=${{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',padding:'10px 12px',fontSize:12,color:'var(--mu)',lineHeight:1.6}}>
+          <strong style=${{color:'var(--tx)'}}>💡 Enter results directly in the Sheet:</strong><br/>
+          Find the <code style=${{background:'rgba(255,255,255,.05)',padding:'1px 5px',borderRadius:3}}>wc26_results</code> row → edit the JSON value to add <code style=${{background:'rgba(255,255,255,.05)',padding:'1px 5px',borderRadius:3}}>{"m01":{"h":2,"a":1}}</code> format. Points auto-update for all members within 5 seconds.
+        </div>
+      </div>
+
+      <!-- Enter results section -->
+      <div class="card">
+        <h3 style=${{marginBottom:12}}>⚽ Match Results</h3>
+        <p style=${{fontSize:12,color:'var(--mu)',marginBottom:12}}>Matches needing a result. Click to enter the score.</p>
+        <div style=${{display:'flex',flexDirection:'column',gap:6,maxHeight:320,overflowY:'auto'}}>
+          ${MS.filter(function(m){
+            var now=Date.now(); var st=new Date(m.utc).getTime();
+            return (now >= st - 3600000) && !props.results[m.id];
+          }).slice(0,15).map(function(m){
+            var st=mStat(m,props.results); var t=fmtTime(m.utc);
+            return html`<div key=${m.id} style=${{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'var(--bg3)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)'}}>
+              <div style=${{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0}}>
+                html`<${FlagImg} team=${m.h} w=${20} />`
+                <span style=${{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
+                <span style=${{fontSize:11,color:'var(--mu)',flexShrink:0}}>vs</span>
+                html`<${FlagImg} team=${m.a} w=${20} />`
+                <span style=${{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.a}</span>
+              </div>
+              <span class=${'bdg '+(st==='live'?'blv':'bpa')} style=${{fontSize:10,flexShrink:0}}>${st==='live'?'LIVE':'PAST'}</span>
+              <button class="btn-p" style=${{fontSize:11,padding:'4px 10px',flexShrink:0}} onClick=${function(){props.onResult(m);}}>
+                <i class="ti ti-pencil"></i> Score
+              </button>
+            </div>`;
+          })}
+          ${MS.filter(function(m){var now=Date.now();var st=new Date(m.utc).getTime();return (now>=st-3600000)&&!props.results[m.id];}).length===0&&html`<div style=${{textAlign:'center',padding:20,color:'var(--mu)',fontSize:13}}>No matches ready for results yet — check back on match day!</div>`}
+        </div>
+      </div>
+
+      <!-- Members list -->
+      <div class="card">
+        <h3 style=${{marginBottom:12}}>👥 Members (${(props.room.members||[]).length})</h3>
+        <div style=${{display:'flex',flexDirection:'column',gap:6}}>
+          ${(props.room.members||[]).map(function(uid){
+            var u=props.users[uid]||{name:'?'};
+            var isMe=uid===props.user.id;
+            var isOwner=uid===props.room.by;
+            return html`<div key=${uid} style=${{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'var(--bg3)',borderRadius:'var(--rs)'}}>
+              <div style=${{width:32,height:32,borderRadius:16,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:600,color:'#fff',flexShrink:0}}>
+                ${(u.name||'?')[0].toUpperCase()}
+              </div>
+              <div style=${{flex:1}}>
+                <div style=${{fontSize:13,fontWeight:500}}>${u.name||'?'}${isMe?' (you)':''}</div>
+                <div style=${{fontSize:11,color:'var(--mu)'}}>${u.phone||''}</div>
+              </div>
+              ${isOwner&&html`<span style=${{fontSize:10,background:'rgba(240,180,41,.12)',color:'var(--gold)',border:'1px solid rgba(240,180,41,.3)',padding:'2px 8px',borderRadius:10}}>Admin</span>`}
+              html`<${FlagImg} team=${u.favT&&u.favT[0]||''} w=${24} />`
+            </div>`;
+          })}
+        </div>
+      </div>
+
+      <!-- Export -->
+      <div class="card" style=${{background:'var(--bg3)'}}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div>
+            <h3 style=${{margin:'0 0 3px'}}>📥 Export Data</h3>
+            <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Download all predictions as a CSV.</p>
+          </div>
+          <button class="btn-p" style=${{fontSize:12,padding:'8px 14px'}} onClick=${function(){props.onExport();}}>
+            <i class="ti ti-download"></i> Download CSV
+          </button>
+        </div>
+      </div>
+    </div>`}
     </div>`}
   </div>`;
 }
@@ -1477,6 +1717,9 @@ function App() {
   var s10=useState('login'); var authMode=s10[0]; var setAuthMode=s10[1];
   var s11=useState(null); var modal=s11[0]; var setModal=s11[1];
   var s11b=useState(null); var matchDetail=s11b[0]; var setMatchDetail=s11b[1];
+  var s11c=useState({}); var adminAuth=s11c[0]; var setAdminAuth=s11c[1];
+  var s11d=useState([]); var news=s11d[0]; var setNews=s11d[1];
+  var s11e=useState(false); var newsLoading=s11e[0]; var setNewsLoading=s11e[1];
   var s12=useState(null); var toast=s12[0]; var setToast=s12[1];
   var s13=useState(0); var factI=s13[0]; var setFactI=s13[1];
   var s14=useState(0); var plyrI=s14[0]; var setPlyrI=s14[1];
@@ -1490,11 +1733,18 @@ function App() {
     var sess = Sess.get('wc26s');
     if (!sess) setScr('welcome');
 
+    var _firstUserLoad = true;
     var unsub = Store.listen('users', function(v) {
       var uu = v || {};
       setUsers(uu);
-      if (sess && uu[sess]) { setUser(uu[sess]); setScr('dash'); }
-      else if (sess && !uu[sess]) { Sess.del('wc26s'); setScr('welcome'); }
+      // Always keep user profile fresh
+      if (sess && uu[sess]) setUser(uu[sess]);
+      // Only navigate on FIRST load — never push user out of current screen
+      if (_firstUserLoad) {
+        _firstUserLoad = false;
+        if (sess && uu[sess]) setScr('dash');
+        else { if(sess) Sess.del('wc26s'); setScr('welcome'); }
+      }
     });
     Store.listen('rooms', function(v) { setRooms(v||{}); });
     Store.listen('preds', function(v) { setPreds(v||{}); });
@@ -1509,6 +1759,27 @@ function App() {
     var t2 = setInterval(function() { setPlyrI(function(i) { return (i+1)%PLY.length; }); }, 4000);
     return function() { if(unsub)unsub(); clearInterval(t1); clearInterval(t2); clearTimeout(fallback); };
   }, []);
+
+  function fetchNews() {
+    setNewsLoading(true);
+    fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:700,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:'Search for latest FIFA World Cup 2026 news today '+new Date().toDateString()+'. Return ONLY a JSON array, no markdown: [{"title":"brief headline","summary":"one sentence","tag":"LIVE|RESULT|PREVIEW|UPDATE"}] with 4 items. No other text.'}]
+      })
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var texts=(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+      var m=texts.match(/\[[\s\S]*?\]/);
+      if(m){try{setNews(JSON.parse(m[0]).slice(0,4));}catch(e){setNews([]);}}
+      else setNews([]);
+      setNewsLoading(false);
+    })
+    .catch(function(){setNewsLoading(false);setNews([]);});
+  }
 
   function notify(msg, t) {
     setToast({msg:msg, t:t||'ok'});
@@ -1532,11 +1803,13 @@ function App() {
   }
   function doLogout() { Sess.del('wc26s'); setUser(null); setRoom(null); setScr('welcome'); }
 
-  function doCreate(name) {
+  function doCreate(name, pass) {
     var code=genCode(), id=genId();
     var nr = Object.assign({}, rooms);
-    nr[id] = {id:id, name:name, code:code, by:user.id, members:[user.id], created:new Date().toISOString()};
+    nr[id] = {id:id, name:name, code:code, by:user.id, adminPass:pass, members:[user.id], created:new Date().toISOString()};
     Store.set('rooms', nr);
+    var na = Object.assign({}, adminAuth); na[id] = true;
+    setAdminAuth(na); localStorage.setItem('wc26_adm_'+id, '1');
     setRoom(nr[id]); setModal(null); setTab('matches'); setScr('room');
     notify('Room created! Share code: ' + code);
   }
@@ -1550,6 +1823,7 @@ function App() {
       Store.set('rooms', nr);
     }
     setRoom(upd); setModal(null); setTab('matches'); setScr('room');
+    if(localStorage.getItem('wc26_adm_'+upd.id)){var na=Object.assign({},adminAuth);na[upd.id]=true;setAdminAuth(na);}
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
@@ -1590,7 +1864,17 @@ function App() {
   var myRooms = user ? Object.values(rooms).filter(function(r){return r.members&&r.members.includes(user.id);}) : [];
   var canPick = Date.now() < KOS.getTime();
   var myPick = room ? (tpicks[user&&user.id+'_'+room.id]||{}).team : null;
-  var isAdmin = room && user && room.by === user.id;
+  var isAdmin = room && adminAuth[room.id] === true;
+  function verifyAdmin(pass) {
+    if (!room || !pass) return false;
+    if (room.adminPass === pass.trim()) {
+      var na = Object.assign({}, adminAuth); na[room.id] = true;
+      setAdminAuth(na);
+      localStorage.setItem('wc26_adm_' + room.id, '1');
+      return true;
+    }
+    return false;
+  }
   var dl = daysTill(WCS);
 
   function doExport() {
@@ -1639,12 +1923,30 @@ function App() {
   // Show setup screen if GS_URL not configured
   if (!Store._ready()) return html`<${SetupScreen} />`;
 
-  if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}><div style=${{fontSize:60}}>⚽</div><p style=${{color:'var(--mu)',fontSize:15,fontFamily:'sans-serif'}}>Loading...</p></div>`;
+  if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,background:'var(--bg)'}}>
+    <div dangerouslySetInnerHTML=${{__html:'<svg viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg" width="56" height="64" style="display:block">
+  <path d="M10 8 H46 L42 38 Q39 47 28 50 Q17 47 14 38 Z" fill="#f0b429"/>
+  <path d="M14 13 Q4 13 4 23 Q4 33 14 33" fill="none" stroke="#f0b429" stroke-width="5" stroke-linecap="round"/>
+  <path d="M42 13 Q52 13 52 23 Q52 33 42 33" fill="none" stroke="#f0b429" stroke-width="5" stroke-linecap="round"/>
+  <rect x="25" y="50" width="6" height="8" fill="#f0b429"/>
+  <rect x="16" y="58" width="24" height="6" rx="3" fill="#f0b429"/>
+  <text x="28" y="37" text-anchor="middle" fill="#0a1628" font-size="13" font-weight="900" font-family="Arial Black,Impact,sans-serif">26</text>
+</svg>'}}></div>
+    <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:22,fontWeight:700,color:'var(--gold)',letterSpacing:3}}>FIFA WORLD CUP 2026</div>
+    <p style=${{color:'var(--mu)',fontSize:13}}>Loading predictions...</p>
+  </div>`;
 
   return html`<div>
     <div class="topbar">
       
-      <span class="logo">🏆 WC 2026 Predictions</span>
+      <span class="logo" style=${{display:"flex",alignItems:"center",gap:6}}><span dangerouslySetInnerHTML=${{__html:'<svg viewBox="0 0 32 36" xmlns="http://www.w3.org/2000/svg" width="22" height="24" style="display:inline-block;vertical-align:middle">
+  <path d="M6 4 H26 L24 21 Q22 26 16 28 Q10 26 8 21 Z" fill="#f0b429"/>
+  <path d="M8 7 Q2 7 2 13 Q2 19 8 19" fill="none" stroke="#f0b429" stroke-width="3" stroke-linecap="round"/>
+  <path d="M24 7 Q30 7 30 13 Q30 19 24 19" fill="none" stroke="#f0b429" stroke-width="3" stroke-linecap="round"/>
+  <rect x="14" y="28" width="4" height="5" fill="#f0b429"/>
+  <rect x="9" y="33" width="14" height="3" rx="1.5" fill="#f0b429"/>
+  <text x="16" y="21" text-anchor="middle" fill="#0a1628" font-size="8" font-weight="900" font-family="Arial Black,Impact,sans-serif">26</text>
+</svg>'}}></span>WC 2026 Predictions</span>
       ${user&&html`<button class="btn" style=${{fontSize:12}} onClick=${doLogout}><i class="ti ti-logout"></i> Out</button>`}
     </div>
 
@@ -1665,9 +1967,9 @@ function App() {
     <div class="page">
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} />`}
+      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');if(localStorage.getItem('wc26_adm_'+r.id)){var na=Object.assign({},adminAuth);na[r.id]=true;setAdminAuth(na);}}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
 
-      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} isAdmin=${isAdmin} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} />`}
+      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} users=${users} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin} isAdmin=${isAdmin} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} />`}
     </div>
   </div>`;
 }
