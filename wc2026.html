@@ -1163,20 +1163,110 @@ function ResultModal(props) {
 }
 
 // Page components
+
+// ── Official WC 2026 logo — loads from Wikimedia Commons (CC BY-SA 4.0) ──
+// Falls back to SVG approximation if image fails to load.
+var WC26_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/2026_FIFA_World_Cup_emblem.svg/200px-2026_FIFA_World_Cup_emblem.svg.png';
+
+function WC2026Logo(props) {
+  var size   = props.size || 100;
+  var imgH   = Math.round(size * 1.54); // emblem is ~455×701px (portrait)
+  var es = useState(false); var imgErr = es[0]; var setImgErr = es[1];
+
+  if (!imgErr) {
+    return html`<img
+      src=${WC26_LOGO_URL}
+      width=${size} height=${imgH}
+      style=${{objectFit:'contain', display:'block'}}
+      alt="FIFA World Cup 2026 official emblem"
+      onError=${function(){ setImgErr(true); }} />`;
+  }
+
+  // ── SVG fallback (mirrors Image 2 as closely as possible) ──────────────
+  var sw = size; var sh = imgH;
+  return html`<svg viewBox="0 0 120 185" xmlns="http://www.w3.org/2000/svg"
+      width=${sw} height=${sh}>
+    <!-- Black background to match the real logo -->
+    <rect width="120" height="185" rx="6" fill="#0a0a0a"/>
+    <!-- "2" digit -->
+    <text x="6"  y="105" font-size="104" font-weight="900"
+      font-family="Arial Black,Impact,sans-serif" fill="#111">2</text>
+    <!-- "6" digit -->
+    <text x="60" y="165" font-size="104" font-weight="900"
+      font-family="Arial Black,Impact,sans-serif" fill="#111">6</text>
+    <!-- Trophy cup body -->
+    <path d="M34 18 H86 L80 72 Q75 88 60 93 Q45 88 40 72 Z" fill="#C9951F"/>
+    <path d="M46 24 H78 L73 68 Q69 82 60 87 Q53 80 50 68 Z" fill="#F5C030" opacity=".3"/>
+    <!-- Handles -->
+    <path d="M40 26 Q20 26 20 46 Q20 66 40 66"
+      fill="none" stroke="#C9951F" stroke-width="9" stroke-linecap="round"/>
+    <path d="M80 26 Q100 26 100 46 Q100 66 80 66"
+      fill="none" stroke="#C9951F" stroke-width="9" stroke-linecap="round"/>
+    <!-- Stem + base -->
+    <rect x="55" y="93" width="10" height="16" fill="#C9951F"/>
+    <rect x="40" y="109" width="40" height="10" rx="5" fill="#C9951F"/>
+    <!-- Malachite rings (green detail on base, per real logo) -->
+    <rect x="40" y="107" width="40" height="4" rx="2" fill="#1a6b2a" opacity=".6"/>
+    <!-- FIFA text -->
+    <text x="60" y="178" text-anchor="middle" font-size="13" font-weight="800"
+      font-family="Arial,sans-serif" fill="white" letter-spacing="4">FIFA</text>
+  </svg>`;
+}
+
 function WelcomePage(props) {
+  // Live seconds ticker for welcome page
+  var TARGET = new Date('2026-06-11T19:00:00Z').getTime();
+  var cs = useState(Math.max(0, TARGET - Date.now()));
+  var rem = cs[0]; var setRem = cs[1];
+  useEffect(function() {
+    if (rem <= 0) return;
+    var tmr = setInterval(function() { setRem(Math.max(0, TARGET - Date.now())); }, 1000);
+    return function() { clearInterval(tmr); };
+  }, []);
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  var dd = Math.floor(rem / 86400000);
+  var hh = Math.floor((rem % 86400000) / 3600000);
+  var mm = Math.floor((rem % 3600000) / 60000);
+  var ss = Math.floor((rem % 60000) / 1000);
+
   return html`<div>
-    <div class="card-dark" style=${{padding:'28px 24px',marginBottom:14,textAlign:'center',borderColor:'rgba(240,180,41,.2)'}}>
-      <div style=${{fontSize:46,marginBottom:8}}>🏆</div>
-      <div style=${{fontFamily:'Barlow Condensed',fontSize:11,letterSpacing:4,color:'var(--gold)',fontWeight:700,marginBottom:4}}>FIFA WORLD CUP</div>
-      <h1 style=${{fontSize:28,marginBottom:4}}>2026 Prediction League</h1>
-      <p style=${{color:'var(--mu)',fontSize:14,marginBottom:18}}>USA · Canada · Mexico | Jun 11 – Jul 19</p>
-      ${props.dl > 0
-        ? html`<div style=${{display:'inline-flex',alignItems:'center',gap:8,background:'var(--gdim)',border:'1px solid rgba(240,180,41,.25)',borderRadius:20,padding:'7px 18px',marginBottom:22}}><span>⏱</span><span style=${{fontSize:14,color:'var(--gold)',fontWeight:500}}>${props.dl} days until kick-off!</span></div>`
-        : html`<div style=${{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.25)',borderRadius:20,padding:'7px 18px',marginBottom:22}}><span style=${{fontSize:14,color:'var(--rd)',fontWeight:500}}>🔴 Tournament is underway!</span></div>`
+    <div class="card-dark" style=${{padding:'32px 24px 28px',marginBottom:14,textAlign:'center',
+      borderColor:'rgba(240,180,41,.15)',background:'linear-gradient(180deg,#0e1520 0%,#111827 100%)'}}>
+
+      <!-- WC 2026 official logo -->
+      <div style=${{display:'flex',justifyContent:'center',marginBottom:14}}>
+        <${WC2026Logo} size=${90} />
+      </div>
+      <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:11,letterSpacing:5,
+        color:'var(--gold)',fontWeight:700,marginBottom:6,textTransform:'uppercase'}}>FIFA World Cup</div>
+      <h1 style=${{fontSize:30,marginBottom:5,fontWeight:800,letterSpacing:-.3}}>2026 Prediction League</h1>
+      <p style=${{color:'var(--mu)',fontSize:13,marginBottom:20}}>USA · Canada · Mexico | Jun 11 — Jul 19</p>
+
+      <!-- Live countdown pill -->
+      ${rem > 0
+        ? html`<div style=${{display:'inline-flex',alignItems:'center',gap:10,
+            background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.11)',
+            borderRadius:24,padding:'8px 20px',marginBottom:24,cursor:'default'}}>
+            <span style=${{fontSize:14}}>⏱</span>
+            ${[{v:pad(dd),l:'d'},{v:pad(hh),l:'h'},{v:pad(mm),l:'m'},{v:pad(ss),l:'s'}].map(function(u){
+              return html`<div key=${u.l} style=${{display:'flex',alignItems:'baseline',gap:1}}>
+                <span style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:20,fontWeight:700,
+                  color:'var(--gold)',letterSpacing:.5}}>${u.v}</span>
+                <span style=${{fontSize:10,color:'var(--mu)',marginRight:6}}>${u.l}</span>
+              </div>`;
+            })}
+            <span style=${{fontSize:13,color:'var(--mu)'}}>until kick-off!</span>
+          </div>`
+        : html`<div style=${{display:'inline-flex',alignItems:'center',gap:8,
+            background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',
+            borderRadius:24,padding:'8px 20px',marginBottom:24}}>
+            <span style=${{fontSize:14,color:'#f87171',fontWeight:600}}>🔴 Tournament is underway!</span>
+          </div>`
       }
+
       <div style=${{display:'flex',gap:12,justifyContent:'center'}}>
-        <button class="btn" onClick=${props.onLogin}>Log in</button>
-        <button class="btn-g" onClick=${props.onReg}>Create Profile</button>
+        <button class="btn" style=${{padding:'10px 26px',fontSize:14}} onClick=${props.onLogin}>Log in</button>
+        <button class="btn-g" style=${{padding:'10px 26px',fontSize:14,fontWeight:700}} onClick=${props.onReg}>Create Profile</button>
       </div>
     </div>
     <div class="g2" style=${{marginBottom:12}}>
@@ -1350,6 +1440,66 @@ function AuthPage(props) {
   </div>`;
 }
 
+
+// ── WC 2026 Live Countdown Banner ─────────────────────────────────────────
+function CountdownBanner() {
+  var TARGET = new Date('2026-06-11T19:00:00Z').getTime(); // Opening match MVT
+  var cs = useState(Math.max(0, TARGET - Date.now()));
+  var rem = cs[0]; var setRem = cs[1];
+
+  useEffect(function() {
+    if (rem <= 0) return;
+    var timer = setInterval(function() {
+      setRem(Math.max(0, TARGET - Date.now()));
+    }, 1000);
+    return function() { clearInterval(timer); };
+  }, []);
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  var d = Math.floor(rem / 86400000);
+  var h = Math.floor((rem % 86400000) / 3600000);
+  var m = Math.floor((rem % 3600000) / 60000);
+  var s = Math.floor((rem % 60000) / 1000);
+  var units = [{v:pad(d),l:'days'},{v:pad(h),l:'hours'},{v:pad(m),l:'mins'},{v:pad(s),l:'secs'}];
+
+  return html`<div style=${{
+    background:'linear-gradient(135deg,#2D3CE6 0%,#1a29c8 100%)',
+    borderRadius:'var(--rs)', padding:'10px 18px',
+    display:'flex', alignItems:'center', justifyContent:'space-between',
+    marginBottom:16, gap:12, overflow:'hidden', position:'relative'
+  }}>
+    <!-- subtle radial glow -->
+    <div style=${{position:'absolute',inset:0,background:'radial-gradient(ellipse 60% 80% at 30% 50%,rgba(255,255,255,.06),transparent)',pointerEvents:'none'}}></div>
+
+    <!-- Left: Logo + text -->
+    <div style=${{display:'flex',alignItems:'center',gap:12,position:'relative'}}>
+      <!-- WC 2026 official logo -->
+      <${WC2026Logo} size=${44} />
+      <div>
+        <div style=${{fontWeight:700,fontSize:14,color:'white',letterSpacing:.2,lineHeight:1.2}}>FIFA World Cup 2026™</div>
+        <div style=${{fontSize:11,color:'rgba(255,255,255,.65)',marginTop:3}}>11 June – 19 July 2026</div>
+      </div>
+    </div>
+
+    <!-- Right: Countdown or LIVE -->
+    <div style=${{position:'relative'}}>
+      ${rem > 0
+        ? html`<div style=${{display:'flex',gap:14,alignItems:'flex-start'}}>
+            ${units.map(function(u){
+              return html`<div key=${u.l} style=${{textAlign:'center'}}>
+                <div style=${{fontFamily:'Barlow Condensed,Arial Narrow,sans-serif',fontSize:34,fontWeight:700,color:'white',lineHeight:1,letterSpacing:1}}>${u.v}</div>
+                <div style=${{fontSize:10,color:'rgba(255,255,255,.55)',marginTop:1,letterSpacing:.5,textTransform:'uppercase'}}>${u.l}</div>
+              </div>`;
+            })}
+          </div>`
+        : html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:20,fontWeight:700,color:'white',letterSpacing:1,display:'flex',alignItems:'center',gap:6}}>
+            <span style=${{animation:'blink 1s step-end infinite'}}>🔴</span> LIVE NOW!
+          </div>`
+      }
+    </div>
+  </div>`;
+}
+
 function DashPage(props) {
   var todayMs = getUpcomingMatchDay();
   return html`<div>
@@ -1359,14 +1509,7 @@ function DashPage(props) {
         <h1>${props.user.name} ${props.user.favT&&props.user.favT[0]?F[props.user.favT[0]]||'⚽':'⚽'}</h1>
       </div>
     </div>
-    <div class="card-dark" style=${{padding:'18px 20px',marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center',borderColor:'rgba(240,180,41,.2)'}}>
-      <div>
-        <div style=${{fontSize:10,color:'var(--gold)',letterSpacing:2,fontFamily:'Barlow Condensed',fontWeight:700,marginBottom:4}}>FIFA WORLD CUP 2026</div>
-        <div style=${{fontFamily:'Barlow Condensed',fontSize:22,fontWeight:600}}>${props.dl>0?props.dl+' DAYS TO KICK-OFF ⏱':'🔴 TOURNAMENT UNDERWAY!'}</div>
-        <div style=${{fontSize:12,color:'var(--mu)',marginTop:2}}>June 11 – July 19 · USA, Canada, Mexico</div>
-      </div>
-      <span style=${{fontSize:36}}>🏟️</span>
-    </div>
+    <${CountdownBanner} />
     <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px 14px',marginBottom:16,fontSize:13,color:'#93c5fd'}}>⚽ ${FACTS[props.factI]}</div>
 
     <!-- My Rooms -->
