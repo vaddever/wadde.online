@@ -843,16 +843,13 @@ function koMatchTeams(km, q, koRes) {
 
 // ── Live score API (football-data.org) ──────────────────────────────────
 function fetchLiveScores(apiKey, onUpdate) {
-  if (!apiKey) return;
-  var ALL_MATCHES = MS.concat(KO_MS);
-  fetch('https://api.football-data.org/v4/competitions/2000/matches', {
-    headers:{'X-Auth-Token': apiKey}
-  })
-  .then(function(r){
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  })
+  // Route through GAS proxy — football-data.org blocks direct browser requests (CORS).
+  // GAS fetches server-side then returns JSON to us.
+  fetch(GS_URL + '?action=livescores')
+  .then(function(r){ return r.json(); })
   .then(function(d){
+    if (!d.ok) { console.warn('Live scores GAS error:', d.error); return; }
+    var ALL_MATCHES = MS.concat(KO_MS);
     var updates={};
     (d.matches||[]).forEach(function(am){
       if (am.status!=='FINISHED') return;
@@ -869,7 +866,7 @@ function fetchLiveScores(apiKey, onUpdate) {
     });
     if (Object.keys(updates).length) onUpdate(updates);
   })
-  .catch(function(e){console.warn('Live scores:',e.message);});
+  .catch(function(e){ console.warn('Live scores:', e.message); });
 }
 
 function computeGroupStandings(grpKey, results) {
@@ -1050,28 +1047,45 @@ function daysTill(d) { return Math.max(0, Math.ceil((d.getTime() - Date.now()) /
 function APIKeyInput(props) {
   var ks=useState(props.apiKey||''); var key=ks[0]; var setKey=ks[1];
   var ss=useState(''); var status=ss[0]; var setStatus=ss[1];
-  function testAndSave() {
+
+  function saveViaGAS() {
     if (!key.trim()) return;
-    setStatus('testing...');
-    fetch('https://api.football-data.org/v4/competitions/2000',{
-      headers:{'X-Auth-Token':key.trim()}
-    }).then(function(r){
-      if(r.ok){setStatus('✓ Valid'); props.onSave(key.trim());}
-      else {setStatus('✗ Invalid key ('+r.status+')');}
-    }).catch(function(){setStatus('✗ Network error');});
+    setStatus('saving...');
+    // Store the key in GAS Script Properties (server-side) so live score
+    // fetches are proxied through GAS — no CORS issues.
+    fetch(GS_URL + '?action=savekey&key=' + encodeURIComponent(key.trim()))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.ok) {
+          setStatus('✓ Saved — testing live scores...');
+          props.onSave(key.trim());
+          // Quick smoke-test via GAS proxy
+          return fetch(GS_URL + '?action=livescores');
+        }
+        throw new Error(d.error||'save failed');
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.ok) setStatus('✓ Connected! ' + d.matches.length + ' matches found.');
+        else setStatus('⚠ Saved but API returned: ' + (d.error||d.code||'unknown'));
+      })
+      .catch(function(e){ setStatus('✗ Error: ' + e.message); });
   }
+
   return html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
     <div style=${{display:'flex',gap:8}}>
       <input type="password" value=${key} placeholder="football-data.org API key"
         style=${{flex:1,fontFamily:'monospace',fontSize:12}}
         onChange=${function(e){setKey(e.target.value);setStatus('');}} />
-      <button class="btn-p" style=${{fontSize:12,flexShrink:0}} onClick=${testAndSave}
+      <button class="btn-p" style=${{fontSize:12,flexShrink:0}} onClick=${saveViaGAS}
         disabled=${!key.trim()}>Save</button>
     </div>
-    ${status&&html`<p style=${{fontSize:11,margin:0,color:status.startsWith('✓')?'#4ade80':'#f87171'}}>${status}</p>`}
+    ${status&&html`<p style=${{fontSize:11,margin:0,
+      color:status.startsWith('✓')?'#4ade80':status.startsWith('⚠')?'#fbbf24':'#f87171'}}>${status}</p>`}
     <p style=${{fontSize:11,color:'var(--dm)',margin:0}}>
-      Free key: <a href="https://www.football-data.org/client/register" target="_blank"
-        style=${{color:'var(--gold)'}}>football-data.org/client/register</a>
+      Scores are fetched via your Google Apps Script — no CORS issues. ·
+      <a href="https://www.football-data.org/client/register" target="_blank"
+        style=${{color:'var(--gold)'}}>Get free key</a>
     </p>
   </div>`;
 }
