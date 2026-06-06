@@ -282,6 +282,22 @@
     .compare{overflow-x:auto}
     .hero-logo{height:72px;margin-bottom:16px}
   }
+  .submit-cta{margin-top:46px;background:linear-gradient(135deg,var(--ivory-2),var(--card));border:1px solid var(--line);border-radius:16px;padding:30px 32px}
+  .submit-cta-inner{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .sc-icon{font-size:2.2rem;flex:none;line-height:1}
+  .submit-cta h3{font-family:'Bricolage Grotesque',sans-serif;font-size:1.25rem;color:var(--plum);margin-bottom:6px}
+  .submit-cta p{color:var(--ink-soft);font-size:.93rem;max-width:46ch}
+  .submit-cta .btn{margin-left:auto;flex:none;white-space:nowrap}
+  .sub-badge{display:inline-block;background:var(--terra);color:#fff;border-radius:999px;font-size:.68rem;padding:2px 8px;margin-left:6px;font-weight:700;vertical-align:middle;font-family:'Schibsted Grotesk',sans-serif}
+  .sub-badge:empty{display:none}
+  .sub-item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:16px}
+  .sub-item h4{font-family:'Bricolage Grotesque',sans-serif;font-size:1.1rem;color:var(--plum);margin-bottom:5px}
+  .sub-item .sm{font-size:.82rem;color:var(--ink-soft);margin-bottom:12px}
+  .sub-item .preview{font-size:.93rem;color:var(--ink-soft);line-height:1.6;padding:14px;background:var(--ivory-2);border-radius:8px;margin-bottom:14px;white-space:pre-wrap}
+  .sub-item .actions{display:flex;gap:10px;flex-wrap:wrap}
+  .approve{background:var(--sage);color:#fff;border:none;padding:9px 18px;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;font-size:.88rem;transition:.2s}
+  .approve:hover{filter:brightness(.88)}
+  @media(max-width:860px){.submit-cta .btn{margin-left:0}}
   @media (prefers-color-scheme: dark){
     :root{
       --ivory:#17120C; --ivory-2:#251D12; --ink:#F0E7D5; --ink-soft:#BCAB8F;
@@ -462,6 +478,16 @@
     </div>
     <div class="notice-rail" id="noticeRail"></div>
     <div class="art-grid" id="artGrid"></div>
+    <div class="submit-cta">
+      <div class="submit-cta-inner">
+        <div class="sc-icon">✍️</div>
+        <div>
+          <h3>Have something to share?</h3>
+          <p>A personal story, research insight or practical tip — submit it and our team will review it for publication.</p>
+        </div>
+        <button class="btn btn-amber" onclick="go('submit')">Submit an article →</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -578,6 +604,26 @@
   </div>
 </section>
 
+<!-- ============ SUBMIT ARTICLE ============ -->
+<section class="page" id="submit">
+  <div class="wrap">
+    <div class="check-wrap">
+      <span class="back-link" onclick="go('articles')">← Back to articles</span>
+      <div class="sec-head" style="margin-bottom:24px">
+        <div class="eyebrow">Community Voices</div>
+        <h2>Share your story with EndoAdvocates</h2>
+        <p>Personal experience, research insight, practical advice — if it could help someone in this community, we want to hear it. Every submission is reviewed by our team before publishing.</p>
+      </div>
+      <div class="disclaimer">
+        <span>ℹ️</span>
+        <span><b>Before you submit:</b> we may edit for clarity and length. We do not publish personal medical diagnoses or content that contradicts established medical guidance. Your email (if given) is only used to let you know when your article goes live.</span>
+      </div>
+      <div id="submitForm"></div>
+      <div id="submitResult"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ ADMIN ============ -->
 <section class="page" id="admin">
   <div class="wrap">
@@ -606,6 +652,7 @@
       <div>
         <h4>More</h4>
         <a onclick="go('support')">Support & Community</a>
+        <a onclick="go('submit')">Submit an Article</a>
         <a onclick="go('admin')">Admin Login</a>
       </div>
     </div>
@@ -634,7 +681,7 @@ const store = {
     catch(e){ mem[key] = value; }
   }
 };
-const KEY_ART='endo:articles', KEY_NOT='endo:notices', KEY_SPEC='endo:specialists', KEY_PW='endo:adminpass';
+const KEY_ART='endo:articles', KEY_NOT='endo:notices', KEY_SPEC='endo:specialists', KEY_PW='endo:adminpass', KEY_SUB='endo:submissions';
 const DEFAULT_PW='EndoAdmin2025';
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today=()=>new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
@@ -707,6 +754,7 @@ function go(route, param){
   if(route==='article') renderArticle(param);
   if(route==='specialists') renderSpecialists();
   if(route==='check') renderCheckForm();
+  if(route==='submit') renderSubmitForm();
   if(route==='admin') renderAdmin();
   location.hash=route+(param?('/'+param):'');
 }
@@ -903,6 +951,8 @@ async function renderAdmin(){
     return;
   }
   const arts=await getJSON(KEY_ART,[]), notices=await getJSON(KEY_NOT,[]), specs=await getJSON(KEY_SPEC,[]);
+  const subs=await getJSON(KEY_SUB,[]);
+  const pending=subs.filter(s=>s.status==='pending');
   c.innerHTML=`
     <div class="sec-head" style="margin-bottom:24px">
       <span class="logout" onclick="isAdmin=false;renderAdmin()">Log out</span>
@@ -913,6 +963,7 @@ async function renderAdmin(){
     <div class="admin-tabs">
       <button class="tab active" data-a="ar" onclick="adminTab('ar')">✍️ New article</button>
       <button class="tab" data-a="no" onclick="adminTab('no')">📢 New notice</button>
+      <button class="tab" data-a="su" onclick="adminTab('su')">📬 Submissions${pending.length?'<span class="sub-badge">'+pending.length+'</span>':''}</button>
       <button class="tab" data-a="sp" onclick="adminTab('sp')">📍 Specialists</button>
       <button class="tab" data-a="se" onclick="adminTab('se')">⚙️ Settings</button>
     </div>
@@ -969,7 +1020,12 @@ async function renderAdmin(){
         <button class="btn btn-primary" onclick="changePw()">Update passphrase</button>
         <p style="margin-top:14px;font-size:.82rem;color:var(--ink-soft)">Note: this is a simple client-side gate suitable for a demo or internal use. For a public production site you'd want a real backend with proper authentication.</p>
       </div>
+    </div>
+
+    <div class="admin-panel" id="ap-su">
+      <div id="subsList"></div>
     </div>`;
+  renderAdminSubs(pending);
 }
 function adminTab(t){
   document.querySelectorAll('.admin-tabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.a===t));
@@ -1025,6 +1081,109 @@ function val(id){ const e=document.getElementById(id); return e?e.value.trim():'
 function esc(s){ return (s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 let toastT;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400); }
+
+/* ============================================================
+   SUBMISSIONS — visitor article submissions
+   ============================================================ */
+function renderSubmitForm(){
+  document.getElementById('submitResult').innerHTML='';
+  document.getElementById('submitForm').innerHTML=
+    '<div class="q-block">'+
+      '<h4>Your name or pen name <span style="font-weight:400;color:var(--ink-soft);font-size:.88rem">(required)</span></h4>'+
+      '<input id="saName" placeholder="e.g. Sarah, or Anonymous">'+
+    '</div>'+
+    '<div class="q-block">'+
+      '<h4>Email <span style="font-weight:400;color:var(--ink-soft);font-size:.88rem">(optional — only used to notify you when published)</span></h4>'+
+      '<input id="saEmail" type="email" placeholder="your@email.com">'+
+    '</div>'+
+    '<div class="row2" style="gap:14px">'+
+      '<div class="q-block" style="margin-bottom:0">'+
+        '<h4>Article title</h4>'+
+        '<input id="saTitle" placeholder="A clear, descriptive title">'+
+      '</div>'+
+      '<div class="q-block" style="margin-bottom:0">'+
+        '<h4>Category</h4>'+
+        '<select id="saCat">'+
+          '<option>Personal Story</option>'+
+          '<option>Education</option>'+
+          '<option>Living Well</option>'+
+          '<option>Research & News</option>'+
+          '<option>Advocacy</option>'+
+        '</select>'+
+      '</div>'+
+    '</div>'+
+    '<div class="q-block" style="margin-top:14px">'+
+      '<h4>Your article</h4>'+
+      '<p style="font-size:.88rem;color:var(--ink-soft);margin-bottom:10px">Write naturally. A blank line between paragraphs becomes a new paragraph. A line starting with <code>## </code> becomes a heading.</p>'+
+      '<textarea id="saBody" style="min-height:260px" placeholder="Write your article here..."></textarea>'+
+    '</div>'+
+    '<button class="btn btn-amber" style="width:100%;justify-content:center;font-size:1.05rem" onclick="submitArticle()">Submit for review →</button>';
+}
+
+async function submitArticle(){
+  const name=val('saName'), title=val('saTitle'), body=val('saBody');
+  if(!name){ toast('Please add your name'); return; }
+  if(!title){ toast('Please add a title'); return; }
+  if(body.trim().length<100){ toast('Please write at least a paragraph or two'); return; }
+  const subs=await getJSON(KEY_SUB,[]);
+  subs.push({
+    id:uid(), name, email:val('saEmail'), title,
+    category:val('saCat')||'Article', body:bodyToHtml(body),
+    rawBody:body.trim(), excerpt:body.trim().slice(0,200).replace(/\n/g,' ')+'…',
+    date:today(), status:'pending'
+  });
+  await store.set(KEY_SUB, JSON.stringify(subs));
+  document.getElementById('submitForm').innerHTML='';
+  document.getElementById('submitResult').innerHTML=
+    '<div class="result" style="text-align:center;padding:44px 34px">'+
+      '<div style="font-size:3rem;margin-bottom:16px">💛</div>'+
+      '<h3>Thank you, '+esc(name)+'!</h3>'+
+      '<p style="max-width:40ch;margin:12px auto 0">Your article has been sent to the EndoAdvocates team for review. If it\'s a good fit we\'ll publish it — and let you know if you left an email.</p>'+
+      '<button class="btn btn-ghost" style="margin:22px auto 0;display:flex" onclick="go(\'articles\')">← Back to articles</button>'+
+    '</div>';
+}
+
+function renderAdminSubs(pending){
+  const el=document.getElementById('subsList'); if(!el) return;
+  if(!pending||!pending.length){
+    el.innerHTML='<div class="admin-card"><p style="color:var(--ink-soft)">No pending submissions — check back after visitors start contributing! Share the "Submit an Article" link to invite them.</p></div>';
+    return;
+  }
+  el.innerHTML=pending.map(s=>
+    '<div class="sub-item">'+
+      '<h4>'+esc(s.title)+'</h4>'+
+      '<div class="sm">By <b>'+esc(s.name)+'</b>'+(s.email?' · '+esc(s.email):'')+' · '+esc(s.category)+' · submitted '+esc(s.date)+'</div>'+
+      '<div class="preview">'+esc(s.rawBody||'').slice(0,420)+(s.rawBody&&s.rawBody.length>420?'…':'')+'</div>'+
+      '<div class="actions">'+
+        '<button class="approve" onclick="approveSubmission(\''+s.id+'\')">✓ Approve &amp; Publish</button>'+
+        '<button class="del" onclick="rejectSubmission(\''+s.id+'\')">✕ Decline</button>'+
+      '</div>'+
+    '</div>'
+  ).join('');
+}
+
+async function approveSubmission(id){
+  const subs=await getJSON(KEY_SUB,[]);
+  const s=subs.find(x=>x.id===id); if(!s) return;
+  const arts=await getJSON(KEY_ART,[]);
+  arts.push({
+    id:uid(), title:s.title, category:s.category,
+    author:s.name, sym:'❤', date:today(),
+    excerpt:s.excerpt, body:s.body
+  });
+  await store.set(KEY_ART,JSON.stringify(arts));
+  const updated=subs.filter(x=>x.id!==id);
+  await store.set(KEY_SUB,JSON.stringify(updated));
+  toast('Article published!');
+  renderAdmin();
+}
+
+async function rejectSubmission(id){
+  const subs=await getJSON(KEY_SUB,[]);
+  await store.set(KEY_SUB,JSON.stringify(subs.filter(x=>x.id!==id)));
+  toast('Submission declined');
+  renderAdmin();
+}
 
 /* ---------- boot ---------- */
 (async function(){
