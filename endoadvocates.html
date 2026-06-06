@@ -323,6 +323,10 @@
     .tab.active{background:var(--amber);color:#241a08;border-color:var(--amber)}
   }
 </style>
+  <!-- Firebase SDK (compat v10) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -667,532 +671,598 @@
 
 <script>
 /* ============================================================
-   STORAGE LAYER — uses window.storage when available (persists
-   across sessions in Claude artifacts), falls back to in-memory.
+   FIREBASE CONFIGURATION
+   ▶ Paste your Firebase project config here.
+   ▶ Find it at: Firebase Console → ⚙️ Project settings → Your apps
    ============================================================ */
-const mem = {};
-const store = {
-  async get(key, shared=true){
-    try{ const r = await window.storage.get(key, shared); return r ? r.value : null; }
-    catch(e){ return (key in mem) ? mem[key] : null; }
-  },
-  async set(key, value, shared=true){
-    try{ await window.storage.set(key, value, shared); }
-    catch(e){ mem[key] = value; }
-  }
+const firebaseConfig = {
+ apiKey: "AIzaSyDx3VwQAklCNzbaFtkhWg1G9WLjprBU_h4",
+  authDomain: "endoadvocates-9285b.firebaseapp.com",
+  projectId: "endoadvocates-9285b",
+  storageBucket: "endoadvocates-9285b.firebasestorage.app",
+  messagingSenderId: "957930794866",
+  appId: "1:957930794866:web:c7f1ff6a01fc2fb22cf7eb"
 };
-const KEY_ART='endo:articles', KEY_NOT='endo:notices', KEY_SPEC='endo:specialists', KEY_PW='endo:adminpass', KEY_SUB='endo:submissions';
-const DEFAULT_PW='EndoAdmin2025';
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const today=()=>new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 
-/* ---------- SEED DATA ---------- */
-const SEED_ARTICLES=[
- {id:'a1',title:'More Than “Bad Periods”: Understanding Endometriosis',category:'Education',author:'EndoAdvocates Team',date:'12 Jan 2026',sym:'§',
-  excerpt:'Why endometriosis is a whole-body condition, not just a painful period — and why being believed is the first step toward care.',
-  body:`<p>For generations, severe period pain has been brushed aside as something to simply endure. Endometriosis is the proof that this attitude has done real harm. It is a chronic, inflammatory condition affecting roughly one in ten people of reproductive age — and yet many wait the better part of a decade for answers.</p>
-  <h2>What's actually happening</h2>
-  <p>In endometriosis, tissue similar to the lining of the uterus grows outside it — on the ovaries, the pelvic wall, sometimes the bowel or bladder. Each cycle this tissue behaves like the uterine lining: it builds up and bleeds. But with nowhere to go, it causes inflammation, scarring and pain.</p>
-  <h2>It's more than the pelvis</h2>
-  <p>Researchers increasingly describe endometriosis as a multisystem condition. Alongside pelvic pain it can bring fatigue, digestive and bladder symptoms, and a real impact on mood and mental health. Understanding it this way matters, because it changes how it should be treated — as a whole-person condition, not a single localised problem.</p>
-  <h2>Why being believed comes first</h2>
-  <p>Because symptoms vary so much and severity doesn't track neatly with the amount of disease, endometriosis is easy to miss and easy to dismiss. If your pain is interfering with your life, that is reason enough to be taken seriously. Keep a record of your symptoms, ask questions, and don't be afraid to seek a second opinion.</p>`},
- {id:'a2',title:'Adenomyosis Explained: When the Lining Grows Inward',category:'Education',author:'EndoAdvocates Team',date:'18 Jan 2026',sym:'¶',
-  excerpt:'Often overshadowed by endometriosis, adenomyosis is its own condition — and recognising the difference helps you get the right care.',
-  body:`<p>Adenomyosis is less talked about than endometriosis, but for those who have it the impact is just as real. The two are easy to confuse — and can even occur together — but they are distinct.</p>
-  <h2>The key difference</h2>
-  <p>In adenomyosis, tissue similar to the uterine lining grows <em>into the muscular wall of the uterus</em>, rather than outside it. This can make the uterus enlarge and become tender, and it tends to produce heavy, prolonged bleeding and cramping that can feel more constant than the cyclical flares typical of endometriosis.</p>
-  <h2>Getting a diagnosis</h2>
-  <p>Adenomyosis is usually picked up on a transvaginal ultrasound or MRI, which can reveal thickening of the uterine wall. Because its symptoms overlap with fibroids and other conditions, a careful clinical assessment is important.</p>
-  <h2>What can help</h2>
-  <p>Management centres on controlling pain and heavy bleeding — through anti-inflammatories, hormonal treatments, and medicines that reduce bleeding. For those who have completed their families and have severe symptoms, a hysterectomy is the one definitive cure. As always, the right path depends on your symptoms, your goals and a conversation with a specialist.</p>`},
- {id:'a3',title:'The Long Wait: How to Advocate for Yourself Before a Diagnosis',category:'Practical',author:'EndoAdvocates Team',date:'24 Jan 2026',sym:'✦',
-  excerpt:'It takes 7–9 years on average to get diagnosed. Here is how to make your appointments count and be heard.',
-  body:`<p>One of the cruelest features of endometriosis and adenomyosis is the delay — an average of seven to nine years between first symptoms and diagnosis. That delay is not your fault, but there are things you can do to shorten it.</p>
-  <h2>Come prepared</h2>
-  <ul><li>Keep a symptom diary: when pain happens, how severe, how it affects work, sleep and relationships.</li><li>Note your cycle and any bleeding changes.</li><li>Write down your top three concerns so they don't get lost in a short appointment.</li></ul>
-  <h2>Be specific and concrete</h2>
-  <p>Instead of "my periods are bad," try "I miss two days of work every month and over-the-counter painkillers don't touch it." Concrete impact is harder to dismiss than vague discomfort.</p>
-  <h2>Know your options</h2>
-  <p>You can ask directly for a referral to a gynaecologist or specialist, request imaging, and seek a second opinion if you feel unheard. Being persistent is not being difficult — it's advocating for your health.</p>`},
- {id:'a4',title:'Living Well: Everyday Strategies Alongside Medical Care',category:'Living Well',author:'EndoAdvocates Team',date:'30 Jan 2026',sym:'❀',
-  excerpt:'Treatment is essential — but day-to-day tools can also help you reclaim some control over flares and fatigue.',
-  body:`<p>Medical treatment is the foundation of managing endometriosis and adenomyosis. But many people also find that small, consistent daily strategies help them cope between appointments. None of these replace professional care — think of them as companions to it.</p>
-  <h2>For flares</h2>
-  <ul><li>Heat (a pad or warm bath) eases cramping for many.</li><li>Gentle movement and rest, balanced through pacing, can prevent the boom-and-bust cycle.</li><li>Ask your care team about pelvic-floor physiotherapy.</li></ul>
-  <h2>For the long game</h2>
-  <ul><li>Track patterns so you and your clinician can adjust treatment.</li><li>Prioritise sleep and stress reduction — both influence pain.</li><li>Look after your mental health; chronic pain and low mood often go hand in hand, and support genuinely helps.</li></ul>
-  <p>Above all: be kind to yourself. Managing a chronic condition is real work, and you're doing it.</p>`}
-];
-const SEED_NOTICES=[
- {id:'n1',title:'Welcome to EndoAdvocates',body:'Our new home for endometriosis & adenomyosis awareness and support is live. Explore the conditions, try the symptom self-check, and reach out — you are not alone.',date:'01 Feb 2026',level:'normal'},
- {id:'n2',title:'Monthly support circle — first Saturday',body:'Our peer support circle meets on the first Saturday of each month. A safe, welcoming space to share and listen. Watch this space for the next meeting link.',date:'02 Feb 2026',level:'normal'}
-];
-const SEED_SPECIALISTS=[
- {id:'s1',name:'Dr. [Add a real name]',role:'Consultant Gynaecologist — Endometriosis',org:'Replace via the Admin panel',location:'Your city',contact:'clinic@example.com',sample:true},
- {id:'s2',name:'Dr. [Add a real name]',role:'Pelvic Pain & Adenomyosis Specialist',org:'Replace via the Admin panel',location:'Your city',contact:'+000 000 0000',sample:true}
-];
+/* ============================================================
+   ADMIN EMAILS
+   ▶ Add the Gmail address(es) allowed to manage this site.
+   ▶ Update your Firestore security rules to match.
+   ============================================================ */
+const ADMIN_EMAILS = ['vaddever@gmail.com'];
 
-async function ensureSeeded(){
-  if(await store.get(KEY_ART)===null) await store.set(KEY_ART, JSON.stringify(SEED_ARTICLES));
-  if(await store.get(KEY_NOT)===null) await store.set(KEY_NOT, JSON.stringify(SEED_NOTICES));
-  if(await store.get(KEY_SPEC)===null) await store.set(KEY_SPEC, JSON.stringify(SEED_SPECIALISTS));
+/* ============================================================
+   FIREBASE INIT
+   ============================================================ */
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.firestore();
+const auth = firebase.auth();
+let currentUser = null, isAdmin = false;
+
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  isAdmin = !!(user && ADMIN_EMAILS.includes(user.email));
+  const adminEl = document.getElementById('admin');
+  if (adminEl && adminEl.classList.contains('show')) renderAdmin();
+});
+
+/* ============================================================
+   FIRESTORE HELPERS
+   ============================================================ */
+async function getCol(col) {
+  try {
+    const snap = await db.collection(col).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) { console.error('getCol', col, e); return []; }
 }
-async function getJSON(k,f){ const v=await store.get(k); try{ return v?JSON.parse(v):f; }catch(e){ return f; } }
+async function addFSDoc(col, data) {
+  return db.collection(col).add({
+    ...data,
+    _ts: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+async function delFSDoc(col, id) {
+  return db.collection(col).doc(id).delete();
+}
+function sortDesc(arr) {
+  return arr.slice().sort((a, b) => {
+    const at = a._ts && a._ts.seconds ? a._ts.seconds : 0;
+    const bt = b._ts && b._ts.seconds ? b._ts.seconds : 0;
+    return bt - at;
+  });
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+const today = () => new Date().toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+function esc(s){ return (s||'').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function val(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+let toastT;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function bodyToHtml(raw){
+  return raw.split(/\n\s*\n/).map(block => {
+    const t = block.trim();
+    if (t.startsWith('## ')) return '<h2>' + esc(t.slice(3)) + '</h2>';
+    return '<p>' + esc(t).replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+}
+function condTab(c){
+  document.querySelectorAll('#conditions .tab').forEach(t => t.classList.toggle('active', t.dataset.c === c));
+  document.querySelectorAll('.cond-panel').forEach(p => p.classList.toggle('show', p.id === 'c-' + c));
+}
+
+/* ============================================================
+   SEED DATA — written to Firestore on first launch only
+   ============================================================ */
+const SEED_ARTICLES = [
+  {
+    title: 'More Than "Bad Periods": Understanding Endometriosis',
+    category: 'Education', author: 'EndoAdvocates Team', sym: '§', date: '12 Jan 2026',
+    excerpt: 'Why endometriosis is a whole-body condition, not just a painful period — and why being believed is the first step toward care.',
+    body: '<p>For generations, severe period pain has been brushed aside as something to simply endure. Endometriosis is the proof that this attitude has done real harm. It is a chronic, inflammatory condition affecting roughly one in ten people of reproductive age — and yet many wait the better part of a decade for answers.</p><h2>What\'s actually happening</h2><p>In endometriosis, tissue similar to the lining of the uterus grows outside it — on the ovaries, the pelvic wall, sometimes the bowel or bladder. Each cycle this tissue behaves like the uterine lining: it builds up and bleeds. But with nowhere to go, it causes inflammation, scarring and pain.</p><h2>It\'s more than the pelvis</h2><p>Researchers increasingly describe endometriosis as a multisystem condition. Alongside pelvic pain it can bring fatigue, digestive and bladder symptoms, and a real impact on mood and mental health.</p><h2>Why being believed comes first</h2><p>If your pain is interfering with your life, that is reason enough to be taken seriously. Keep a record of your symptoms, ask questions, and don\'t be afraid to seek a second opinion.</p>'
+  },
+  {
+    title: 'Adenomyosis Explained: When the Lining Grows Inward',
+    category: 'Education', author: 'EndoAdvocates Team', sym: '¶', date: '18 Jan 2026',
+    excerpt: 'Often overshadowed by endometriosis, adenomyosis is its own condition — and recognising the difference helps you get the right care.',
+    body: '<p>Adenomyosis is less talked about than endometriosis, but for those who have it the impact is just as real. In adenomyosis, tissue similar to the uterine lining grows <em>into the muscular wall of the uterus</em>, rather than outside it. This tends to produce heavy, prolonged bleeding and cramping that can feel more constant than the cyclical flares typical of endometriosis.</p><h2>Getting a diagnosis</h2><p>Adenomyosis is usually picked up on a transvaginal ultrasound or MRI, which can reveal thickening of the uterine wall.</p><h2>What can help</h2><p>Management centres on controlling pain and heavy bleeding — through anti-inflammatories, hormonal treatments, and medicines that reduce bleeding. For those who have completed their families and have severe symptoms, a hysterectomy is the one definitive cure.</p>'
+  },
+  {
+    title: 'The Long Wait: How to Advocate for Yourself',
+    category: 'Practical', author: 'EndoAdvocates Team', sym: '✦', date: '24 Jan 2026',
+    excerpt: 'It takes 7–9 years on average to get diagnosed. Here is how to make your appointments count and be heard.',
+    body: '<p>One of the cruelest features of endometriosis and adenomyosis is the delay — an average of seven to nine years between first symptoms and diagnosis. That delay is not your fault, but there are things you can do to shorten it.</p><h2>Come prepared</h2><p>Keep a symptom diary: when pain happens, how severe, how it affects work, sleep and relationships. Write down your top three concerns so they don\'t get lost in a short appointment.</p><h2>Be specific and concrete</h2><p>Instead of "my periods are bad," try "I miss two days of work every month and over-the-counter painkillers don\'t touch it." Concrete impact is harder to dismiss than vague discomfort.</p><h2>Know your options</h2><p>You can ask directly for a referral to a specialist, request imaging, and seek a second opinion if you feel unheard.</p>'
+  },
+  {
+    title: 'Living Well: Everyday Strategies Alongside Medical Care',
+    category: 'Living Well', author: 'EndoAdvocates Team', sym: '❀', date: '30 Jan 2026',
+    excerpt: 'Treatment is essential — but day-to-day tools can also help you reclaim some control over flares and fatigue.',
+    body: '<p>Medical treatment is the foundation of managing endometriosis and adenomyosis. But many people also find that small, consistent daily strategies help them cope between appointments.</p><h2>For flares</h2><p>Heat (a pad or warm bath) eases cramping for many. Gentle movement and rest, balanced through pacing, can prevent the boom-and-bust cycle. Ask your care team about pelvic-floor physiotherapy.</p><h2>For the long game</h2><p>Track patterns so you and your clinician can adjust treatment. Prioritise sleep and stress reduction — both influence pain. Look after your mental health; chronic pain and low mood often go hand in hand.</p><p>Above all: be kind to yourself. Managing a chronic condition is real work, and you are doing it.</p>'
+  }
+];
+const SEED_NOTICES = [
+  { title: 'Welcome to EndoAdvocates', body: 'Our home for endometriosis & adenomyosis awareness and support is live. Explore the conditions, try the symptom self-check, and reach out — you are not alone.', date: '01 Feb 2026', level: 'normal' },
+  { title: 'Monthly support circle — first Saturday', body: 'Our peer support circle meets on the first Saturday of each month. A safe, welcoming space to share and listen. Watch this space for the next meeting link.', date: '02 Feb 2026', level: 'normal' }
+];
+const SEED_SPECIALISTS = [
+  { name: 'Dr. [Add a real name]', role: 'Consultant Gynaecologist — Endometriosis', org: 'Replace via the Admin panel', location: 'Your city', contact: 'clinic@example.com', sample: true },
+  { name: 'Dr. [Add a real name]', role: 'Pelvic Pain & Adenomyosis Specialist',     org: 'Replace via the Admin panel', location: 'Your city', contact: '+000 000 0000',       sample: true }
+];
+
+async function ensureSeeded() {
+  const arts = await getCol('articles');
+  if (arts.length > 0) return;
+  for (const a of SEED_ARTICLES)    await addFSDoc('articles',    a);
+  for (const n of SEED_NOTICES)     await addFSDoc('notices',     n);
+  for (const s of SEED_SPECIALISTS) await addFSDoc('specialists', s);
+}
 
 /* ============================================================
    ROUTER
    ============================================================ */
-function go(route, param){
-  document.querySelectorAll('section.page').forEach(s=>s.classList.remove('show'));
-  const el=document.getElementById(route)||document.getElementById('home');
+function go(route, param) {
+  document.querySelectorAll('section.page').forEach(s => s.classList.remove('show'));
+  const el = document.getElementById(route) || document.getElementById('home');
   el.classList.add('show');
-  document.querySelectorAll('nav.links a').forEach(a=>a.classList.toggle('active', a.dataset.r===route));
-  document.getElementById('navlinks').classList.remove('open');
-  window.scrollTo({top:0,behavior:'instant'});
-  if(route==='articles') renderArticles();
-  if(route==='article') renderArticle(param);
-  if(route==='specialists') renderSpecialists();
-  if(route==='check') renderCheckForm();
-  if(route==='submit') renderSubmitForm();
-  if(route==='admin') renderAdmin();
-  location.hash=route+(param?('/'+param):'');
+  document.querySelectorAll('nav.links a').forEach(a => a.classList.toggle('active', a.dataset.r === route));
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  if (route === 'articles')    renderArticles();
+  if (route === 'article')     renderArticle(param);
+  if (route === 'specialists') renderSpecialists();
+  if (route === 'check')       renderCheckForm();
+  if (route === 'submit')      renderSubmitForm();
+  if (route === 'admin')       renderAdmin();
+  location.hash = route + (param ? '/' + param : '');
 }
 
 /* ============================================================
    ARTICLES + NOTICES
    ============================================================ */
-async function renderArticles(){
-  const notices=await getJSON(KEY_NOT,[]);
-  const arts=await getJSON(KEY_ART,[]);
-  const nr=document.getElementById('noticeRail');
-  nr.innerHTML = notices.length? notices.slice().reverse().map(n=>`
-    <div class="notice ${n.level==='urgent'?'urgent':''}">
-      <div class="nico">${n.level==='urgent'?'📢':'📌'}</div>
-      <div><h4>${esc(n.title)}</h4><p>${esc(n.body)}</p><div class="nd">${esc(n.date)}</div></div>
-    </div>`).join('') : '';
-  const g=document.getElementById('artGrid');
-  g.innerHTML = arts.slice().reverse().map(a=>`
-    <div class="art-card" onclick="go('article','${a.id}')">
-      <div class="art-top"><span class="cat">${esc(a.category||'Article')}</span><span class="sym">${a.sym||'§'}</span></div>
-      <div class="art-body">
-        <h3>${esc(a.title)}</h3>
-        <p>${esc(a.excerpt||'')}</p>
-        <div class="art-meta"><span>${esc(a.author||'')} · ${esc(a.date||'')}</span><span class="read">Read →</span></div>
-      </div>
-    </div>`).join('');
+async function renderArticles() {
+  const [notices, arts] = await Promise.all([getCol('notices'), getCol('articles')]);
+
+  const nr = document.getElementById('noticeRail');
+  nr.innerHTML = sortDesc(notices).map(n =>
+    '<div class="notice ' + (n.level === 'urgent' ? 'urgent' : '') + '">' +
+      '<div class="nico">' + (n.level === 'urgent' ? '📢' : '📌') + '</div>' +
+      '<div><h4>' + esc(n.title) + '</h4><p>' + esc(n.body) + '</p><div class="nd">' + esc(n.date) + '</div></div>' +
+    '</div>'
+  ).join('');
+
+  const g = document.getElementById('artGrid');
+  const sorted = sortDesc(arts);
+  g.innerHTML = sorted.length
+    ? sorted.map(a =>
+        '<div class="art-card" onclick="go(\'article\',\'' + a.id + '\')">' +
+          '<div class="art-top"><span class="cat">' + esc(a.category || 'Article') + '</span><span class="sym">' + (a.sym || '§') + '</span></div>' +
+          '<div class="art-body">' +
+            '<h3>' + esc(a.title) + '</h3>' +
+            '<p>' + esc(a.excerpt || '') + '</p>' +
+            '<div class="art-meta"><span>' + esc(a.author || '') + ' · ' + esc(a.date || '') + '</span><span class="read">Read →</span></div>' +
+          '</div>' +
+        '</div>'
+      ).join('')
+    : '<p style="color:var(--ink-soft)">No articles yet — check back soon.</p>';
 }
-async function renderArticle(id){
-  const arts=await getJSON(KEY_ART,[]);
-  const a=arts.find(x=>x.id===id);
-  const c=document.getElementById('articleFull');
-  if(!a){ c.innerHTML='<p>Article not found.</p>'; return; }
-  c.innerHTML=`
-    <span class="back-link" onclick="go('articles')">← Back to articles</span>
-    <span class="cat">${esc(a.category||'Article')}</span>
-    <h1>${esc(a.title)}</h1>
-    <div class="byline">By ${esc(a.author||'EndoAdvocates')} · ${esc(a.date||'')}</div>
-    <div class="content">${a.body||('<p>'+esc(a.excerpt||'')+'</p>')}</div>
-    <div class="disclaimer" style="margin-top:40px"><span>ℹ️</span><span>This article is for general information and is not medical advice. Please consult a qualified clinician about your situation.</span></div>`;
+
+async function renderArticle(id) {
+  const c = document.getElementById('articleFull');
+  if (!id) { c.innerHTML = '<p>Article not found.</p>'; return; }
+  try {
+    const docSnap = await db.collection('articles').doc(id).get();
+    if (!docSnap.exists) { c.innerHTML = '<p>Article not found.</p>'; return; }
+    const a = { id: docSnap.id, ...docSnap.data() };
+    c.innerHTML =
+      '<span class="back-link" onclick="go(\'articles\')">← Back to articles</span>' +
+      '<span class="cat">' + esc(a.category || 'Article') + '</span>' +
+      '<h1>' + esc(a.title) + '</h1>' +
+      '<div class="byline">By ' + esc(a.author || 'EndoAdvocates') + ' · ' + esc(a.date || '') + '</div>' +
+      '<div class="content">' + (a.body || '<p>' + esc(a.excerpt || '') + '</p>') + '</div>' +
+      '<div class="disclaimer" style="margin-top:40px"><span>ℹ️</span><span>This article is for general information and is not medical advice. Please consult a qualified clinician about your situation.</span></div>';
+  } catch(e) {
+    c.innerHTML = '<p style="color:var(--ink-soft)">Could not load article. Please try again.</p>';
+    console.error(e);
+  }
 }
 
 /* ============================================================
    SPECIALISTS
    ============================================================ */
-async function renderSpecialists(){
-  const list=await getJSON(KEY_SPEC,[]);
-  const g=document.getElementById('specGrid');
-  g.innerHTML = list.length ? list.map(s=>`
-    <div class="spec">
-      <span class="tag">Specialist</span>
-      <h3>${esc(s.name)}</h3>
-      <div class="role">${esc(s.role||'')}</div>
-      ${s.org?`<div class="det"><b>Clinic</b><span>${esc(s.org)}</span></div>`:''}
-      ${s.location?`<div class="det"><b>Location</b><span>${esc(s.location)}</span></div>`:''}
-      ${s.contact?`<div class="det"><b>Contact</b><span>${esc(s.contact)}</span></div>`:''}
-      ${s.sample?`<div class="sample-flag">⚑ Sample entry — replace via the Admin panel</div>`:''}
-    </div>`).join('') : '<p style="color:var(--ink-soft)">No specialists listed yet. An admin can add them from the Admin panel.</p>';
+async function renderSpecialists() {
+  const list = await getCol('specialists');
+  document.getElementById('specGrid').innerHTML = list.length
+    ? list.map(s =>
+        '<div class="spec">' +
+          '<span class="tag">Specialist</span>' +
+          '<h3>' + esc(s.name) + '</h3>' +
+          '<div class="role">' + esc(s.role || '') + '</div>' +
+          (s.org      ? '<div class="det"><b>Clinic</b><span>'    + esc(s.org)      + '</span></div>' : '') +
+          (s.location ? '<div class="det"><b>Location</b><span>'  + esc(s.location) + '</span></div>' : '') +
+          (s.contact  ? '<div class="det"><b>Contact</b><span>'   + esc(s.contact)  + '</span></div>' : '') +
+          (s.sample   ? '<div class="sample-flag">⚑ Sample entry — replace via the Admin panel</div>' : '') +
+        '</div>'
+      ).join('')
+    : '<p style="color:var(--ink-soft)">No specialists listed yet. An admin can add them from the Admin panel.</p>';
 }
 
 /* ============================================================
-   SYMPTOM SELF-CHECK
+   VISITOR SUBMISSION
    ============================================================ */
-const SYMPTOMS=[
- {id:'q1', text:'Severe pain during your period (beyond ordinary cramps)', endo:2, adeno:2},
- {id:'q2', text:'Pelvic pain that continues between periods', endo:2, adeno:1},
- {id:'q3', text:'Very heavy or prolonged menstrual bleeding', endo:1, adeno:3},
- {id:'q4', text:'Pain during or after sex', endo:2, adeno:1},
- {id:'q5', text:'Painful bowel movements or urination, especially around your period', endo:3, adeno:0},
- {id:'q6', text:'Bloating, nausea or "endo belly"', endo:2, adeno:1},
- {id:'q7', text:'A feeling that your uterus is enlarged, heavy or tender', endo:0, adeno:3},
- {id:'q8', text:'Persistent fatigue', endo:1, adeno:1},
- {id:'q9', text:'Pain that radiates to your lower back or legs', endo:2, adeno:1},
- {id:'q10', text:'Difficulty getting pregnant', endo:2, adeno:1}
-];
-let symState={}, patternAns=null, durAns=null, sevAns=null;
-
-function renderCheckForm(){
-  symState={}; patternAns=null; durAns=null; sevAns=null;
-  document.getElementById('checkResult').innerHTML='';
-  const f=document.getElementById('checkForm');
-  f.innerHTML=`
-    <div class="q-block">
-      <h4>1 · Which of these have you been experiencing? <span style="font-weight:400;color:var(--ink-soft);font-size:.9rem">(Select all that apply)</span></h4>
-      <div class="opts" id="symOpts">
-        ${SYMPTOMS.map(s=>`<div class="opt" data-s="${s.id}" onclick="toggleSym('${s.id}')"><div class="box">✓</div><span>${s.text}</span></div>`).join('')}
-      </div>
-    </div>
-    <div class="q-block">
-      <h4>2 · When do your symptoms tend to occur?</h4>
-      <div class="seg" id="patOpts">
-        <div class="opt radio" data-p="cyclical" onclick="setPat('cyclical')"><div class="box">●</div><span>Mostly around my period</span></div>
-        <div class="opt radio" data-p="constant" onclick="setPat('constant')"><div class="box">●</div><span>Fairly constant, all month</span></div>
-        <div class="opt radio" data-p="unsure" onclick="setPat('unsure')"><div class="box">●</div><span>Not sure / varies</span></div>
-      </div>
-    </div>
-    <div class="q-block">
-      <h4>3 · How long have you had these symptoms?</h4>
-      <div class="seg" id="durOpts">
-        <div class="opt radio" data-d="lt6" onclick="setDur('lt6')"><div class="box">●</div><span>Less than 6 months</span></div>
-        <div class="opt radio" data-d="6to24" onclick="setDur('6to24')"><div class="box">●</div><span>6 months – 2 years</span></div>
-        <div class="opt radio" data-d="gt24" onclick="setDur('gt24')"><div class="box">●</div><span>More than 2 years</span></div>
-      </div>
-    </div>
-    <div class="q-block">
-      <h4>4 · How much do symptoms affect your daily life?</h4>
-      <div class="seg" id="sevOpts">
-        <div class="opt radio" data-v="mild" onclick="setSev('mild')"><div class="box">●</div><span>Mild — manageable</span></div>
-        <div class="opt radio" data-v="mod" onclick="setSev('mod')"><div class="box">●</div><span>Moderate — disruptive</span></div>
-        <div class="opt radio" data-v="severe" onclick="setSev('severe')"><div class="box">●</div><span>Severe — debilitating</span></div>
-      </div>
-    </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:1.05rem;margin-top:6px" onclick="runCheck()">See my results →</button>`;
+function renderSubmitForm() {
+  document.getElementById('submitResult').innerHTML = '';
+  document.getElementById('submitForm').innerHTML =
+    '<div class="q-block">' +
+      '<h4>Your name or pen name <span style="font-weight:400;color:var(--ink-soft);font-size:.88rem">(required)</span></h4>' +
+      '<input id="saName" placeholder="e.g. Sarah, or Anonymous">' +
+    '</div>' +
+    '<div class="q-block">' +
+      '<h4>Email <span style="font-weight:400;color:var(--ink-soft);font-size:.88rem">(optional — only used to notify you when published)</span></h4>' +
+      '<input id="saEmail" type="email" placeholder="your@email.com">' +
+    '</div>' +
+    '<div class="row2" style="gap:14px">' +
+      '<div class="q-block" style="margin-bottom:0">' +
+        '<h4>Article title</h4>' +
+        '<input id="saTitle" placeholder="A clear, descriptive title">' +
+      '</div>' +
+      '<div class="q-block" style="margin-bottom:0">' +
+        '<h4>Category</h4>' +
+        '<select id="saCat"><option>Personal Story</option><option>Education</option><option>Living Well</option><option>Research & News</option><option>Advocacy</option></select>' +
+      '</div>' +
+    '</div>' +
+    '<div class="q-block" style="margin-top:14px">' +
+      '<h4>Your article</h4>' +
+      '<p style="font-size:.88rem;color:var(--ink-soft);margin-bottom:10px">Write naturally. A blank line between paragraphs becomes a new paragraph.</p>' +
+      '<textarea id="saBody" style="min-height:260px" placeholder="Write your article here..."></textarea>' +
+    '</div>' +
+    '<button class="btn btn-amber" style="width:100%;justify-content:center;font-size:1.05rem" onclick="submitArticle()">Submit for review →</button>';
 }
-function toggleSym(id){ symState[id]=!symState[id]; document.querySelector(`[data-s="${id}"]`).classList.toggle('sel',symState[id]); }
-function setPat(v){ patternAns=v; document.querySelectorAll('#patOpts .opt').forEach(o=>o.classList.toggle('sel',o.dataset.p===v)); }
-function setDur(v){ durAns=v; document.querySelectorAll('#durOpts .opt').forEach(o=>o.classList.toggle('sel',o.dataset.d===v)); }
-function setSev(v){ sevAns=v; document.querySelectorAll('#sevOpts .opt').forEach(o=>o.classList.toggle('sel',o.dataset.v===v)); }
 
-function runCheck(){
-  const selected=SYMPTOMS.filter(s=>symState[s.id]);
-  if(selected.length===0){ toast('Please select at least one symptom'); return; }
-  let endo=0,adeno=0,maxE=0,maxA=0;
-  SYMPTOMS.forEach(s=>{ maxE+=s.endo; maxA+=s.adeno; if(symState[s.id]){ endo+=s.endo; adeno+=s.adeno; }});
-  if(patternAns==='cyclical') endo+=3;
-  if(patternAns==='constant') adeno+=3;
-  maxE+=3; maxA+=3;
-  const ePct=Math.round(endo/maxE*100), aPct=Math.round(adeno/maxA*100);
-  const overall=Math.round((selected.length/SYMPTOMS.length)*100);
+async function submitArticle() {
+  const name = val('saName'), title = val('saTitle'), body = val('saBody');
+  if (!name)                  { toast('Please add your name'); return; }
+  if (!title)                 { toast('Please add a title'); return; }
+  if (body.trim().length < 100) { toast('Please write at least a paragraph or two'); return; }
+  try {
+    await addFSDoc('submissions', {
+      name, email: val('saEmail'), title,
+      category: val('saCat') || 'Article',
+      body: bodyToHtml(body), rawBody: body.trim(),
+      excerpt: body.trim().slice(0, 200).replace(/\n/g, ' ') + '…',
+      date: today(), status: 'pending'
+    });
+    document.getElementById('submitForm').innerHTML = '';
+    document.getElementById('submitResult').innerHTML =
+      '<div class="result" style="text-align:center;padding:44px 34px">' +
+        '<div style="font-size:3rem;margin-bottom:16px">💛</div>' +
+        '<h3>Thank you, ' + esc(name) + '!</h3>' +
+        '<p style="max-width:40ch;margin:12px auto 0">Your article has been sent to the EndoAdvocates team for review. We\'ll let you know if you left an email.</p>' +
+        '<button class="btn btn-ghost" style="margin:22px auto 0;display:flex" onclick="go(\'articles\')">← Back to articles</button>' +
+      '</div>';
+  } catch(e) {
+    toast('Submission failed — please check your connection and try again.');
+    console.error(e);
+  }
+}
 
-  let lean='both shared features of';
-  if(endo>adeno+2) lean='patterns more often associated with endometriosis, among';
-  else if(adeno>endo+2) lean='patterns more often associated with adenomyosis, among';
+/* ============================================================
+   SYMPTOM CHECKER
+   ============================================================ */
+const SYMPTOMS = [
+  {id:'q1',  text:'Severe pain during your period (beyond ordinary cramps)',             endo:2, adeno:2},
+  {id:'q2',  text:'Pelvic pain that continues between periods',                          endo:2, adeno:1},
+  {id:'q3',  text:'Very heavy or prolonged menstrual bleeding',                          endo:1, adeno:3},
+  {id:'q4',  text:'Pain during or after sex',                                            endo:2, adeno:1},
+  {id:'q5',  text:'Painful bowel movements or urination, especially around your period', endo:3, adeno:0},
+  {id:'q6',  text:'Bloating, nausea or "endo belly"',                                   endo:2, adeno:1},
+  {id:'q7',  text:'A feeling that your uterus is enlarged, heavy or tender',             endo:0, adeno:3},
+  {id:'q8',  text:'Persistent fatigue',                                                  endo:1, adeno:1},
+  {id:'q9',  text:'Pain that radiates to your lower back or legs',                       endo:2, adeno:1},
+  {id:'q10', text:'Difficulty getting pregnant',                                          endo:2, adeno:1}
+];
+let symState = {}, patternAns = null, durAns = null, sevAns = null;
 
-  const sevNote = sevAns==='severe' ? 'You described a severe impact on your daily life — please prioritise seeing a clinician soon.' :
-                  sevAns==='mod' ? 'You described a moderate, disruptive impact — this is worth discussing with a clinician.' :
-                  sevAns==='mild' ? 'Even mild but persistent symptoms are worth raising with a clinician.' : '';
+function renderCheckForm() {
+  symState = {}; patternAns = null; durAns = null; sevAns = null;
+  document.getElementById('checkResult').innerHTML = '';
+  document.getElementById('checkForm').innerHTML =
+    '<div class="q-block"><h4>1 · Which of these have you been experiencing? <span style="font-weight:400;color:var(--ink-soft);font-size:.9rem">(Select all that apply)</span></h4>' +
+    '<div class="opts">' + SYMPTOMS.map(s =>
+      '<div class="opt" data-s="' + s.id + '" onclick="toggleSym(\'' + s.id + '\')"><div class="box">✓</div><span>' + s.text + '</span></div>'
+    ).join('') + '</div></div>' +
+    '<div class="q-block"><h4>2 · When do your symptoms tend to occur?</h4>' +
+    '<div class="seg">' +
+    '<div class="opt radio" data-p="cyclical" onclick="setPat(\'cyclical\')"><div class="box">●</div><span>Mostly around my period</span></div>' +
+    '<div class="opt radio" data-p="constant" onclick="setPat(\'constant\')"><div class="box">●</div><span>Fairly constant, all month</span></div>' +
+    '<div class="opt radio" data-p="unsure"   onclick="setPat(\'unsure\')"><div class="box">●</div><span>Not sure / varies</span></div>' +
+    '</div></div>' +
+    '<div class="q-block"><h4>3 · How long have you had these symptoms?</h4>' +
+    '<div class="seg">' +
+    '<div class="opt radio" data-d="lt6"   onclick="setDur(\'lt6\')"><div class="box">●</div><span>Less than 6 months</span></div>' +
+    '<div class="opt radio" data-d="6to24" onclick="setDur(\'6to24\')"><div class="box">●</div><span>6 months – 2 years</span></div>' +
+    '<div class="opt radio" data-d="gt24"  onclick="setDur(\'gt24\')"><div class="box">●</div><span>More than 2 years</span></div>' +
+    '</div></div>' +
+    '<div class="q-block"><h4>4 · How much do symptoms affect your daily life?</h4>' +
+    '<div class="seg">' +
+    '<div class="opt radio" data-v="mild"   onclick="setSev(\'mild\')"><div class="box">●</div><span>Mild — manageable</span></div>' +
+    '<div class="opt radio" data-v="mod"    onclick="setSev(\'mod\')"><div class="box">●</div><span>Moderate — disruptive</span></div>' +
+    '<div class="opt radio" data-v="severe" onclick="setSev(\'severe\')"><div class="box">●</div><span>Severe — debilitating</span></div>' +
+    '</div></div>' +
+    '<button class="btn btn-primary" style="width:100%;justify-content:center;font-size:1.05rem;margin-top:6px" onclick="runCheck()">See my results →</button>';
+}
+function toggleSym(id) { symState[id] = !symState[id]; document.querySelector('[data-s="' + id + '"]').classList.toggle('sel', symState[id]); }
+function setPat(v) { patternAns = v; document.querySelectorAll('[data-p]').forEach(o => o.classList.toggle('sel', o.dataset.p === v)); }
+function setDur(v) { durAns    = v; document.querySelectorAll('[data-d]').forEach(o => o.classList.toggle('sel', o.dataset.d === v)); }
+function setSev(v) { sevAns    = v; document.querySelectorAll('[data-v]').forEach(o => o.classList.toggle('sel', o.dataset.v === v)); }
 
-  const durNote = durAns==='gt24' ? 'You\'ve had symptoms for more than two years — long-standing symptoms deserve a thorough assessment.' : '';
-
-  const symListHtml = selected.map(s=>`<li>${s.text}</li>`).join('');
-  const patternText = patternAns==='cyclical'?'mostly around your period':patternAns==='constant'?'fairly constant all month':'variable';
-  const durText = durAns==='lt6'?'less than 6 months':durAns==='6to24'?'6 months to 2 years':durAns==='gt24'?'more than 2 years':'unspecified';
-  const sevText = sevAns||'unspecified';
-
-  document.getElementById('checkResult').innerHTML=`
-    <div class="result">
-      <span class="badge">Educational summary — not a diagnosis</span>
-      <h3>What your answers suggest</h3>
-      <p>You selected <b>${selected.length}</b> of ${SYMPTOMS.length} listed symptoms, occurring ${patternText}. These include several ${lean} the patterns we see in endometriosis and adenomyosis. ${sevNote} ${durNote}</p>
-      <div class="meter-row"><div class="ml"><span>Overlap with endometriosis patterns</span><span>${ePct}%</span></div><div class="meter"><span style="width:${ePct}%;background:var(--terra)"></span></div></div>
-      <div class="meter-row"><div class="ml"><span>Overlap with adenomyosis patterns</span><span>${aPct}%</span></div><div class="meter"><span style="width:${aPct}%;background:var(--sage)"></span></div></div>
-      <p style="font-size:.88rem">These bars reflect how closely your selections match each condition's typical pattern. They are <b>not</b> a probability of having the condition — the two overlap heavily and frequently occur together. Only a clinician can diagnose.</p>
-
-      <h3 style="font-size:1.3rem;margin-top:22px">Your recommended next steps</h3>
-      <ul>
-        <li><b>Book an appointment</b> with a gynaecologist or a doctor experienced in pelvic pain — see our <a style="color:var(--amber-deep);font-weight:600;cursor:pointer" onclick="go('specialists')">Find a Specialist</a> page.</li>
-        <li><b>Bring this summary with you</b> (below) so nothing gets forgotten.</li>
-        <li><b>Ask about</b> the right path to diagnosis — this may include a clinical assessment, an ultrasound or MRI, and in some cases laparoscopy.</li>
-        <li><b>Know there are options.</b> While these conditions aren't simply "cured," symptoms can often be managed well with medication, hormonal treatment, surgery, and supportive care.</li>
-      </ul>
-
-      <div class="summary-box">
-        <h4>📋 Summary to take to your doctor</h4>
-        <p style="margin-bottom:6px"><b>Symptoms reported:</b></p>
-        <ul>${symListHtml}</ul>
-        <p style="margin-top:10px"><b>Pattern:</b> ${patternText} &nbsp;·&nbsp; <b>Duration:</b> ${durText} &nbsp;·&nbsp; <b>Impact:</b> ${sevText}</p>
-        <p style="margin-top:10px"><b>Questions to ask:</b> Could this be endometriosis or adenomyosis? What tests do I need? What are my treatment options? Should I see a specialist?</p>
-        <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
-          <button class="btn btn-amber" onclick="window.print()">🖨️ Print / save summary</button>
-          <button class="btn btn-ghost" onclick="renderCheckForm()">↺ Start over</button>
-        </div>
-      </div>
-
-      <div class="disclaimer" style="margin-top:24px"><span>⚠️</span><span><b>Remember:</b> this self-check cannot diagnose, treat or cure anything. It's a starting point for a conversation with a qualified clinician. Seek urgent care for sudden severe pain, very heavy bleeding, fainting or fever.</span></div>
-    </div>`;
-  document.getElementById('checkResult').scrollIntoView({behavior:'smooth',block:'start'});
+function runCheck() {
+  const selected = SYMPTOMS.filter(s => symState[s.id]);
+  if (!selected.length) { toast('Please select at least one symptom'); return; }
+  let endo = 0, adeno = 0, maxE = 0, maxA = 0;
+  SYMPTOMS.forEach(s => { maxE += s.endo; maxA += s.adeno; if (symState[s.id]) { endo += s.endo; adeno += s.adeno; } });
+  if (patternAns === 'cyclical') endo  += 3;
+  if (patternAns === 'constant') adeno += 3;
+  maxE += 3; maxA += 3;
+  const ePct = Math.round(endo / maxE * 100), aPct = Math.round(adeno / maxA * 100);
+  let lean = 'both shared features of';
+  if (endo  > adeno + 2) lean = 'patterns more often associated with endometriosis, among';
+  if (adeno > endo  + 2) lean = 'patterns more often associated with adenomyosis, among';
+  const sevNote = sevAns === 'severe' ? 'You described a severe impact on your daily life — please prioritise seeing a clinician soon.' :
+                  sevAns === 'mod'    ? 'You described a moderate, disruptive impact — this is worth discussing with a clinician.' :
+                  sevAns === 'mild'   ? 'Even mild but persistent symptoms are worth raising with a clinician.' : '';
+  const durNote = durAns === 'gt24'   ? 'You\'ve had symptoms for more than two years — long-standing symptoms deserve a thorough assessment.' : '';
+  const patternText = patternAns === 'cyclical' ? 'mostly around your period' : patternAns === 'constant' ? 'fairly constant all month' : 'variable';
+  const durText     = durAns === 'lt6' ? 'less than 6 months' : durAns === '6to24' ? '6 months to 2 years' : durAns === 'gt24' ? 'more than 2 years' : 'unspecified';
+  const sevText     = sevAns || 'unspecified';
+  document.getElementById('checkResult').innerHTML =
+    '<div class="result">' +
+      '<span class="badge">Educational summary — not a diagnosis</span>' +
+      '<h3>What your answers suggest</h3>' +
+      '<p>You selected <b>' + selected.length + '</b> of ' + SYMPTOMS.length + ' listed symptoms, occurring ' + patternText + '. These include several ' + lean + ' the patterns we see in endometriosis and adenomyosis. ' + sevNote + ' ' + durNote + '</p>' +
+      '<div class="meter-row"><div class="ml"><span>Overlap with endometriosis patterns</span><span>' + ePct + '%</span></div><div class="meter"><span style="width:' + ePct + '%;background:var(--terra)"></span></div></div>' +
+      '<div class="meter-row"><div class="ml"><span>Overlap with adenomyosis patterns</span><span>'  + aPct + '%</span></div><div class="meter"><span style="width:' + aPct + '%;background:var(--sage)"></span></div></div>' +
+      '<p style="font-size:.88rem">These bars reflect how closely your selections match each condition\'s typical pattern. They are <b>not</b> a probability of having the condition. Only a clinician can diagnose.</p>' +
+      '<h3 style="font-size:1.3rem;margin-top:22px">Your recommended next steps</h3>' +
+      '<ul>' +
+        '<li><b>Book an appointment</b> with a gynaecologist or a doctor experienced in pelvic pain.</li>' +
+        '<li><b>Bring this summary</b> (below) so nothing gets forgotten.</li>' +
+        '<li><b>Ask about</b> the right path to diagnosis — clinical assessment, ultrasound or MRI, and in some cases laparoscopy.</li>' +
+        '<li><b>Know there are options.</b> Symptoms can often be managed well with medication, hormonal treatment, surgery, and supportive care.</li>' +
+      '</ul>' +
+      '<div class="summary-box">' +
+        '<h4>📋 Summary to take to your doctor</h4>' +
+        '<p style="margin-bottom:6px"><b>Symptoms reported:</b></p>' +
+        '<ul>' + selected.map(s => '<li>' + s.text + '</li>').join('') + '</ul>' +
+        '<p style="margin-top:10px"><b>Pattern:</b> ' + patternText + ' &nbsp;·&nbsp; <b>Duration:</b> ' + durText + ' &nbsp;·&nbsp; <b>Impact:</b> ' + sevText + '</p>' +
+        '<p style="margin-top:10px"><b>Questions to ask:</b> Could this be endometriosis or adenomyosis? What tests do I need? What are my treatment options?</p>' +
+        '<div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">' +
+          '<button class="btn btn-amber" onclick="window.print()">🖨️ Print / save summary</button>' +
+          '<button class="btn btn-ghost" onclick="renderCheckForm()">↺ Start over</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="disclaimer" style="margin-top:24px"><span>⚠️</span><span><b>Remember:</b> this self-check cannot diagnose, treat or cure anything. It\'s a starting point for a conversation with a qualified clinician. Seek urgent care for sudden severe pain, very heavy bleeding, fainting or fever.</span></div>' +
+    '</div>';
+  document.getElementById('checkResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ============================================================
    ADMIN
    ============================================================ */
-let isAdmin=false;
-async function renderAdmin(){
-  const c=document.getElementById('adminContent');
-  if(!isAdmin){
-    c.innerHTML=`
-      <div class="admin-gate">
-        <h3>Admin login</h3>
-        <p>Enter the admin passphrase to manage articles, notices and specialists.</p>
-        <input type="password" id="pwInput" placeholder="Passphrase" onkeydown="if(event.key==='Enter')doLogin()">
-        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Log in</button>
-        <p style="margin-top:16px;font-size:.8rem;color:var(--ink-soft)">Default passphrase: <b>${DEFAULT_PW}</b> — change it once logged in. This is a lightweight client-side gate, not secure authentication.</p>
-      </div>`;
+async function renderAdmin() {
+  const c = document.getElementById('adminContent');
+
+  if (!isAdmin) {
+    const wrongAccount = currentUser && !isAdmin;
+    c.innerHTML =
+      '<div class="admin-gate">' +
+        '<h3>Admin access</h3>' +
+        (wrongAccount
+          ? '<p style="color:var(--terra);margin-bottom:16px">⚠️ Signed in as <b>' + esc(currentUser.email) + '</b> — this account is not authorised.</p>'
+          : '<p>Sign in with Google to manage articles, notices, specialists and submissions.</p>') +
+        '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;gap:12px" onclick="adminSignIn()">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" style="flex:none">' +
+            '<path fill="#EA4335" d="M5.3 12a6.8 6.8 0 0 1 .1-1.1L2.1 8.4A11.3 11.3 0 0 0 1 12c0 1.3.2 2.5.6 3.6l3.3-2.6A6.8 6.8 0 0 1 5.3 12z"/>' +
+            '<path fill="#FBBC05" d="M12 5.4c1.6 0 3 .6 4.1 1.5l2.8-2.8A11.1 11.1 0 0 0 12 1 11.1 11.1 0 0 0 3 6.8l3.3 2.6C7.2 7 9.4 5.4 12 5.4z"/>' +
+            '<path fill="#34A853" d="M12 18.6c-2.6 0-4.8-1.6-5.7-3.9L3 17.2A11.1 11.1 0 0 0 12 23c2.9 0 5.6-1.1 7.7-2.9l-3.1-2.5A6.8 6.8 0 0 1 12 18.6z"/>' +
+            '<path fill="#4285F4" d="M23 12c0-.7-.1-1.4-.2-2H12v4.1h6.2a5.4 5.4 0 0 1-2.3 3.5l3.1 2.5C21.2 17.9 23 15.2 23 12z"/>' +
+          '</svg>' +
+          'Sign in with Google' +
+        '</button>' +
+        (wrongAccount ? '<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px" onclick="adminSignOut()">Sign out and try another account</button>' : '') +
+        '<p style="margin-top:16px;font-size:.8rem;color:var(--ink-soft)">Access is restricted to addresses listed in <code>ADMIN_EMAILS</code> in the site code.</p>' +
+      '</div>';
     return;
   }
-  const arts=await getJSON(KEY_ART,[]), notices=await getJSON(KEY_NOT,[]), specs=await getJSON(KEY_SPEC,[]);
-  const subs=await getJSON(KEY_SUB,[]);
-  const pending=subs.filter(s=>s.status==='pending');
-  c.innerHTML=`
-    <div class="sec-head" style="margin-bottom:24px">
-      <span class="logout" onclick="isAdmin=false;renderAdmin()">Log out</span>
-      <div class="eyebrow">Admin Dashboard</div>
-      <h2>Manage your site</h2>
-      <p>Post articles and notices, manage your specialist directory, and update your passphrase. Changes are saved and visible to all visitors.</p>
-    </div>
-    <div class="admin-tabs">
-      <button class="tab active" data-a="ar" onclick="adminTab('ar')">✍️ New article</button>
-      <button class="tab" data-a="no" onclick="adminTab('no')">📢 New notice</button>
-      <button class="tab" data-a="su" onclick="adminTab('su')">📬 Submissions${pending.length?'<span class="sub-badge">'+pending.length+'</span>':''}</button>
-      <button class="tab" data-a="sp" onclick="adminTab('sp')">📍 Specialists</button>
-      <button class="tab" data-a="se" onclick="adminTab('se')">⚙️ Settings</button>
-    </div>
 
-    <div class="admin-panel show" id="ap-ar">
-      <div class="admin-card">
-        <h3>Publish a new article</h3>
-        <div class="row2"><div><label>Title</label><input id="naTitle" placeholder="Article title"></div><div><label>Category</label><input id="naCat" placeholder="e.g. Education, Living Well" value="Article"></div></div>
-        <div class="row2"><div><label>Author</label><input id="naAuthor" placeholder="Author name" value="EndoAdvocates Team"></div><div><label>Symbol (decorative)</label><input id="naSym" placeholder="e.g. §" value="✦" maxlength="2"></div></div>
-        <label>Short excerpt (shown on the card)</label><input id="naExcerpt" placeholder="One-sentence summary">
-        <label>Body — write naturally. Blank lines start new paragraphs; a line starting with "## " becomes a heading.</label>
-        <textarea id="naBody" placeholder="Write your article here..."></textarea>
-        <button class="btn btn-primary" onclick="addArticle()">Publish article</button>
-      </div>
-      <div class="admin-card">
-        <h3>Existing articles (${arts.length})</h3>
-        ${arts.slice().reverse().map(a=>`<div class="manage-item"><div><div class="mi-t">${esc(a.title)}</div><div class="mi-s">${esc(a.category)} · ${esc(a.date)}</div></div><button class="del" onclick="delItem('${KEY_ART}','${a.id}')">Delete</button></div>`).join('')||'<p style="color:var(--ink-soft)">No articles yet.</p>'}
-      </div>
-    </div>
+  const [arts, notices, specs, subs] = await Promise.all([
+    getCol('articles'), getCol('notices'), getCol('specialists'), getCol('submissions')
+  ]);
+  const pending = subs.filter(s => s.status === 'pending');
 
-    <div class="admin-panel" id="ap-no">
-      <div class="admin-card">
-        <h3>Post an important notice</h3>
-        <label>Title</label><input id="nnTitle" placeholder="Notice title">
-        <label>Message</label><textarea id="nnBody" style="min-height:90px" placeholder="Notice text..."></textarea>
-        <label>Priority</label>
-        <select id="nnLevel"><option value="normal">Normal</option><option value="urgent">Urgent / pinned</option></select>
-        <button class="btn btn-primary" onclick="addNotice()">Post notice</button>
-      </div>
-      <div class="admin-card">
-        <h3>Existing notices (${notices.length})</h3>
-        ${notices.slice().reverse().map(n=>`<div class="manage-item"><div><div class="mi-t">${esc(n.title)} ${n.level==='urgent'?'📢':''}</div><div class="mi-s">${esc(n.date)}</div></div><button class="del" onclick="delItem('${KEY_NOT}','${n.id}')">Delete</button></div>`).join('')||'<p style="color:var(--ink-soft)">No notices yet.</p>'}
-      </div>
-    </div>
+  c.innerHTML =
+    '<div class="sec-head" style="margin-bottom:24px">' +
+      '<span class="logout" onclick="adminSignOut()">Sign out (' + esc(currentUser.email) + ')</span>' +
+      '<div class="eyebrow">Admin Dashboard</div>' +
+      '<h2>Manage your site</h2>' +
+      '<p>Publish articles and notices, manage the specialist directory, and review visitor submissions. All changes save to Firestore instantly.</p>' +
+    '</div>' +
+    '<div class="admin-tabs">' +
+      '<button class="tab active" data-a="ar" onclick="adminTab(\'ar\')">✍️ New article</button>' +
+      '<button class="tab" data-a="no" onclick="adminTab(\'no\')">📢 New notice</button>' +
+      '<button class="tab" data-a="su" onclick="adminTab(\'su\')">📬 Submissions' + (pending.length ? '<span class="sub-badge">' + pending.length + '</span>' : '') + '</button>' +
+      '<button class="tab" data-a="sp" onclick="adminTab(\'sp\')">📍 Specialists</button>' +
+      '<button class="tab" data-a="se" onclick="adminTab(\'se\')">⚙️ Settings</button>' +
+    '</div>' +
 
-    <div class="admin-panel" id="ap-sp">
-      <div class="admin-card">
-        <h3>Add a specialist</h3>
-        <div class="row2"><div><label>Name</label><input id="nsName" placeholder="Dr. Jane Doe"></div><div><label>Role / specialty</label><input id="nsRole" placeholder="Consultant Gynaecologist"></div></div>
-        <div class="row2"><div><label>Clinic / organisation</label><input id="nsOrg" placeholder="Clinic name"></div><div><label>Location</label><input id="nsLoc" placeholder="City"></div></div>
-        <label>Contact (phone / email / website)</label><input id="nsContact" placeholder="contact details">
-        <button class="btn btn-primary" onclick="addSpec()">Add specialist</button>
-      </div>
-      <div class="admin-card">
-        <h3>Directory (${specs.length})</h3>
-        ${specs.map(s=>`<div class="manage-item"><div><div class="mi-t">${esc(s.name)}</div><div class="mi-s">${esc(s.role||'')} · ${esc(s.location||'')}${s.sample?' · ⚑ sample':''}</div></div><button class="del" onclick="delItem('${KEY_SPEC}','${s.id}')">Delete</button></div>`).join('')||'<p style="color:var(--ink-soft)">No specialists yet.</p>'}
-      </div>
-    </div>
+    // — New Article —
+    '<div class="admin-panel show" id="ap-ar">' +
+      '<div class="admin-card">' +
+        '<h3>Publish a new article</h3>' +
+        '<div class="row2"><div><label>Title</label><input id="naTitle" placeholder="Article title"></div><div><label>Category</label><input id="naCat" placeholder="e.g. Education" value="Article"></div></div>' +
+        '<div class="row2"><div><label>Author</label><input id="naAuthor" placeholder="Author name" value="EndoAdvocates Team"></div><div><label>Symbol (decorative)</label><input id="naSym" placeholder="§" value="✦" maxlength="2"></div></div>' +
+        '<label>Short excerpt (shown on the card)</label><input id="naExcerpt" placeholder="One-sentence summary">' +
+        '<label>Body — blank lines = new paragraph; a line starting with "## " = heading.</label>' +
+        '<textarea id="naBody" placeholder="Write your article here..."></textarea>' +
+        '<button class="btn btn-primary" onclick="addArticle()">Publish article</button>' +
+      '</div>' +
+      '<div class="admin-card">' +
+        '<h3>Published articles (' + arts.length + ')</h3>' +
+        (sortDesc(arts).map(a =>
+          '<div class="manage-item"><div><div class="mi-t">' + esc(a.title) + '</div><div class="mi-s">' + esc(a.category) + ' · ' + esc(a.date) + '</div></div>' +
+          '<button class="del" onclick="delItem(\'articles\',\'' + a.id + '\')">Delete</button></div>'
+        ).join('') || '<p style="color:var(--ink-soft)">No articles yet.</p>') +
+      '</div>' +
+    '</div>' +
 
-    <div class="admin-panel" id="ap-se">
-      <div class="admin-card">
-        <h3>Change admin passphrase</h3>
-        <label>New passphrase</label><input type="password" id="newPw" placeholder="New passphrase">
-        <button class="btn btn-primary" onclick="changePw()">Update passphrase</button>
-        <p style="margin-top:14px;font-size:.82rem;color:var(--ink-soft)">Note: this is a simple client-side gate suitable for a demo or internal use. For a public production site you'd want a real backend with proper authentication.</p>
-      </div>
-    </div>
+    // — Notices —
+    '<div class="admin-panel" id="ap-no">' +
+      '<div class="admin-card">' +
+        '<h3>Post a notice</h3>' +
+        '<label>Title</label><input id="nnTitle" placeholder="Notice title">' +
+        '<label>Message</label><textarea id="nnBody" style="min-height:90px" placeholder="Notice text..."></textarea>' +
+        '<label>Priority</label><select id="nnLevel"><option value="normal">Normal</option><option value="urgent">Urgent / pinned</option></select>' +
+        '<button class="btn btn-primary" onclick="addNotice()">Post notice</button>' +
+      '</div>' +
+      '<div class="admin-card">' +
+        '<h3>Existing notices (' + notices.length + ')</h3>' +
+        (sortDesc(notices).map(n =>
+          '<div class="manage-item"><div><div class="mi-t">' + esc(n.title) + (n.level === 'urgent' ? ' 📢' : '') + '</div><div class="mi-s">' + esc(n.date) + '</div></div>' +
+          '<button class="del" onclick="delItem(\'notices\',\'' + n.id + '\')">Delete</button></div>'
+        ).join('') || '<p style="color:var(--ink-soft)">No notices yet.</p>') +
+      '</div>' +
+    '</div>' +
 
-    <div class="admin-panel" id="ap-su">
-      <div id="subsList"></div>
-    </div>`;
+    // — Submissions —
+    '<div class="admin-panel" id="ap-su"><div id="subsList"></div></div>' +
+
+    // — Specialists —
+    '<div class="admin-panel" id="ap-sp">' +
+      '<div class="admin-card">' +
+        '<h3>Add a specialist</h3>' +
+        '<div class="row2"><div><label>Name</label><input id="nsName" placeholder="Dr. Jane Doe"></div><div><label>Role / specialty</label><input id="nsRole" placeholder="Consultant Gynaecologist"></div></div>' +
+        '<div class="row2"><div><label>Clinic / organisation</label><input id="nsOrg" placeholder="Clinic name"></div><div><label>Location</label><input id="nsLoc" placeholder="City"></div></div>' +
+        '<label>Contact (phone / email / website)</label><input id="nsContact" placeholder="contact details">' +
+        '<button class="btn btn-primary" onclick="addSpec()">Add specialist</button>' +
+      '</div>' +
+      '<div class="admin-card">' +
+        '<h3>Directory (' + specs.length + ')</h3>' +
+        (specs.map(s =>
+          '<div class="manage-item"><div><div class="mi-t">' + esc(s.name) + '</div><div class="mi-s">' + esc(s.role || '') + ' · ' + esc(s.location || '') + (s.sample ? ' · ⚑ sample' : '') + '</div></div>' +
+          '<button class="del" onclick="delItem(\'specialists\',\'' + s.id + '\')">Delete</button></div>'
+        ).join('') || '<p style="color:var(--ink-soft)">No specialists yet.</p>') +
+      '</div>' +
+    '</div>' +
+
+    // — Settings —
+    '<div class="admin-panel" id="ap-se">' +
+      '<div class="admin-card">' +
+        '<h3>Your account</h3>' +
+        '<p>Signed in as <b>' + esc(currentUser.email) + '</b>.</p>' +
+        '<p style="margin-top:10px;color:var(--ink-soft);font-size:.9rem">To add or change admin accounts, update the <code>ADMIN_EMAILS</code> array in the HTML file and update your Firestore security rules to match.</p>' +
+        '<button class="btn btn-ghost" style="margin-top:16px" onclick="adminSignOut()">Sign out</button>' +
+      '</div>' +
+      '<div class="admin-card">' +
+        '<h3>Database</h3>' +
+        '<p style="color:var(--ink-soft);font-size:.9rem">This site uses <b>Firebase Firestore</b>. You can also browse and edit data directly in the <a href="https://console.firebase.google.com" target="_blank" style="color:var(--amber-deep);font-weight:600">Firebase Console</a>.</p>' +
+      '</div>' +
+    '</div>';
+
   renderAdminSubs(pending);
 }
-function adminTab(t){
-  document.querySelectorAll('.admin-tabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.a===t));
-  document.querySelectorAll('.admin-panel').forEach(p=>p.classList.toggle('show',p.id==='ap-'+t));
+
+function adminSignIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => toast('Sign-in failed: ' + e.message));
 }
-async function doLogin(){
-  const v=document.getElementById('pwInput').value;
-  let pw=await store.get(KEY_PW, false); if(pw===null) pw=DEFAULT_PW;
-  if(v===pw){ isAdmin=true; renderAdmin(); toast('Welcome back, admin'); }
-  else toast('Incorrect passphrase');
+function adminSignOut() {
+  auth.signOut();
+  isAdmin = false; currentUser = null;
+  renderAdmin();
 }
-function bodyToHtml(raw){
-  return raw.split(/\n\s*\n/).map(block=>{
-    const t=block.trim();
-    if(t.startsWith('## ')) return '<h2>'+esc(t.slice(3))+'</h2>';
-    return '<p>'+esc(t).replace(/\n/g,'<br>')+'</p>';
-  }).join('');
-}
-async function addArticle(){
-  const title=val('naTitle'); if(!title){ toast('Please add a title'); return; }
-  const arts=await getJSON(KEY_ART,[]);
-  arts.push({id:uid(),title,category:val('naCat')||'Article',author:val('naAuthor')||'EndoAdvocates Team',
-    sym:val('naSym')||'✦',date:today(),excerpt:val('naExcerpt'),body:bodyToHtml(val('naBody'))});
-  await store.set(KEY_ART,JSON.stringify(arts)); toast('Article published'); renderAdmin();
-}
-async function addNotice(){
-  const title=val('nnTitle'); if(!title){ toast('Please add a title'); return; }
-  const notices=await getJSON(KEY_NOT,[]);
-  notices.push({id:uid(),title,body:val('nnBody'),date:today(),level:val('nnLevel')});
-  await store.set(KEY_NOT,JSON.stringify(notices)); toast('Notice posted'); renderAdmin();
-}
-async function addSpec(){
-  const name=val('nsName'); if(!name){ toast('Please add a name'); return; }
-  const specs=await getJSON(KEY_SPEC,[]);
-  specs.push({id:uid(),name,role:val('nsRole'),org:val('nsOrg'),location:val('nsLoc'),contact:val('nsContact'),sample:false});
-  await store.set(KEY_SPEC,JSON.stringify(specs)); toast('Specialist added'); renderAdmin();
-}
-async function delItem(key,id){
-  let list=await getJSON(key,[]); list=list.filter(x=>x.id!==id);
-  await store.set(key,JSON.stringify(list)); toast('Deleted'); renderAdmin();
-}
-async function changePw(){
-  const v=val('newPw'); if(v.length<4){ toast('Use at least 4 characters'); return; }
-  await store.set(KEY_PW,v,false); toast('Passphrase updated');
+function adminTab(t) {
+  document.querySelectorAll('.admin-tabs .tab').forEach(b => b.classList.toggle('active', b.dataset.a === t));
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.toggle('show', p.id === 'ap-' + t));
 }
 
-/* ---------- helpers ---------- */
-function condTab(c){
-  document.querySelectorAll('#conditions .tab').forEach(t=>t.classList.toggle('active',t.dataset.c===c));
-  document.querySelectorAll('.cond-panel').forEach(p=>p.classList.toggle('show',p.id==='c-'+c));
+async function addArticle() {
+  const title = val('naTitle'); if (!title) { toast('Please add a title'); return; }
+  await addFSDoc('articles', { title, category: val('naCat') || 'Article', author: val('naAuthor') || 'EndoAdvocates Team', sym: val('naSym') || '✦', date: today(), excerpt: val('naExcerpt'), body: bodyToHtml(val('naBody')) });
+  toast('Article published'); renderAdmin();
 }
-function val(id){ const e=document.getElementById(id); return e?e.value.trim():''; }
-function esc(s){ return (s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-let toastT;
-function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400); }
-
-/* ============================================================
-   SUBMISSIONS — visitor article submissions
-   ============================================================ */
-function renderSubmitForm(){
-  document.getElementById('submitResult').innerHTML='';
-  document.getElementById('submitForm').innerHTML=
-    '<div class="q-block">'+
-      '<h4>Your name or pen name <span style="font-weight:400;color:var(--ink-soft);font-size:.88rem">(required)</span></h4>'+
-      '<input id="saName" placeholder="e.g. Sarah, or Anonymous">'+
-    '</div>'+
-    '<div class="q-block">'+
-      '<h4>Email <span style="font-weight:400;color:var(--ink-soft);font-size:.88rem">(optional — only used to notify you when published)</span></h4>'+
-      '<input id="saEmail" type="email" placeholder="your@email.com">'+
-    '</div>'+
-    '<div class="row2" style="gap:14px">'+
-      '<div class="q-block" style="margin-bottom:0">'+
-        '<h4>Article title</h4>'+
-        '<input id="saTitle" placeholder="A clear, descriptive title">'+
-      '</div>'+
-      '<div class="q-block" style="margin-bottom:0">'+
-        '<h4>Category</h4>'+
-        '<select id="saCat">'+
-          '<option>Personal Story</option>'+
-          '<option>Education</option>'+
-          '<option>Living Well</option>'+
-          '<option>Research & News</option>'+
-          '<option>Advocacy</option>'+
-        '</select>'+
-      '</div>'+
-    '</div>'+
-    '<div class="q-block" style="margin-top:14px">'+
-      '<h4>Your article</h4>'+
-      '<p style="font-size:.88rem;color:var(--ink-soft);margin-bottom:10px">Write naturally. A blank line between paragraphs becomes a new paragraph. A line starting with <code>## </code> becomes a heading.</p>'+
-      '<textarea id="saBody" style="min-height:260px" placeholder="Write your article here..."></textarea>'+
-    '</div>'+
-    '<button class="btn btn-amber" style="width:100%;justify-content:center;font-size:1.05rem" onclick="submitArticle()">Submit for review →</button>';
+async function addNotice() {
+  const title = val('nnTitle'); if (!title) { toast('Please add a title'); return; }
+  await addFSDoc('notices', { title, body: val('nnBody'), date: today(), level: val('nnLevel') });
+  toast('Notice posted'); renderAdmin();
 }
-
-async function submitArticle(){
-  const name=val('saName'), title=val('saTitle'), body=val('saBody');
-  if(!name){ toast('Please add your name'); return; }
-  if(!title){ toast('Please add a title'); return; }
-  if(body.trim().length<100){ toast('Please write at least a paragraph or two'); return; }
-  const subs=await getJSON(KEY_SUB,[]);
-  subs.push({
-    id:uid(), name, email:val('saEmail'), title,
-    category:val('saCat')||'Article', body:bodyToHtml(body),
-    rawBody:body.trim(), excerpt:body.trim().slice(0,200).replace(/\n/g,' ')+'…',
-    date:today(), status:'pending'
-  });
-  await store.set(KEY_SUB, JSON.stringify(subs));
-  document.getElementById('submitForm').innerHTML='';
-  document.getElementById('submitResult').innerHTML=
-    '<div class="result" style="text-align:center;padding:44px 34px">'+
-      '<div style="font-size:3rem;margin-bottom:16px">💛</div>'+
-      '<h3>Thank you, '+esc(name)+'!</h3>'+
-      '<p style="max-width:40ch;margin:12px auto 0">Your article has been sent to the EndoAdvocates team for review. If it\'s a good fit we\'ll publish it — and let you know if you left an email.</p>'+
-      '<button class="btn btn-ghost" style="margin:22px auto 0;display:flex" onclick="go(\'articles\')">← Back to articles</button>'+
-    '</div>';
+async function addSpec() {
+  const name = val('nsName'); if (!name) { toast('Please add a name'); return; }
+  await addFSDoc('specialists', { name, role: val('nsRole'), org: val('nsOrg'), location: val('nsLoc'), contact: val('nsContact'), sample: false });
+  toast('Specialist added'); renderAdmin();
 }
-
-function renderAdminSubs(pending){
-  const el=document.getElementById('subsList'); if(!el) return;
-  if(!pending||!pending.length){
-    el.innerHTML='<div class="admin-card"><p style="color:var(--ink-soft)">No pending submissions — check back after visitors start contributing! Share the "Submit an Article" link to invite them.</p></div>';
+async function delItem(col, id) {
+  await delFSDoc(col, id);
+  toast('Deleted'); renderAdmin();
+}
+async function approveSubmission(id) {
+  try {
+    const docSnap = await db.collection('submissions').doc(id).get();
+    if (!docSnap.exists) return;
+    const s = docSnap.data();
+    await addFSDoc('articles', { title: s.title, category: s.category, author: s.name, sym: '❤', date: today(), excerpt: s.excerpt, body: s.body });
+    await delFSDoc('submissions', id);
+    toast('Article published!'); renderAdmin();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+async function rejectSubmission(id) {
+  await delFSDoc('submissions', id);
+  toast('Submission declined'); renderAdmin();
+}
+function renderAdminSubs(pending) {
+  const el = document.getElementById('subsList'); if (!el) return;
+  if (!pending || !pending.length) {
+    el.innerHTML = '<div class="admin-card"><p style="color:var(--ink-soft)">No pending submissions. When visitors submit articles, they\'ll appear here for review.</p></div>';
     return;
   }
-  el.innerHTML=pending.map(s=>
-    '<div class="sub-item">'+
-      '<h4>'+esc(s.title)+'</h4>'+
-      '<div class="sm">By <b>'+esc(s.name)+'</b>'+(s.email?' · '+esc(s.email):'')+' · '+esc(s.category)+' · submitted '+esc(s.date)+'</div>'+
-      '<div class="preview">'+esc(s.rawBody||'').slice(0,420)+(s.rawBody&&s.rawBody.length>420?'…':'')+'</div>'+
-      '<div class="actions">'+
-        '<button class="approve" onclick="approveSubmission(\''+s.id+'\')">✓ Approve &amp; Publish</button>'+
-        '<button class="del" onclick="rejectSubmission(\''+s.id+'\')">✕ Decline</button>'+
-      '</div>'+
+  el.innerHTML = pending.map(s =>
+    '<div class="sub-item">' +
+      '<h4>' + esc(s.title) + '</h4>' +
+      '<div class="sm">By <b>' + esc(s.name) + '</b>' + (s.email ? ' · ' + esc(s.email) : '') + ' · ' + esc(s.category) + ' · submitted ' + esc(s.date) + '</div>' +
+      '<div class="preview">' + esc(s.rawBody || '').slice(0, 440) + (s.rawBody && s.rawBody.length > 440 ? '…' : '') + '</div>' +
+      '<div class="actions">' +
+        '<button class="approve" onclick="approveSubmission(\'' + s.id + '\')">✓ Approve &amp; Publish</button>' +
+        '<button class="del"     onclick="rejectSubmission(\''  + s.id + '\')">✕ Decline</button>' +
+      '</div>' +
     '</div>'
   ).join('');
 }
 
-async function approveSubmission(id){
-  const subs=await getJSON(KEY_SUB,[]);
-  const s=subs.find(x=>x.id===id); if(!s) return;
-  const arts=await getJSON(KEY_ART,[]);
-  arts.push({
-    id:uid(), title:s.title, category:s.category,
-    author:s.name, sym:'❤', date:today(),
-    excerpt:s.excerpt, body:s.body
-  });
-  await store.set(KEY_ART,JSON.stringify(arts));
-  const updated=subs.filter(x=>x.id!==id);
-  await store.set(KEY_SUB,JSON.stringify(updated));
-  toast('Article published!');
-  renderAdmin();
-}
+/* ============================================================
+   BOOT
+   ============================================================ */
+(async function () {
+  document.getElementById('yr').textContent = new Date().getFullYear();
 
-async function rejectSubmission(id){
-  const subs=await getJSON(KEY_SUB,[]);
-  await store.set(KEY_SUB,JSON.stringify(subs.filter(x=>x.id!==id)));
-  toast('Submission declined');
-  renderAdmin();
-}
+  // Show setup banner if config hasn't been filled in yet
+  if (firebaseConfig.apiKey === 'YOUR_API_KEY') {
+    document.body.insertAdjacentHTML('afterbegin',
+      '<div id="setupBanner" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--terra);color:#fff;text-align:center;padding:14px 20px;font-size:.9rem;font-family:inherit">' +
+        '⚙️ <b>Firebase not configured yet.</b> Open this HTML file, find <code>firebaseConfig</code> near the top of the &lt;script&gt; block, and paste your project settings.' +
+      '</div>'
+    );
+    return;
+  }
 
-/* ---------- boot ---------- */
-(async function(){
-  document.getElementById('yr').textContent=new Date().getFullYear();
-  await ensureSeeded();
-  const hash=(location.hash||'#home').slice(1);
-  const [r,p]=hash.split('/');
-  go(r||'home', p);
+  try { await ensureSeeded(); } catch(e) { console.warn('Seed skipped:', e.message); }
+
+  const hash = (location.hash || '#home').slice(1);
+  const [r, p] = hash.split('/');
+  go(r || 'home', p);
 })();
+
 </script>
 </body>
 </html>
