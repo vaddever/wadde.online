@@ -1163,13 +1163,13 @@ async function renderAdmin() {
         '</div>' +
       '</div>' +
       '<div class="admin-card"><h3>All articles (' + arts.length + ')</h3>' +
-        sortDesc(arts).map(a =>
+        (sortDesc(arts).map(a =>
           '<div class="manage-item"><div><div class="mi-t">' + esc(a.title) + '</div><div class="mi-s">' + esc(a.category) + ' · ' + esc(a.date) + '</div></div>' +
           '<div style="display:flex;gap:8px">' +
             '<button class="del" style="border-color:var(--sage);color:var(--sage)" onclick="editArticle(\'' + a.id + '\')">Edit</button>' +
             '<button class="del" onclick="delItem(\'articles\',\'' + a.id + '\')">Delete</button>' +
           '</div></div>'
-        ).join('') || '<p style="color:var(--ink-soft)">No articles yet.</p>' +
+        ).join('') || '<p style="color:var(--ink-soft)">No articles yet.</p>') +
       '</div>' +
     '</div>' +
 
@@ -1186,13 +1186,13 @@ async function renderAdmin() {
         '</div>' +
       '</div>' +
       '<div class="admin-card"><h3>Existing notices (' + notices.length + ')</h3>' +
-        sortDesc(notices).map(n =>
+        (sortDesc(notices).map(n =>
           '<div class="manage-item"><div><div class="mi-t">' + esc(n.title) + (n.level==='urgent'?' 📢':'') + '</div><div class="mi-s">' + esc(n.date) + '</div></div>' +
           '<div style="display:flex;gap:8px">' +
             '<button class="del" style="border-color:var(--sage);color:var(--sage)" onclick="editNotice(\'' + n.id + '\')">Edit</button>' +
             '<button class="del" onclick="delItem(\'notices\',\'' + n.id + '\')">Delete</button>' +
           '</div></div>'
-        ).join('') || '<p style="color:var(--ink-soft)">No notices yet.</p>' +
+        ).join('') || '<p style="color:var(--ink-soft)">No notices yet.</p>') +
       '</div>' +
     '</div>' +
 
@@ -1214,13 +1214,13 @@ async function renderAdmin() {
         '</div>' +
       '</div>' +
       '<div class="admin-card"><h3>Directory (' + specs.length + ')</h3>' +
-        specs.map(s =>
+        (specs.map(s =>
           '<div class="manage-item"><div><div class="mi-t">' + esc(s.name) + '</div><div class="mi-s">' + esc(s.role||'') + ' · ' + esc(s.location||'') + (s.sample?' · ⚑ sample':'') + '</div></div>' +
           '<div style="display:flex;gap:8px">' +
             '<button class="del" style="border-color:var(--sage);color:var(--sage)" onclick="editSpec(\'' + s.id + '\')">Edit</button>' +
             '<button class="del" onclick="delItem(\'specialists\',\'' + s.id + '\')">Delete</button>' +
           '</div></div>'
-        ).join('') || '<p style="color:var(--ink-soft)">No specialists yet.</p>' +
+        ).join('') || '<p style="color:var(--ink-soft)">No specialists yet.</p>') +
       '</div>' +
     '</div>' +
 
