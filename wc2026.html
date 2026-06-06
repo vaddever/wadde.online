@@ -472,7 +472,73 @@ var QQ=[
   {q:'Which match kicks off WC 2026?',o:['USA vs Mexico','Brazil vs Argentina','Mexico vs South Africa','England vs France'],a:2},
 ];
 var FACTS=['The 2026 World Cup is the first with 48 teams!','104 matches across 16 venues in USA, Canada and Mexico.','Argentina are the defending champions from Qatar 2022.','Opens June 11 with Mexico vs South Africa.','Final: July 19 at MetLife Stadium, New York/NJ.','The Round of 32 is a brand-new knockout round for 2026!','Three co-hosts: USA, Canada and Mexico.','2 pts correct result · 2 pts exact score · +5 pts tournament winner!'];
-var PLY=[{n:'Lionel Messi',t:'Argentina',p:'Forward',i:'2022 WC winner',sid:41959},{n:'Kylian Mbappé',t:'France',p:'Forward',i:'Top scorer contender',sid:342658},{n:'Erling Haaland',t:'Norway',p:'Forward',i:'Premier League top scorer',sid:839956},{n:'Vinicius Jr.',t:'Brazil',p:'Forward',i:'Champions League star',sid:700026},{n:'Pedri',t:'Spain',p:'Midfielder',i:'Barcelona midfield maestro',sid:888013},{n:'Jude Bellingham',t:'England',p:'Midfielder',i:'Real Madrid star',sid:816250},{n:'Cristiano Ronaldo',t:'Portugal',p:'Forward',i:'All-time top scorer',sid:874},{n:'Kevin De Bruyne',t:'Belgium',p:'Midfielder',i:'World-class playmaker',sid:70996}];
+var PLY=[{n:'Lionel Messi',t:'Argentina',p:'Forward',i:'2022 WC winner',sid:41959},{n:'Kylian Mbappé',t:'France',p:'Forward',i:'Top scorer contender',sid:342658},{n:'Erling Haaland',t:'Norway',p:'Forward',i:'Premier League top scorer',sid:839956},{n:'Vinicius Jr.',t:'Brazil',p:'Forward',i:'Champions League star',sid:700026},{n:'Pedri',t:'Spain',p:'Midfielder',i:'Barcelona midfield maestro',sid:888013},{n:'Jude Bellingham',t:'England',p:'Midfielder',i:'Real Madrid star',sid:816250},{n:'Cristiano Ronaldo',t:'Portugal',p:'Forward',i:'All-time top scorer',sid:874},{n:'Kevin De Bruyne',t:'Belgium',p:'Midfielder',i:'World-class playmaker',sid:70996}]
+// ── Knockout Stage: 31 matches ──────────────────────────────────────────
+// h_slot/a_slot = initial qualifier slot ('W-A','R-B','3rd-1' etc.)
+// h_from/a_from = winner of a prior KO match id (or 'L-id' for loser)
+var KO_MS = [
+  // Round of 32
+  {id:'r32_01',rd:'R32',h_slot:'W-A', a_slot:'3rd-1',utc:'2026-06-28T19:00:00Z'},
+  {id:'r32_02',rd:'R32',h_slot:'W-B', a_slot:'R-A',  utc:'2026-06-28T23:00:00Z'},
+  {id:'r32_03',rd:'R32',h_slot:'W-C', a_slot:'3rd-2',utc:'2026-06-29T19:00:00Z'},
+  {id:'r32_04',rd:'R32',h_slot:'R-B', a_slot:'R-C',  utc:'2026-06-29T23:00:00Z'},
+  {id:'r32_05',rd:'R32',h_slot:'W-D', a_slot:'3rd-3',utc:'2026-06-30T19:00:00Z'},
+  {id:'r32_06',rd:'R32',h_slot:'W-E', a_slot:'R-D',  utc:'2026-06-30T23:00:00Z'},
+  {id:'r32_07',rd:'R32',h_slot:'W-F', a_slot:'3rd-4',utc:'2026-07-01T19:00:00Z'},
+  {id:'r32_08',rd:'R32',h_slot:'R-E', a_slot:'R-F',  utc:'2026-07-01T23:00:00Z'},
+  {id:'r32_09',rd:'R32',h_slot:'W-G', a_slot:'3rd-5',utc:'2026-07-02T19:00:00Z'},
+  {id:'r32_10',rd:'R32',h_slot:'W-H', a_slot:'R-G',  utc:'2026-07-02T23:00:00Z'},
+  {id:'r32_11',rd:'R32',h_slot:'W-I', a_slot:'3rd-6',utc:'2026-07-03T15:00:00Z'},
+  {id:'r32_12',rd:'R32',h_slot:'R-H', a_slot:'R-I',  utc:'2026-07-03T19:00:00Z'},
+  {id:'r32_13',rd:'R32',h_slot:'W-J', a_slot:'3rd-7',utc:'2026-07-03T23:00:00Z'},
+  {id:'r32_14',rd:'R32',h_slot:'W-K', a_slot:'R-J',  utc:'2026-07-04T15:00:00Z'},
+  {id:'r32_15',rd:'R32',h_slot:'W-L', a_slot:'3rd-8',utc:'2026-07-04T19:00:00Z'},
+  {id:'r32_16',rd:'R32',h_slot:'R-K', a_slot:'R-L',  utc:'2026-07-04T23:00:00Z'},
+  // Round of 16
+  {id:'r16_01',rd:'R16',h_from:'r32_01',a_from:'r32_02',utc:'2026-07-06T19:00:00Z'},
+  {id:'r16_02',rd:'R16',h_from:'r32_03',a_from:'r32_04',utc:'2026-07-06T23:00:00Z'},
+  {id:'r16_03',rd:'R16',h_from:'r32_05',a_from:'r32_06',utc:'2026-07-07T19:00:00Z'},
+  {id:'r16_04',rd:'R16',h_from:'r32_07',a_from:'r32_08',utc:'2026-07-07T23:00:00Z'},
+  {id:'r16_05',rd:'R16',h_from:'r32_09',a_from:'r32_10',utc:'2026-07-08T19:00:00Z'},
+  {id:'r16_06',rd:'R16',h_from:'r32_11',a_from:'r32_12',utc:'2026-07-08T23:00:00Z'},
+  {id:'r16_07',rd:'R16',h_from:'r32_13',a_from:'r32_14',utc:'2026-07-09T19:00:00Z'},
+  {id:'r16_08',rd:'R16',h_from:'r32_15',a_from:'r32_16',utc:'2026-07-09T23:00:00Z'},
+  // Quarter-finals
+  {id:'qf_01',rd:'QF',h_from:'r16_01',a_from:'r16_02',utc:'2026-07-12T19:00:00Z'},
+  {id:'qf_02',rd:'QF',h_from:'r16_03',a_from:'r16_04',utc:'2026-07-12T23:00:00Z'},
+  {id:'qf_03',rd:'QF',h_from:'r16_05',a_from:'r16_06',utc:'2026-07-13T19:00:00Z'},
+  {id:'qf_04',rd:'QF',h_from:'r16_07',a_from:'r16_08',utc:'2026-07-13T23:00:00Z'},
+  // Semi-finals
+  {id:'sf_01',rd:'SF',h_from:'qf_01',a_from:'qf_02',utc:'2026-07-17T23:00:00Z'},
+  {id:'sf_02',rd:'SF',h_from:'qf_03',a_from:'qf_04',utc:'2026-07-18T23:00:00Z'},
+  // 3rd place
+  {id:'tpp_01',rd:'3PL',h_from:'L-sf_01',a_from:'L-sf_02',utc:'2026-07-19T17:00:00Z'},
+  // Final
+  {id:'fin_01',rd:'FIN',h_from:'W-sf_01',a_from:'W-sf_02',utc:'2026-07-19T21:00:00Z'},
+];
+var KO_ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-finals',SF:'Semi-finals','3PL':'3rd Place',FIN:'Final'};
+
+// football-data.org → our team names
+var FD_MAP = {'Mexico':'Mexico','United States':'United States','Canada':'Canada',
+  'South Africa':'South Africa','Korea Republic':'South Korea','Czech Republic':'Czechia',
+  'Bosnia and Herzegovina':'Bosnia & Herzegovina','IR Iran':'Iran','Saudi Arabia':'Saudi Arabia',
+  'Qatar':'Qatar','Colombia':'Colombia','Ecuador':'Ecuador','Peru':'Peru','Chile':'Chile',
+  'Venezuela':'Venezuela','Bolivia':'Bolivia','Paraguay':'Paraguay','Brazil':'Brazil',
+  'Argentina':'Argentina','Uruguay':'Uruguay','England':'England','France':'France',
+  'Germany':'Germany','Spain':'Spain','Portugal':'Portugal','Belgium':'Belgium',
+  'Netherlands':'Netherlands','Italy':'Italy','Switzerland':'Switzerland','Croatia':'Croatia',
+  'Denmark':'Denmark','Serbia':'Serbia','Hungary':'Hungary','Romania':'Romania',
+  'Austria':'Austria','Poland':'Poland','Ukraine':'Ukraine','Wales':'Wales',
+  'Scotland':'Scotland','Turkey':'Türkiye','Türkiye':'Türkiye','Morocco':'Morocco',
+  'Senegal':'Senegal','Nigeria':'Nigeria','Cameroon':'Cameroon','Ghana':'Ghana',
+  'Egypt':'Egypt','Algeria':'Algeria','Tunisia':'Tunisia','Australia':'Australia',
+  'Japan':'Japan','New Zealand':'New Zealand','Jamaica':'Jamaica','Panama':'Panama',
+  'Costa Rica':'Costa Rica','Honduras':'Honduras','El Salvador':'El Salvador',
+  'Cuba':'Cuba','Uzbekistan':'Uzbekistan','Indonesia':'Indonesia','Iraq':'Iraq',
+  "Côte d'Ivoire":"Côte d'Ivoire",'DR Congo':'DR Congo',
+};
+function fdTeam(n){return FD_MAP[n]||n;}
+;
 
 // WC 2026 full player database
 var WC_PLAYERS=[
@@ -728,6 +794,84 @@ function playerPhotoUrl(sid) {
 }
 
 // Compute live group standings from entered results
+
+// ── KO qualifier calculation ─────────────────────────────────────────────
+function getKOQualifiers(results) {
+  var w={}, r={}, third=[], groupDone={};
+  Object.keys(GRP).forEach(function(g){
+    var rows = computeGroupStandings(g, results);
+    var gMs  = MS.filter(function(m){return m.gr===g;});
+    groupDone[g] = gMs.length>0 && gMs.every(function(m){return !!results[m.id];});
+    if(rows[0]) w[g]={team:rows[0].team,confirmed:groupDone[g]};
+    if(rows[1]) r[g]={team:rows[1].team,confirmed:groupDone[g]};
+    if(rows[2]) third.push(Object.assign({},rows[2],{group:g,confirmed:groupDone[g]}));
+  });
+  third.sort(function(a,b){return b.pts-a.pts||b.gd-a.gd||b.gf-a.gf;});
+  return {winners:w, runners:r, best3rd:third.slice(0,8),
+          allGroupsDone: Object.values(groupDone).every(Boolean)};
+}
+
+// Resolve a slot label → team name (recursive for KO rounds)
+function resolveSlot(slot, q, koRes) {
+  if (!slot||!q) return null;
+  // Group winner: 'W-A'
+  if (/^W-[A-L]$/.test(slot)) { var o=q.winners[slot[2]]; return o?o.team:null; }
+  // Group runner-up: 'R-A'
+  if (/^R-[A-L]$/.test(slot)) { var o=q.runners[slot[2]]; return o?o.team:null; }
+  // Best 3rd: '3rd-1' … '3rd-8'
+  if (/^3rd-\d$/.test(slot)) { var o=q.best3rd[+slot[4]-1]; return o?o.team:null; }
+  // Winner of prior KO match: 'W-r32_01' or bare 'r32_01' (h_from/a_from use bare IDs)
+  var isLoser  = slot.startsWith('L-');
+  var matchId  = isLoser ? slot.slice(2) : (slot.startsWith('W-') ? slot.slice(2) : slot);
+  var km = KO_MS.find(function(m){return m.id===matchId;});
+  if (!km) return null;
+  var res = koRes && koRes[matchId];
+  if (!res) return null;
+  var homeTeam = resolveSlot(km.h_slot||km.h_from, q, koRes);
+  var awayTeam = resolveSlot(km.a_slot||km.a_from, q, koRes);
+  var hWon = res.h > res.a, aWon = res.a > res.h;
+  if (!hWon && !aWon) return null; // draw (AET/pens — treat as winner = home for now)
+  return isLoser ? (hWon?awayTeam:homeTeam) : (hWon?homeTeam:awayTeam);
+}
+
+function koMatchTeams(km, q, koRes) {
+  return {
+    h: resolveSlot(km.h_slot||km.h_from, q, koRes),
+    a: resolveSlot(km.a_slot||km.a_from, q, koRes),
+  };
+}
+
+// ── Live score API (football-data.org) ──────────────────────────────────
+function fetchLiveScores(apiKey, onUpdate) {
+  if (!apiKey) return;
+  var ALL_MATCHES = MS.concat(KO_MS);
+  fetch('https://api.football-data.org/v4/competitions/2000/matches', {
+    headers:{'X-Auth-Token': apiKey}
+  })
+  .then(function(r){
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  })
+  .then(function(d){
+    var updates={};
+    (d.matches||[]).forEach(function(am){
+      if (am.status!=='FINISHED') return;
+      var sc=am.score&&am.score.fullTime;
+      if (!sc||sc.home===null||sc.away===null) return;
+      var hn=fdTeam(am.homeTeam.name||''), an=fdTeam(am.awayTeam.name||'');
+      var found=ALL_MATCHES.find(function(m){
+        var mh=m.h||'', ma=m.a||'';
+        return (mh===hn&&ma===an)||(mh===an&&ma===hn);
+      });
+      if (!found) return;
+      var swapped=(found.h===an);
+      updates[found.id]={h:swapped?sc.away:sc.home, a:swapped?sc.home:sc.away, auto:true};
+    });
+    if (Object.keys(updates).length) onUpdate(updates);
+  })
+  .catch(function(e){console.warn('Live scores:',e.message);});
+}
+
 function computeGroupStandings(grpKey, results) {
   var teams = GRP[grpKey] || [];
   var s = {};
@@ -902,6 +1046,36 @@ var KOS = new Date('2026-06-28T00:00:00Z');
 function daysTill(d) { return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 864e5)); }
 
 // Score picker component
+
+function APIKeyInput(props) {
+  var ks=useState(props.apiKey||''); var key=ks[0]; var setKey=ks[1];
+  var ss=useState(''); var status=ss[0]; var setStatus=ss[1];
+  function testAndSave() {
+    if (!key.trim()) return;
+    setStatus('testing...');
+    fetch('https://api.football-data.org/v4/competitions/2000',{
+      headers:{'X-Auth-Token':key.trim()}
+    }).then(function(r){
+      if(r.ok){setStatus('✓ Valid'); props.onSave(key.trim());}
+      else {setStatus('✗ Invalid key ('+r.status+')');}
+    }).catch(function(){setStatus('✗ Network error');});
+  }
+  return html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
+    <div style=${{display:'flex',gap:8}}>
+      <input type="password" value=${key} placeholder="football-data.org API key"
+        style=${{flex:1,fontFamily:'monospace',fontSize:12}}
+        onChange=${function(e){setKey(e.target.value);setStatus('');}} />
+      <button class="btn-p" style=${{fontSize:12,flexShrink:0}} onClick=${testAndSave}
+        disabled=${!key.trim()}>Save</button>
+    </div>
+    ${status&&html`<p style=${{fontSize:11,margin:0,color:status.startsWith('✓')?'#4ade80':'#f87171'}}>${status}</p>`}
+    <p style=${{fontSize:11,color:'var(--dm)',margin:0}}>
+      Free key: <a href="https://www.football-data.org/client/register" target="_blank"
+        style=${{color:'var(--gold)'}}>football-data.org/client/register</a>
+    </p>
+  </div>`;
+}
+
 // ── Admin Lock Screen ───────────────────────────────────────────────────
 function AdminLock(props) {
   var ps = useState(''); var pass = ps[0]; var setPass = ps[1];
@@ -1654,6 +1828,163 @@ function DashPage(props) {
   </div>`;
 }
 
+
+// ── KO Match Card ────────────────────────────────────────────────────────
+function KOMatchCard(props) {
+  var km=props.match, q=props.qualifiers, koRes=props.koResults||{};
+  var teams=koMatchTeams(km,q,koRes);
+  var h=teams.h, a=teams.a;
+  var res=koRes[km.id];
+  var tv=fmtTime(km.utc);
+  var dateParts=tv.local.split(', ');
+  var tbd=!h||!a;
+
+  return html`<div style=${{
+    background:'var(--bg2)',border:'1px solid var(--bdr)',
+    borderRadius:8,overflow:'hidden',marginBottom:6,
+    borderLeft:'3px solid '+(res?'rgba(240,180,41,.4)':tbd?'rgba(255,255,255,.06)':'rgba(91,139,184,.4)')
+  }}>
+    <div style=${{display:'flex',alignItems:'center',padding:'10px 12px',gap:8}}>
+      <!-- Home -->
+      <div style=${{flex:1,display:'flex',alignItems:'center',gap:7,minWidth:0}}>
+        ${h?html`<${FlagImg} team=${h} w=${20} />`:''}
+        <span style=${{fontSize:13,fontWeight:500,color:h?'var(--tx)':'var(--dm)',
+          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+          ${h||html`<em style=${{fontStyle:'italic'}}>${km.h_slot||km.h_from}</em>`}
+        </span>
+      </div>
+      <!-- Score/time -->
+      <div style=${{textAlign:'center',minWidth:56,flexShrink:0}}>
+        ${res
+          ? html`<span style=${{fontFamily:'Barlow Condensed,sans-serif',
+              fontSize:20,fontWeight:700,letterSpacing:1}}>
+              ${res.h}<span style=${{color:'var(--dm)',margin:'0 3px'}}>–</span>${res.a}
+              ${res.auto?html`<div style=${{fontSize:9,color:'var(--dm)',marginTop:1}}>API ✓</div>`:''}
+            </span>`
+          : html`<div style=${{fontSize:11,color:'var(--mu)'}}>${dateParts[0]||''}</div>
+              <div style=${{fontSize:13,fontWeight:600}}>${dateParts[1]||tv.local}</div>`
+        }
+      </div>
+      <!-- Away -->
+      <div style=${{flex:1,display:'flex',alignItems:'center',justifyContent:'flex-end',gap:7,minWidth:0}}>
+        <span style=${{fontSize:13,fontWeight:500,color:a?'var(--tx)':'var(--dm)',
+          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'right'}}>
+          ${a||html`<em style=${{fontStyle:'italic'}}>${km.a_slot||km.a_from}</em>`}
+        </span>
+        ${a?html`<${FlagImg} team=${a} w=${20} />`:''}
+      </div>
+    </div>
+    <!-- Admin result entry -->
+    ${props.isAdmin&&!res&&h&&a&&html`<div style=${{padding:'4px 12px 8px',display:'flex',justifyContent:'flex-end'}}>
+      <button class="btn" style=${{fontSize:11,padding:'3px 9px'}}
+        onClick=${function(){props.onResult&&props.onResult(km,h,a);}}>+ Result</button>
+    </div>`}
+  </div>`;
+}
+
+// ── Qualifiers Summary Panel ─────────────────────────────────────────────
+function QualifiersPanel(props) {
+  var q=props.qualifiers;
+  if (!q) return null;
+  var gs=Object.keys(GRP);
+  var total=Object.keys(q.winners).length + Object.keys(q.runners).length + q.best3rd.length;
+
+  return html`<div style=${{marginBottom:20}}>
+    <h3 style=${{margin:'0 0 10px',fontSize:15}}>🎟️ Qualified Teams (${total}/32)</h3>
+
+    <!-- Group qualifiers grid -->
+    <div style=${{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:6,marginBottom:12}}>
+      ${gs.map(function(g){
+        var w=q.winners[g], r=q.runners[g];
+        var done=q.allGroupsDone||false;
+        return html`<div key=${g} style=${{
+          background:'var(--bg2)',border:'1px solid var(--bdr)',
+          borderRadius:7,padding:'7px 9px',fontSize:12
+        }}>
+          <div style=${{fontWeight:700,color:'var(--gold)',fontSize:10,letterSpacing:.5,marginBottom:5}}>GROUP ${g}</div>
+          <div style=${{display:'flex',alignItems:'center',gap:5,marginBottom:3}}>
+            <span style=${{fontSize:9,background:'rgba(240,180,41,.15)',color:'var(--gold)',
+              borderRadius:3,padding:'1px 4px',fontWeight:600}}>1ST</span>
+            ${w?html`<${FlagImg} team=${w.team} w=${14} /><span style=${{color:'var(--tx)'}}>${w.team}</span>`
+               :html`<span style=${{color:'var(--dm)'}}>TBD</span>`}
+          </div>
+          <div style=${{display:'flex',alignItems:'center',gap:5}}>
+            <span style=${{fontSize:9,background:'rgba(91,139,184,.15)',color:'#60a5fa',
+              borderRadius:3,padding:'1px 4px',fontWeight:600}}>2ND</span>
+            ${r?html`<${FlagImg} team=${r.team} w=${14} /><span style=${{color:'var(--tx)'}}>${r.team}</span>`
+               :html`<span style=${{color:'var(--dm)'}}>TBD</span>`}
+          </div>
+        </div>`;
+      })}
+    </div>
+
+    <!-- Best 3rd place teams -->
+    <div style=${{background:'var(--bg2)',border:'1px solid var(--bdr)',borderRadius:7,padding:'10px 12px'}}>
+      <div style=${{fontWeight:600,fontSize:12,marginBottom:8,color:'var(--mu)'}}>
+        🥉 Best 3rd-Place Teams (${q.best3rd.length}/8 advancing)
+      </div>
+      <div style=${{display:'flex',flexDirection:'column',gap:4}}>
+        ${q.best3rd.map(function(r,i){
+          return html`<div key=${i} style=${{display:'flex',alignItems:'center',gap:8,fontSize:12}}>
+            <span style=${{width:16,textAlign:'right',color:'var(--dm)',fontWeight:600}}>${i+1}</span>
+            <${FlagImg} team=${r.team} w=${18} />
+            <span style=${{flex:1}}>${r.team}</span>
+            <span style=${{color:'var(--mu)',fontSize:11}}>Grp ${r.group}</span>
+            <span style=${{color:'var(--dm)',fontFamily:'monospace'}}>${r.pts}pts ${r.gd>0?'+':''}${r.gd}GD</span>
+          </div>`;
+        })}
+        ${q.best3rd.length===0&&html`<p style=${{color:'var(--dm)',fontSize:12,margin:0}}>No group stage results yet</p>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Full KO Bracket View ──────────────────────────────────────────────────
+function KOBracketView(props) {
+  var q=props.qualifiers, koRes=props.koResults||{};
+  var rounds=['R32','R16','QF','SF','FIN'];
+
+  return html`<div>
+    <!-- API sync status -->
+    <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+      <h2 style=${{margin:0,fontSize:16}}>🏆 Knockout Bracket</h2>
+      ${props.apiKey
+        ? html`<div style=${{fontSize:11,display:'flex',alignItems:'center',gap:5,
+            color:'#4ade80',background:'rgba(74,222,128,.08)',borderRadius:10,padding:'3px 10px',
+            border:'1px solid rgba(74,222,128,.2)'}}>
+            <span>●</span> Live API active</div>`
+        : html`<span style=${{fontSize:11,color:'var(--dm)'}}>No API key — manual mode</span>`
+      }
+    </div>
+
+    <!-- Qualifiers panel -->
+    <${QualifiersPanel} qualifiers=${q} />
+
+    <!-- Rounds -->
+    ${rounds.map(function(rd){
+      var matches=KO_MS.filter(function(m){return m.rd===rd;});
+      // Also show 3PL
+      if (rd==='FIN') matches=KO_MS.filter(function(m){return m.rd==='3PL'||m.rd==='FIN';});
+      return html`<div key=${rd} style=${{marginBottom:18}}>
+        <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:13,fontWeight:700,
+          letterSpacing:1.5,color:'var(--gold)',textTransform:'uppercase',marginBottom:8,
+          display:'flex',alignItems:'center',gap:8}}>
+          <span>${KO_ROUND_LABELS[rd]||rd}</span>
+          <div style=${{flex:1,height:1,background:'rgba(240,180,41,.15)'}}></div>
+        </div>
+        ${matches.map(function(km){
+          return html`<${KOMatchCard} key=${km.id} match=${km} qualifiers=${q}
+            koResults=${koRes} isAdmin=${props.isAdmin}
+            onResult=${props.onResult} />`;
+        })}
+      </div>`;
+    })}
+    <p style=${{fontSize:11,color:'var(--dm)',textAlign:'center',marginTop:4}}>
+      Bracket pairings are estimates — FIFA's official draw may differ · Scores sync automatically via API
+    </p>
+  </div>`;
+}
+
 function RoomPage(props) {
   var gMs = MS.filter(function(m){ return !props.grp || m.gr === props.grp; });
   return html`<div>
@@ -1666,7 +1997,7 @@ function RoomPage(props) {
       ${props.canPick&&html`<button class="btn" style=${{fontSize:12,background:props.myPick?'var(--gdim)':undefined,borderColor:props.myPick?'rgba(240,180,41,.35)':undefined,color:props.myPick?'var(--gold)':undefined,whiteSpace:'nowrap',flexShrink:0}} onClick=${props.onPickW}>🏆 ${props.myPick?(F[props.myPick]||'')+' '+props.myPick:'Pick winner'}</button>`}
     </div>
     <div class="tabs">
-      ${[['matches','⚽ Matches'],['leaderboard','🏆 Standings'],['groups','📊 Groups'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
+      ${[['matches','⚽ Matches'],['knockout','🏆 Knockout'],['leaderboard','📋 Standings'],['groups','📊 Groups'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
     </div>
 
     ${props.tab==='matches'&&html`<div>
@@ -1744,6 +2075,15 @@ function RoomPage(props) {
       </div>
       <div style=${{fontSize:11,color:'var(--dm)',marginTop:8,textAlign:'center'}}>All times in Maldives Time (MVT, UTC+5)</div>
     </div>`}
+    ${props.tab==='knockout'&&html`<div>
+      <${KOBracketView}
+        qualifiers=${props.qualifiers}
+        koResults=${props.koResults}
+        isAdmin=${props.isAdmin}
+        apiKey=${props.apiKey}
+        onResult=${function(km,h,a){ props.onKOResult&&props.onKOResult(km,h,a); }} />
+    </div>`}
+
     ${props.tab==='leaderboard'&&html`<div>
       ${props.lboard[0]&&props.lboard[0].pts>0&&html`<div class="card-dark" style=${{padding:'14px 18px',marginBottom:14,display:'flex',alignItems:'center',gap:12,borderColor:'rgba(240,180,41,.25)'}}>
         <span style=${{fontSize:32}}>🏆</span>
@@ -1881,6 +2221,19 @@ function RoomPage(props) {
       ${!props.isAdmin
         ? html`<${AdminLock} onUnlock=${props.onAdminUnlock} />`
         : html`<div style=${{display:'flex',flexDirection:'column',gap:12}}>
+            <!-- API Key configuration -->
+            <div class="card" style=${{padding:'14px 16px'}}>
+              <div style=${{fontWeight:600,marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                🔌 Live Score API
+                ${props.apiKey&&html`<span style=${{fontSize:11,color:'#4ade80',background:'rgba(74,222,128,.1)',
+                  borderRadius:10,padding:'2px 8px',border:'1px solid rgba(74,222,128,.2)'}}>Connected ●</span>`}
+              </div>
+              <p style=${{fontSize:12,color:'var(--mu)',marginBottom:10}}>
+                Enter a free API key from <strong>football-data.org</strong> to auto-fetch match scores.
+                Scores sync every 60 seconds — no manual entry needed for completed matches.
+              </p>
+              <${APIKeyInput} apiKey=${props.apiKey} onSave=${props.onSaveAPIKey} />
+            </div>
       <!-- Room overview -->
       <div class="card-dark" style=${{borderColor:'rgba(240,180,41,.2)',padding:'16px 18px'}}>
         <div style=${{fontSize:10,color:'var(--gold)',letterSpacing:2,fontFamily:'Barlow Condensed',fontWeight:700,marginBottom:10}}>⚙️ ROOM CONFIGURATION</div>
@@ -2054,6 +2407,10 @@ function App() {
   var s11c=useState({}); var adminAuth=s11c[0]; var setAdminAuth=s11c[1];
   var s11d=useState([]); var news=s11d[0]; var setNews=s11d[1];
   var s11e=useState(false); var newsLoading=s11e[0]; var setNewsLoading=s11e[1];
+  var s11f=useState(function(){ return JSON.parse(localStorage.getItem('wc26_kores')||'{}'); });
+  var koResults=s11f[0]; var setKoResults=s11f[1];
+  var s11g=useState(localStorage.getItem('wc26_apikey')||'');
+  var apiKey=s11g[0]; var setApiKey=s11g[1];
   var s12=useState(null); var toast=s12[0]; var setToast=s12[1];
   var s13=useState(0); var factI=s13[0]; var setFactI=s13[1];
   var s14=useState(0); var plyrI=s14[0]; var setPlyrI=s14[1];
@@ -2084,6 +2441,24 @@ function App() {
     Store.listen('preds', function(v) { setPreds(v||{}); });
     Store.listen('tpicks', function(v) { setTpicks(v||{}); });
     Store.listen('results', function(v) { setResults(v||{}); });
+
+    // ── Live score auto-sync every 60 s ────────────────────────────────
+    var _syncTimer = null;
+    function runSync(key) {
+      if (!key) return;
+      fetchLiveScores(key, function(updates) {
+        var grpU={}, koU={};
+        var koIds = KO_MS.map(function(m){return m.id;});
+        Object.keys(updates).forEach(function(id){
+          if(koIds.indexOf(id)>=0) koU[id]=updates[id]; else grpU[id]=updates[id];
+        });
+        if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
+        if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));return n;});
+      });
+    }
+    var _initKey = localStorage.getItem('wc26_apikey')||'';
+    if (_initKey) { runSync(_initKey); _syncTimer=setInterval(function(){runSync(localStorage.getItem('wc26_apikey')||'');},60000); }
+    return function(){if(_syncTimer)clearInterval(_syncTimer);};
 
     var fallback = setTimeout(function() {
       setScr(function(cur) { return cur === 'loading' ? 'welcome' : cur; });
@@ -2199,6 +2574,31 @@ function App() {
   var canPick = Date.now() < KOS.getTime();
   var myPick = room ? (tpicks[user&&user.id+'_'+room.id]||{}).team : null;
   var isAdmin = room && adminAuth[room.id] === true;
+  var qualifiers = getKOQualifiers(results);
+
+  function saveAPIKey(key) {
+    localStorage.setItem('wc26_apikey', key);
+    setApiKey(key);
+    // restart sync with new key
+    fetchLiveScores(key, function(updates) {
+      var grpU={}, koU={};
+      Object.keys(updates).forEach(function(id){
+        if(KO_MS.some(function(m){return m.id===id;})) koU[id]=updates[id];
+        else grpU[id]=updates[id];
+      });
+      if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
+      if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));return n;});
+    });
+    notify('API key saved — scores syncing!');
+  }
+
+  function doKOResult(km, h, a, hs, as) {
+    var upd = Object.assign({}, koResults);
+    upd[km.id] = {h: parseInt(hs)||0, a: parseInt(as)||0};
+    setKoResults(upd);
+    localStorage.setItem('wc26_kores', JSON.stringify(upd));
+    notify('KO result saved!');
+  }
   function verifyAdmin(pass) {
     if (!room || !pass) return false;
     if (room.adminPass === pass.trim()) {
@@ -2299,7 +2699,14 @@ function App() {
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
       ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');if(localStorage.getItem('wc26_adm_'+r.id)){var na=Object.assign({},adminAuth);na[r.id]=true;setAdminAuth(na);}}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
 
-      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} users=${users} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin} isAdmin=${isAdmin} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} />`}
+      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} users=${users} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
+          isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
+          apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
+          onKOResult=${function(km,h,a){
+            var hs=prompt('Score for '+h+'?','0');
+            var as=prompt('Score for '+a+'?','0');
+            if(hs!==null&&as!==null) doKOResult(km,h,a,hs,as);
+          }} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} />`}
     </div>
   </div>`;
 }
