@@ -1038,11 +1038,15 @@ function calcPts(p, r) {
   return pw === rw ? 2 : 0;
 }
 function fmtTime(iso) {
-  var d = new Date(iso);
-  return {
-    local: d.toLocaleString(undefined, {weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}),
-    utcS: d.toUTCString().replace(' GMT','') + ' UTC'
-  };
+  var d   = new Date(iso);
+  var tz  = 'Indian/Maldives'; // MVT = UTC+5
+  var day  = d.toLocaleDateString('en-US',  {weekday:'short', timeZone:tz});         // "Fri"
+  var date = d.toLocaleDateString('en-US',  {month:'short', day:'numeric', timeZone:tz}); // "Jun 12"
+  var time = d.toLocaleTimeString('en-US',  {hour:'2-digit', minute:'2-digit',
+               hour12:false, timeZone:tz});                                           // "07:00"
+  return { day:day, date:date, time:time,
+    local: day + ', ' + date + ', ' + time,
+    utcS:  d.toUTCString().replace(' GMT','') + ' UTC' };
 }
 function mStat(m, results) {
   var now = Date.now(), st = new Date(m.utc).getTime();
@@ -1861,7 +1865,6 @@ function KOMatchCard(props) {
   var h=teams.h, a=teams.a;
   var res=koRes[km.id];
   var tv=fmtTime(km.utc);
-  var dateParts=tv.local.split(', ');
   var tbd=!h||!a;
 
   return html`<div style=${{
@@ -1886,8 +1889,9 @@ function KOMatchCard(props) {
               ${res.h}<span style=${{color:'var(--dm)',margin:'0 3px'}}>–</span>${res.a}
               ${res.auto?html`<div style=${{fontSize:9,color:'var(--dm)',marginTop:1}}>API ✓</div>`:''}
             </span>`
-          : html`<div style=${{fontSize:11,color:'var(--mu)'}}>${dateParts[0]||''}</div>
-              <div style=${{fontSize:13,fontWeight:600}}>${dateParts[1]||tv.local}</div>`
+          : html`<div style=${{fontSize:11,color:'var(--dm)'}}>${tv.day}</div>
+              <div style=${{fontSize:13,fontWeight:700}}>${tv.date}</div>
+              <div style=${{fontSize:11,color:'var(--mu)'}}>${tv.time}</div>`
         }
       </div>
       <!-- Away -->
@@ -2043,9 +2047,6 @@ function RoomPage(props) {
           var isLive=st==='live';
           var isDone=st==='done'||st==='past';
           var accColor=isLive?'#ef4444':isDone?'rgba(255,255,255,.07)':'rgba(255,255,255,.04)';
-          var dateParts=tv.local.split(', ');
-          var dayStr=dateParts[0]||'';
-          var timeStr=dateParts[1]||tv.local;
           return html`<div key=${m.id}
             style=${{background:accColor,borderBottom:'1px solid var(--bdr)',cursor:'pointer',transition:'background .15s'}}
             onMouseEnter=${function(e){e.currentTarget.style.background=isLive?'rgba(239,68,68,.18)':'rgba(255,255,255,.06)';}}
@@ -2077,8 +2078,9 @@ function RoomPage(props) {
                       ${res.h}<span style=${{color:'var(--dm)',margin:'0 3px'}}>–</span>${res.a}
                     </div>
                     ${ep!==null&&html`<div style=${{fontSize:11,marginTop:4,color:ep===4?'#4ade80':ep===2?'#60a5fa':'#f87171',fontWeight:500}}>${ep===4?'🎯 Exact':ep===2?'✓ Winner':'✗ Missed'}</div>`}`
-                  : html`<div style=${{fontSize:12,color:'var(--mu)',fontWeight:400}}>${dayStr}</div>
-                    <div style=${{fontSize:15,fontWeight:600,color:isLive?'#ef4444':'var(--tx)',marginTop:1}}>${isLive?'LIVE':timeStr}</div>`
+                  : html`<div style=${{fontSize:11,color:'var(--dm)',fontWeight:500,letterSpacing:.3}}>${tv.day}</div>
+                    <div style=${{fontSize:14,fontWeight:700,color:'var(--tx)',lineHeight:1.15}}>${tv.date}</div>
+                    <div style=${{fontSize:12,color:isLive?'#ef4444':'var(--mu)',fontWeight:isLive?700:400,marginTop:1}}>${isLive?'🔴 LIVE':tv.time}</div>`
                 }
               </div>
             </div>
@@ -2308,7 +2310,7 @@ function RoomPage(props) {
             var now=Date.now(); var st=new Date(m.utc).getTime();
             return (now >= st - 3600000) && !props.results[m.id];
           }).slice(0,15).map(function(m){
-            var st=mStat(m,props.results); var t=fmtTime(m.utc);
+            var st=mStat(m,props.results); var tv2=fmtTime(m.utc);
             return html`<div key=${m.id} style=${{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'var(--bg3)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)'}}>
               <div style=${{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0}}>
                 <${FlagImg} team=${m.h} w=${20} />
