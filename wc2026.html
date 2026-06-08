@@ -3316,7 +3316,7 @@ function App() {
     <div class="page">
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');subscribeChatRoom(r.id);}}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
 
       ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} users=${users} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
