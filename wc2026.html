@@ -875,25 +875,20 @@ function _applyMatches(matches, onUpdate) {
 
 function fetchLiveScores(apiKey, onUpdate) {
   if (!apiKey) return;
-  var FD_URL = 'https://api.football-data.org/v4/competitions/2000/matches';
-
-  // ── Try GAS proxy first (works once GAS is updated) ─────────────────
+  // Scores fetched exclusively via GAS proxy — no CORS issues.
+  // Requires the updated google-apps-script.js to be deployed.
   fetch(GS_URL + '?action=livescores')
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (d.ok) { _applyMatches(d.matches, onUpdate); return; }
-      // GAS not updated yet → fall through to CORS proxy
-      throw new Error('gas-not-updated');
+      if (d.ok) {
+        _applyMatches(d.matches, onUpdate);
+      } else if (d.error && d.error.indexOf('Unknown action') !== -1) {
+        console.warn('Live scores: GAS needs to be redeployed with the updated script.');
+      } else {
+        console.warn('Live scores GAS error:', d.error || 'unknown');
+      }
     })
-    .catch(function(){
-      // ── Fallback: public CORS proxy (corsproxy.io) ─────────────────
-      fetch('https://corsproxy.io/?' + encodeURIComponent(FD_URL), {
-        headers:{'X-Auth-Token': apiKey, 'X-Requested-With': 'XMLHttpRequest'}
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(d){ _applyMatches(d.matches, onUpdate); })
-      .catch(function(e){ console.warn('Live scores unavailable:', e.message); });
-    });
+    .catch(function(e){ console.warn('Live scores fetch error:', e.message); });
 }
 
 function computeGroupStandings(grpKey, results) {
@@ -1083,21 +1078,29 @@ function APIKeyInput(props) {
   function doSave() {
     if (!key.trim()) return;
     var k = key.trim();
-    // 1. Save to localStorage immediately
     localStorage.setItem('wc26_apikey', k);
     props.onSave(k);
-    // 2. Also persist in Google Sheet via existing set action
     Store.set('config', {apiKey: k});
-    setStatus('✓ Saved! Testing connection...');
-    // 3. Quick smoke-test via CORS proxy
-    fetch('https://corsproxy.io/?' + encodeURIComponent(
-      'https://api.football-data.org/v4/competitions/2000'
-    ), {headers:{'X-Auth-Token': k}})
+    setStatus('Saving key to GAS…');
+    // Save key to GAS Script Properties, then test via GAS proxy
+    fetch(GS_URL + '?action=savekey&key=' + encodeURIComponent(k))
       .then(function(r){ return r.json(); })
       .then(function(d){
-        setStatus(d.id ? '✓ Connected — syncing every 60 s!' : '⚠ Saved, but API returned unexpected data');
+        if (!d.ok) throw new Error(d.error || 'GAS save failed');
+        setStatus('Testing connection…');
+        return fetch(GS_URL + '?action=livescores');
       })
-      .catch(function(){ setStatus('✓ Saved — sync will run in background'); });
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.ok) {
+          setStatus('✓ Connected! ' + (d.matches||[]).length + ' matches found. Syncing every 60 s.');
+        } else if (d.error && d.error.indexOf('Unknown action') !== -1) {
+          setStatus('⚠ Key saved. Redeploy GAS with the updated script to enable auto-sync.');
+        } else {
+          setStatus('⚠ Key saved. API: ' + (d.error || d.code || 'check key'));
+        }
+      })
+      .catch(function(){ setStatus('⚠ Key saved locally. Redeploy GAS to enable auto-sync.'); });
   }
 
   return html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
