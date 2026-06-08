@@ -1428,6 +1428,332 @@ function WC2026Logo(props) {
   </svg>`;
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// SUPER ADMIN SYSTEM
+// Access: navigate to  #superadmin  in the URL
+// Default password: wadde2026
+// ══════════════════════════════════════════════════════════════
+
+function SuperAdminApp() {
+  var ps  = useState(''); var pass = ps[0]; var setPass = ps[1];
+  var as  = useState(false); var authed = as[0]; var setAuthed = as[1];
+  var es  = useState(''); var err = es[0]; var setErr = es[1];
+  var ts  = useState('users'); var saTab = ts[0]; var setSaTab = ts[1];
+
+  // Data
+  var uS  = useState({}); var saUsers = uS[0]; var setSaUsers = uS[1];
+  var rS  = useState({}); var saRooms = rS[0]; var setSaRooms = rS[1];
+  var prS = useState({}); var saPreds = prS[0]; var setSaPreds = prS[1];
+  var reS = useState({}); var saResults = reS[0]; var setSaResults = reS[1];
+  var lS  = useState(false); var loading = lS[0]; var setLoading = lS[1];
+
+  // Password change
+  var npS = useState(''); var newPw = npS[0]; var setNewPw = npS[1];
+  var opS = useState(''); var oldPw = opS[0]; var setOldPw = opS[1];
+  var pwMsgS = useState(''); var pwMsg = pwMsgS[0]; var setPwMsg = pwMsgS[1];
+
+  function doLogin() {
+    if (!pass.trim()) return;
+    setErr('Verifying…');
+    fetch(GS_URL + '?action=superlogin&pass=' + encodeURIComponent(pass.trim()))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.ok) { setAuthed(true); setErr(''); loadAll(); }
+        else setErr('✗ ' + (d.error || 'Wrong password'));
+      })
+      .catch(function(){ setErr('✗ Network error'); });
+  }
+
+  function loadAll() {
+    setLoading(true);
+    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results'];
+    var done = 0;
+    var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
+                   wc26_preds:setSaPreds, wc26_results:setSaResults};
+    keys.forEach(function(k){
+      fetch(GS_URL + '?action=get&key=' + k)
+        .then(function(r){ return r.json(); })
+        .then(function(d){ setters[k](d.value||{}); })
+        .catch(function(){})
+        .finally(function(){ done++; if(done===keys.length) setLoading(false); });
+    });
+  }
+
+  function deleteUser(uid) {
+    if (!confirm('Delete user '+uid+'? This cannot be undone.')) return;
+    var nu = Object.assign({}, saUsers);
+    delete nu[uid];
+    setSaUsers(nu);
+    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'set', key:'wc26_users', value:nu})});
+  }
+
+  function deleteRoom(rid) {
+    if (!confirm('Delete room '+rid+'? All predictions in this room will remain.')) return;
+    var nr = Object.assign({}, saRooms);
+    delete nr[rid];
+    setSaRooms(nr);
+    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'set', key:'wc26_rooms', value:nr})});
+  }
+
+  function changePw() {
+    if (!oldPw || !newPw || newPw.length < 6) { setPwMsg('✗ New password must be 6+ characters'); return; }
+    setPwMsg('Saving…');
+    fetch(GS_URL + '?action=setsuperpw&oldpass=' + encodeURIComponent(oldPw) +
+          '&newpass=' + encodeURIComponent(newPw))
+      .then(function(r){ return r.json(); })
+      .then(function(d){ setPwMsg(d.ok ? '✓ Password updated!' : '✗ ' + d.error); })
+      .catch(function(){ setPwMsg('✗ Network error'); });
+  }
+
+  // ── Login screen ─────────────────────────────────────────────
+  if (!authed) {
+    return html`<div style=${{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',padding:20}}>
+      <div style=${{width:'100%',maxWidth:360}}>
+        <div style=${{textAlign:'center',marginBottom:28}}>
+          <div style=${{fontSize:44,marginBottom:8}}>🛡️</div>
+          <h1 style=${{fontSize:24,marginBottom:4}}>Super Admin</h1>
+          <p style=${{fontSize:13,color:'var(--mu)'}}>System management panel</p>
+          <p style=${{fontSize:11,color:'var(--dm)',marginTop:4}}>Access: <code>#superadmin</code> in URL</p>
+        </div>
+        <div class="card" style=${{display:'flex',flexDirection:'column',gap:12}}>
+          <input type="password" value=${pass}
+            onChange=${function(e){setPass(e.target.value);setErr('');}}
+            onKeyDown=${function(e){if(e.key==='Enter')doLogin();}}
+            placeholder="Enter super-admin password" autoFocus />
+          ${err&&html`<p style=${{fontSize:12,color:err.startsWith('✓')?'var(--gn)':'var(--rd)',margin:0}}>${err}</p>`}
+          <button class="btn-p" onClick=${doLogin} disabled=${!pass.trim()}>Access Panel →</button>
+          <a href="#" onClick=${function(e){e.preventDefault();window.location.hash='';}} style=${{fontSize:12,color:'var(--mu)',textAlign:'center'}}>← Back to app</a>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── Authenticated ─────────────────────────────────────────────
+  var uList  = Object.values(saUsers);
+  var rList  = Object.values(saRooms);
+  var prList = Object.keys(saPreds).map(function(k){
+    var p=saPreds[k]; var pts=k.split('_');
+    return {key:k, uid:pts[0]||'', mid:pts[1]||'', h:p.h, a:p.a};
+  });
+  var reList = Object.keys(saResults).map(function(id){
+    var r=saResults[id]; return {id:id, h:r.h, a:r.a, auto:r.auto};
+  });
+
+  var SA_TABS = [
+    {id:'users',     label:'👤 Users ('+uList.length+')'},
+    {id:'rooms',     label:'🏠 Rooms ('+rList.length+')'},
+    {id:'preds',     label:'⚽ Predictions ('+prList.length+')'},
+    {id:'results',   label:'📊 Results ('+reList.length+')'},
+    {id:'settings',  label:'⚙️ Settings'},
+  ];
+
+  return html`<div style=${{minHeight:'100vh',background:'var(--bg)'}}>
+    <!-- SA Topbar -->
+    <div style=${{background:'#0a0f1e',borderBottom:'1px solid rgba(239,68,68,.3)',padding:'12px 20px',
+      display:'flex',justifyContent:'space-between',alignItems:'center',position:'sticky',top:0,zIndex:50}}>
+      <div style=${{display:'flex',alignItems:'center',gap:10}}>
+        <span style=${{fontSize:20}}>🛡️</span>
+        <div>
+          <div style=${{fontWeight:700,fontSize:15,color:'#f87171',letterSpacing:.5}}>SUPER ADMIN</div>
+          <div style=${{fontSize:11,color:'rgba(248,113,113,.6)'}}>WC 2026 System Panel</div>
+        </div>
+      </div>
+      <div style=${{display:'flex',gap:8}}>
+        <button class="btn" style=${{fontSize:12}} onClick=${loadAll} disabled=${loading}>
+          ${loading?'⏳ Loading…':'↻ Refresh'}
+        </button>
+        <a href="#" onClick=${function(e){e.preventDefault();window.location.hash='';}}
+          class="btn" style=${{fontSize:12,textDecoration:'none'}}>← Back to App</a>
+      </div>
+    </div>
+
+    <div class="page">
+      <!-- Stats row -->
+      <div style=${{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:20}}>
+        ${[
+          {label:'Total Users',  val:uList.length,  icon:'👤', color:'#60a5fa'},
+          {label:'Total Rooms',  val:rList.length,  icon:'🏠', color:'#4ade80'},
+          {label:'Predictions',  val:prList.length, icon:'⚽', color:'#fbbf24'},
+          {label:'Results In',   val:reList.length, icon:'✓',  color:'#a78bfa'},
+        ].map(function(s,i){
+          return html`<div key=${i} class="card" style=${{textAlign:'center',padding:'14px 8px'}}>
+            <div style=${{fontSize:24,marginBottom:4}}>${s.icon}</div>
+            <div style=${{fontSize:28,fontWeight:700,fontFamily:'Barlow Condensed,sans-serif',color:s.color}}>${s.val}</div>
+            <div style=${{fontSize:11,color:'var(--mu)'}}>${s.label}</div>
+          </div>`;
+        })}
+      </div>
+
+      <!-- SA Tabs -->
+      <div class="tabs" style=${{marginBottom:16}}>
+        ${SA_TABS.map(function(tab){
+          return html`<button key=${tab.id} class=${'tab '+(saTab===tab.id?'on':'')}
+            onClick=${function(){setSaTab(tab.id);}}>${tab.label}</button>`;
+        })}
+      </div>
+
+      <!-- Users tab -->
+      ${saTab==='users'&&html`<div>
+        <div style=${{overflowX:'auto'}}>
+          <table style=${{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+            <thead>
+              <tr style=${{background:'var(--bg3)'}}>
+                ${['Name','Phone','Fav Team','Fav Player','Joined','Actions'].map(function(h){
+                  return html`<th key=${h} style=${{padding:'8px 12px',textAlign:'left',
+                    fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)',whiteSpace:'nowrap'}}>${h}</th>`;
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              ${uList.length===0
+                ? html`<tr><td colspan="6" style=${{padding:20,textAlign:'center',color:'var(--dm)'}}>No users yet</td></tr>`
+                : uList.map(function(u){
+                  return html`<tr key=${u.id} style=${{borderBottom:'1px solid var(--bdr)'}}>
+                    <td style=${{padding:'9px 12px',fontWeight:500}}>
+                      <${FlagImg} team=${(u.favT||[])[0]||''} w=${16} />
+                      ${' '+u.name}
+                    </td>
+                    <td style=${{padding:'9px 12px',fontFamily:'monospace',fontSize:12,color:'var(--mu)'}}>${u.phone||''}</td>
+                    <td style=${{padding:'9px 12px',color:'var(--mu)',fontSize:12}}>${(u.favT||[]).join(', ')||'—'}</td>
+                    <td style=${{padding:'9px 12px',color:'var(--mu)',fontSize:12}}>${(u.favP||[]).join(', ')||'—'}</td>
+                    <td style=${{padding:'9px 12px',color:'var(--dm)',fontSize:11,whiteSpace:'nowrap'}}>${u.joined?new Date(u.joined).toLocaleDateString():''}</td>
+                    <td style=${{padding:'9px 12px'}}>
+                      <button class="btn" style=${{fontSize:11,padding:'3px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
+                        onClick=${function(){deleteUser(u.id);}}>Delete</button>
+                    </td>
+                  </tr>`;
+                })
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>`}
+
+      <!-- Rooms tab -->
+      ${saTab==='rooms'&&html`<div>
+        <div style=${{overflowX:'auto'}}>
+          <table style=${{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+            <thead>
+              <tr style=${{background:'var(--bg3)'}}>
+                ${['Room Name','Code','Members','Admin Pass','Created','Actions'].map(function(h){
+                  return html`<th key=${h} style=${{padding:'8px 12px',textAlign:'left',
+                    fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)',whiteSpace:'nowrap'}}>${h}</th>`;
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              ${rList.length===0
+                ? html`<tr><td colspan="6" style=${{padding:20,textAlign:'center',color:'var(--dm)'}}>No rooms yet</td></tr>`
+                : rList.map(function(r){
+                  var creator = saUsers[r.by];
+                  return html`<tr key=${r.id} style=${{borderBottom:'1px solid var(--bdr)'}}>
+                    <td style=${{padding:'9px 12px',fontWeight:500}}>${r.name}</td>
+                    <td style=${{padding:'9px 12px',fontFamily:'monospace',fontWeight:700,color:'var(--gold)',letterSpacing:1}}>${r.code}</td>
+                    <td style=${{padding:'9px 12px',textAlign:'center'}}>${(r.members||[]).length}</td>
+                    <td style=${{padding:'9px 12px',fontFamily:'monospace',fontSize:11,color:'var(--mu)'}}>${r.adminPass||'(none)'}</td>
+                    <td style=${{padding:'9px 12px',color:'var(--dm)',fontSize:11,whiteSpace:'nowrap'}}>${r.created?new Date(r.created).toLocaleDateString():''}</td>
+                    <td style=${{padding:'9px 12px'}}>
+                      <button class="btn" style=${{fontSize:11,padding:'3px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
+                        onClick=${function(){deleteRoom(r.id);}}>Delete</button>
+                    </td>
+                  </tr>`;
+                })
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>`}
+
+      <!-- Predictions tab -->
+      ${saTab==='preds'&&html`<div>
+        <p style=${{fontSize:12,color:'var(--mu)',marginBottom:10}}>${prList.length} predictions across all rooms</p>
+        <div style=${{overflowX:'auto'}}>
+          <table style=${{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+            <thead><tr style=${{background:'var(--bg3)'}}>
+              ${['Key','User','Match','Prediction'].map(function(h){
+                return html`<th key=${h} style=${{padding:'7px 10px',textAlign:'left',
+                  fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)'}}>${h}</th>`;
+              })}
+            </tr></thead>
+            <tbody>
+              ${prList.slice(0,200).map(function(p,i){
+                var u = saUsers[p.uid];
+                return html`<tr key=${i} style=${{borderBottom:'1px solid rgba(255,255,255,.03)'}}>
+                  <td style=${{padding:'6px 10px',fontFamily:'monospace',fontSize:10,color:'var(--dm)'}}>${p.key}</td>
+                  <td style=${{padding:'6px 10px',color:'var(--tx)'}}>${u?u.name:p.uid.slice(0,8)+'…'}</td>
+                  <td style=${{padding:'6px 10px',color:'var(--mu)'}}>${p.mid}</td>
+                  <td style=${{padding:'6px 10px',fontWeight:600,color:'var(--gold)'}}>${p.h} – ${p.a}</td>
+                </tr>`;
+              })}
+              ${prList.length>200&&html`<tr><td colspan="4" style=${{padding:10,textAlign:'center',color:'var(--dm)',fontSize:11}}>${prList.length-200} more predictions not shown</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>`}
+
+      <!-- Results tab -->
+      ${saTab==='results'&&html`<div>
+        <div style=${{overflowX:'auto'}}>
+          <table style=${{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+            <thead><tr style=${{background:'var(--bg3)'}}>
+              ${['Match ID','Score','Source'].map(function(h){
+                return html`<th key=${h} style=${{padding:'8px 12px',textAlign:'left',
+                  fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)'}}>${h}</th>`;
+              })}
+            </tr></thead>
+            <tbody>
+              ${reList.length===0
+                ? html`<tr><td colspan="3" style=${{padding:20,textAlign:'center',color:'var(--dm)'}}>No results yet</td></tr>`
+                : reList.map(function(r,i){
+                  return html`<tr key=${i} style=${{borderBottom:'1px solid rgba(255,255,255,.03)'}}>
+                    <td style=${{padding:'8px 12px',fontFamily:'monospace',color:'var(--mu)'}}>${r.id}</td>
+                    <td style=${{padding:'8px 12px',fontFamily:'Barlow Condensed,sans-serif',fontSize:20,fontWeight:700}}>${r.h} – ${r.a}</td>
+                    <td style=${{padding:'8px 12px'}}>
+                      <span style=${{fontSize:10,padding:'2px 7px',borderRadius:10,
+                        background:r.auto?'rgba(74,222,128,.1)':'rgba(91,139,184,.1)',
+                        color:r.auto?'#4ade80':'var(--mu)',fontWeight:600}}>
+                        ${r.auto?'🤖 API':'✍ Manual'}
+                      </span>
+                    </td>
+                  </tr>`;
+                })
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>`}
+
+      <!-- Settings tab -->
+      ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16,maxWidth:420}}>
+        <div class="card">
+          <h3 style=${{marginBottom:12}}>🔑 Change Super-Admin Password</h3>
+          <div style=${{display:'flex',flexDirection:'column',gap:10}}>
+            <div><label>Current password</label>
+              <input type="password" value=${oldPw} onChange=${function(e){setOldPw(e.target.value);}} placeholder="Current password" /></div>
+            <div><label>New password (6+ characters)</label>
+              <input type="password" value=${newPw} onChange=${function(e){setNewPw(e.target.value);}} placeholder="New password" /></div>
+            ${pwMsg&&html`<p style=${{fontSize:12,margin:0,color:pwMsg.startsWith('✓')?'var(--gn)':'var(--rd)' }}>${pwMsg}</p>`}
+            <button class="btn-p" onClick=${changePw} disabled=${!oldPw||!newPw}>Update Password</button>
+          </div>
+        </div>
+        <div class="card" style=${{borderColor:'rgba(239,68,68,.2)',background:'rgba(239,68,68,.03)'}}>
+          <h3 style=${{marginBottom:8,color:'var(--rd)'}}>⚠️ Info</h3>
+          <ul style=${{fontSize:12,color:'var(--mu)',lineHeight:2,paddingLeft:18}}>
+            <li>Super-admin password is stored in GAS Script Properties</li>
+            <li>Default password: <code>wadde2026</code> — change it above</li>
+            <li>Access this panel via <code>#superadmin</code> in the URL</li>
+            <li>Structured Sheet tabs (Users, Rooms, etc.) auto-update on every write once GAS is redeployed</li>
+          </ul>
+        </div>
+      </div>`}
+    </div>
+  </div>`;
+}
+
+
 function WelcomePage(props) {
   // Live seconds ticker for welcome page
   var TARGET = new Date('2026-06-11T19:00:00Z').getTime();
@@ -1526,82 +1852,83 @@ function PlayerPicker(props) {
     return p.n.toLowerCase().includes(q) || p.t.toLowerCase().includes(q) || p.p.toLowerCase().includes(q);
   });
 
-  function toggle(player) {
-    var cur = props.selected || [];
-    if (cur.includes(player.n)) {
-      props.onSelect(cur.filter(function(x){return x!==player.n;}));
-    } else if (cur.length < 1) {
-      props.onSelect(cur.concat([player.n]));
-    }
+  // selected is a single player name string (or empty string)
+  var selected = props.selected || '';
+
+  function pick(player) {
+    // Toggle: clicking the already-selected player deselects
+    props.onSelect(selected === player.n ? '' : player.n);
   }
 
-  var sel = props.selected || [];
-
   return html`<div style=${{display:'flex',flexDirection:'column',gap:12}}>
-    <h2 style=${{marginBottom:4}}>Favorite players <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>3 of 3</span></h2>
-    <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Search and pick 3 players from the WC 2026 squads.</p>
+    <div>
+      <h2 style=${{marginBottom:2}}>Favourite Player</h2>
+      <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Pick one player from the WC 2026 squads.</p>
+    </div>
 
-    <!-- Selected chips -->
-    <div style=${{minHeight:40,display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
-      ${sel.length===0
-        ? html`<span style=${{fontSize:12,color:'var(--dm)'}}>No players selected yet</span>`
-        : sel.map(function(name){ return html`<div key=${name} style=${{display:'inline-flex',alignItems:'center',gap:6,background:'rgba(26,86,219,.15)',border:'1px solid rgba(26,86,219,.3)',borderRadius:20,padding:'4px 10px 4px 12px',fontSize:13}}>
-            <span style=${{color:'var(--tx)',fontWeight:500}}>${name}</span>
-            <button onClick=${function(){toggle({n:name});}} style=${{background:'none',border:'none',color:'var(--mu)',cursor:'pointer',padding:0,fontSize:15,lineHeight:1,display:'flex',alignItems:'center'}}>×</button>
-          </div>`;
-        })
+    <!-- Selected chip -->
+    <div style=${{minHeight:38,display:'flex',gap:6,alignItems:'center'}}>
+      ${selected
+        ? html`<div style=${{display:'inline-flex',alignItems:'center',gap:8,
+              background:'rgba(26,86,219,.12)',border:'1px solid rgba(26,86,219,.3)',
+              borderRadius:20,padding:'5px 12px 5px 14px',fontSize:13}}>
+            <span style=${{color:'var(--tx)',fontWeight:500}}>${selected}</span>
+            <button onClick=${function(){props.onSelect('');}} style=${{background:'none',border:'none',
+              color:'var(--mu)',cursor:'pointer',padding:0,fontSize:16,lineHeight:1}}>×</button>
+          </div>`
+        : html`<span style=${{fontSize:12,color:'var(--dm)'}}>No player selected yet</span>`
       }
     </div>
 
     <!-- Search -->
     <div style=${{position:'relative'}}>
-      <input
-        value=${search}
-        onChange=${function(e){setSearch(e.target.value);}}
-        placeholder="Search by name, team or position (FW/MF/DF/GK)..."
-        style=${{paddingLeft:36}}
-        autoFocus
-      />
-      <i class="ti ti-search" style=${{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--dm)',fontSize:14,pointerEvents:'none'}}></i>
+      <input value=${search} onChange=${function(e){setSearch(e.target.value);}}
+        placeholder="Search by name, team or position…"
+        style=${{paddingLeft:36}} autoFocus />
+      <i class="ti ti-search" style=${{position:'absolute',left:12,top:'50%',
+        transform:'translateY(-50%)',color:'var(--dm)',fontSize:14,pointerEvents:'none'}}></i>
     </div>
 
     <!-- Player list -->
-    <div style=${{maxHeight:280,overflowY:'auto',display:'flex',flexDirection:'column',gap:1,border:'1px solid var(--bdr)',borderRadius:'var(--rs)',overflow:'hidden'}}>
+    <div style=${{maxHeight:300,overflowY:'auto',border:'1px solid var(--bdr)',
+        borderRadius:'var(--rs)',overflow:'hidden'}}>
       ${filtered.length===0
-        ? html`<div style=${{padding:'20px',textAlign:'center',color:'var(--dm)',fontSize:13}}>No players found. Try a different name or team.</div>`
+        ? html`<div style=${{padding:'20px',textAlign:'center',color:'var(--dm)',fontSize:13}}>No players found.</div>`
         : filtered.map(function(p){
-            var picked = sel.includes(p.n);
-            var disabled = !picked && sel.length >= 3;
-            return html`<button key=${p.n} onClick=${function(){if(!disabled)toggle(p);}} style=${{
-              display:'flex',alignItems:'center',gap:10,padding:'9px 12px',
-              background:picked?'rgba(26,86,219,.1)':disabled?'rgba(255,255,255,.01)':'var(--bg3)',
-              border:'none',borderBottom:'1px solid var(--bdr)',cursor:disabled?'not-allowed':'pointer',
-              textAlign:'left',opacity:disabled?0.4:1,transition:'background .1s'
+            var picked = selected === p.n;
+            return html`<button key=${p.n} onClick=${function(){pick(p);}} style=${{
+              display:'flex',alignItems:'center',gap:10,padding:'10px 12px',width:'100%',
+              background:picked?'rgba(26,86,219,.12)':'var(--bg3)',
+              border:'none',borderBottom:'1px solid var(--bdr)',
+              cursor:'pointer',textAlign:'left',transition:'background .1s'
             }}>
-              <${PlayerAvatar} name=${p.n} team=${p.t} size=${36} />
+              <${PlayerAvatar} name=${p.n} team=${p.t} size=${34} />
               <div style=${{flex:1,minWidth:0}}>
-                <div style=${{fontSize:14,fontWeight:500,color:picked?'#60a5fa':'var(--tx)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
-                <div style=${{fontSize:11,color:'var(--mu)',marginTop:1}}>${F[p.t]||'🏳'} ${p.t}</div>
+                <div style=${{fontSize:13,fontWeight:500,color:picked?'#60a5fa':'var(--tx)',
+                  overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.n}</div>
+                <div style=${{fontSize:11,color:'var(--mu)',marginTop:1}}>
+                  <${FlagImg} team=${p.t} w=${14} /> ${p.t}
+                </div>
               </div>
-              <span style=${{fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:10,background:POS_COLOR[p.p]||'rgba(148,163,184,.15)',color:POS_TEXT[p.p]||'var(--mu)',flexShrink:0}}>${p.p}</span>
-              ${picked&&html`<i class="ti ti-check" style=${{color:'#60a5fa',fontSize:16,flexShrink:0}}></i>`}
+              <span style=${{fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:10,
+                background:POS_COLOR[p.p]||'rgba(148,163,184,.15)',
+                color:POS_TEXT[p.p]||'var(--mu)',flexShrink:0}}>${p.p}</span>
+              ${picked&&html`<i class="ti ti-check" style=${{color:'#60a5fa',fontSize:16}}></i>`}
             </button>`;
           })
       }
     </div>
 
-    <div style=${{fontSize:12,color:'var(--mu)',textAlign:'center'}}>
-      ${sel.length}/1 player selected · Teams: ${props.favT.map(function(t){return F[t]||t;}).join(' ')}
-    </div>
-
     <div style=${{display:'flex',gap:8}}>
       <button class="btn" style=${{flex:1}} onClick=${props.onBack}>← Back</button>
-      <button class="btn-p" style=${{flex:2,opacity:sel.length===0?0.45:1}} disabled=${sel.length===0} onClick=${props.onDone}>
+      <button class="btn-p" style=${{flex:2,opacity:!selected?0.45:1}}
+        disabled=${!selected} onClick=${props.onDone}>
         Create Profile 🎉
       </button>
     </div>
   </div>`;
 }
+
 
 function AuthPage(props) {
   var ns=useState(''); var name=ns[0]; var setName=ns[1];
@@ -1616,7 +1943,7 @@ function AuthPage(props) {
     if(props.mode==='login'){props.onLogin(name,phone);return;}
     if(step===1){if(!name||!phone)return;setStep(2);}
     else if(step===2){if(!favT.length)return;setStep(3);}
-    else props.onReg(name,phone,favT,favP.filter(Boolean));
+    else props.onReg(name,phone,favT,favP?[favP]:[]);
   }
   return html`<div style=${{maxWidth:480,margin:'0 auto',paddingTop:8}}>
     <button class="btn" onClick=${props.onBack} style=${{marginBottom:14}}><i class="ti ti-arrow-left"></i> Back</button>
@@ -1721,7 +2048,10 @@ function DashPage(props) {
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
       <div>
         <p style=${{fontSize:12,color:'var(--mu)',marginBottom:2}}>Welcome back</p>
-        <h1>${props.user.name} ${props.user.favT&&props.user.favT[0]?F[props.user.favT[0]]||'⚽':'⚽'}</h1>
+        <h1 style=${{display:'flex',alignItems:'center',gap:8}}>
+          ${props.user.name}
+          ${props.user.favT&&props.user.favT[0]&&html`<${FlagImg} team=${props.user.favT[0]} w=${28} h=${19} />`}
+        </h1>
       </div>
     </div>
     <${CountdownBanner} />
@@ -1793,41 +2123,27 @@ function DashPage(props) {
       </div>
     </div>`}
 
-    <!-- Featured Players — real photos via SofaScore CDN -->
+    <!-- Featured Players — colored avatar cards -->
     <div style=${{marginBottom:20}}>
       <h2 style=${{margin:'0 0 14px'}}>⚽ Featured Players</h2>
       <div style=${{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(110px,1fr))',gap:10}}>
         ${PLY.map(function(p,i){
-          var photoUrl = 'https://api.sofascore.app/api/v1/player/'+p.sid+'/image';
           var initials = ((p.n.split(' ')[0]||'?')[0]+((p.n.split(' ')[1]||' ')[0]||'')).toUpperCase();
+          var bg = teamBg(p.t);
           return html`<div key=${i} style=${{
             background:'var(--bg2)',border:'1px solid var(--bdr)',
-            borderRadius:12,overflow:'hidden',
-            boxShadow:'var(--shadow)',
+            borderRadius:12,overflow:'hidden',boxShadow:'var(--shadow)',
             transition:'transform .15s,box-shadow .15s'
           }}
             onMouseEnter=${function(e){e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 6px 20px rgba(0,0,0,.12)';}}
             onMouseLeave=${function(e){e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='var(--shadow)';}}>
-
-            <!-- Photo area -->
-            <div style=${{width:'100%',aspectRatio:'1/1',position:'relative',overflow:'hidden',background:teamBg(p.t)}}>
-              <!-- Colored initial as bg fallback -->
-              <div style=${{
-                position:'absolute',inset:0,display:'flex',alignItems:'center',
-                justifyContent:'center',fontSize:28,fontWeight:700,
-                color:'rgba(255,255,255,.85)',fontFamily:'Barlow Condensed,Arial,sans-serif',
-                letterSpacing:1
-              }}>${initials}</div>
-              <!-- Real photo on top — removes itself if it fails -->
-              <img
-                src=${photoUrl}
-                alt=${p.n}
-                style=${{position:'absolute',inset:0,width:'100%',height:'100%',
-                  objectFit:'cover',objectPosition:'top center'}}
-                onError=${function(e){e.target.remove();}}
-              />
+            <!-- Colored avatar with initials -->
+            <div style=${{width:'100%',aspectRatio:'1/1',background:bg,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              fontSize:30,fontWeight:700,color:'rgba(255,255,255,.9)',
+              fontFamily:'Barlow Condensed,Arial,sans-serif',letterSpacing:1}}>
+              ${initials}
             </div>
-
             <!-- Info -->
             <div style=${{padding:'8px 9px 10px'}}>
               <div style=${{fontSize:12,fontWeight:600,color:'var(--tx)',lineHeight:1.2,marginBottom:2}}>${p.n}</div>
@@ -2170,7 +2486,11 @@ function ChatRoom(props) {
 }
 
 function RoomPage(props) {
-  var gMs = MS.filter(function(m){ return !props.grp || m.gr === props.grp; });
+  var gMs = MS.filter(function(m){ return !props.grp || m.gr === props.grp; })
+             .sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); });
+  var upNext = MS.filter(function(m){ return mStat(m,props.results)==='soon'; })
+               .sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); })
+               .slice(0,2);
   return html`<div>
     <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
       <button class="btn" style=${{padding:'8px 10px'}} onClick=${props.onBack}><i class="ti ti-arrow-left"></i></button>
@@ -2181,10 +2501,49 @@ function RoomPage(props) {
       ${props.canPick&&html`<button class="btn" style=${{fontSize:12,background:props.myPick?'var(--gdim)':undefined,borderColor:props.myPick?'rgba(240,180,41,.35)':undefined,color:props.myPick?'var(--gold)':undefined,whiteSpace:'nowrap',flexShrink:0}} onClick=${props.onPickW}>🏆 ${props.myPick?(F[props.myPick]||'')+' '+props.myPick:'Pick winner'}</button>`}
     </div>
     <div class="tabs">
-      ${[['matches','⚽ Matches'],['knockout','🏆 Knockout'],['leaderboard','📋 Standings'],['groups','📊 Groups'],['chat','💬 Chat'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
+      ${[['leaderboard','📋 Standings'],['chat','💬 Chat'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
     </div>
 
     ${props.tab==='matches'&&html`<div>
+      <!-- Next 2 upcoming matches dashboard banner -->
+      ${upNext.length>0&&html`<div style=${{marginBottom:14}}>
+        <div style=${{fontSize:11,fontWeight:700,letterSpacing:1,color:'var(--gold)',textTransform:'uppercase',marginBottom:8}}>⚡ Up Next</div>
+        <div style=${{display:'grid',gridTemplateColumns:upNext.length>1?'1fr 1fr':'1fr',gap:8,marginBottom:4}}>
+          ${upNext.map(function(m){
+            var tv2=fmtTime(m.utc);
+            var pred=props.preds[props.user.id+'_'+m.id];
+            return html`<div key=${m.id} style=${{
+              background:'linear-gradient(135deg,rgba(26,86,219,.12) 0%,rgba(26,86,219,.04) 100%)',
+              border:'1px solid rgba(26,86,219,.25)',
+              borderRadius:'var(--r)',padding:'12px 14px',
+              display:'flex',flexDirection:'column',gap:8
+            }}>
+              <div style=${{fontSize:10,color:'var(--gold)',fontWeight:600,letterSpacing:.5}}>GROUP ${m.gr}</div>
+              <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                <div style=${{display:'flex',flexDirection:'column',gap:4,flex:1}}>
+                  <div style=${{display:'flex',alignItems:'center',gap:6}}>
+                    <${FlagImg} team=${m.h} w=${18} />
+                    <span style=${{fontSize:13,fontWeight:500}}>${m.h}</span>
+                  </div>
+                  <div style=${{display:'flex',alignItems:'center',gap:6}}>
+                    <${FlagImg} team=${m.a} w=${18} />
+                    <span style=${{fontSize:13,fontWeight:500}}>${m.a}</span>
+                  </div>
+                </div>
+                <div style=${{textAlign:'right',flexShrink:0}}>
+                  <div style=${{fontSize:11,color:'var(--mu)'}}>${tv2.day} ${tv2.date}</div>
+                  <div style=${{fontSize:14,fontWeight:700}}>${tv2.time}</div>
+                </div>
+              </div>
+              <button class="btn-p" style=${{width:'100%',fontSize:12,padding:'6px 10px'}}
+                onClick=${function(e){e.stopPropagation();props.onPredict(m);}}>
+                ${pred?'✎ Edit: '+pred.h+'–'+pred.a:'Predict ⚽'}
+              </button>
+            </div>`;
+          })}
+        </div>
+      </div>`}
+
       <!-- Group filter pills -->
       <div style=${{display:'flex',gap:5,marginBottom:16,flexWrap:'wrap'}}>
         <button class=${'pill '+(props.grp===''?'on':'')} onClick=${function(){props.setGrp('');}}>All</button>
@@ -2573,12 +2932,23 @@ function App() {
   var s5=useState({}); var tpicks=s5[0]; var setTpicks=s5[1];
   var s6=useState({}); var results=s6[0]; var setResults=s6[1];
   var s7=useState(null); var room=s7[0]; var setRoom=s7[1];
-  var s8=useState('matches'); var tab=s8[0]; var setTab=s8[1];
+  var s8=useState('leaderboard'); var tab=s8[0]; var setTab=s8[1];
   var s9=useState(''); var grp=s9[0]; var setGrp=s9[1];
   var s10=useState('login'); var authMode=s10[0]; var setAuthMode=s10[1];
   var s11=useState(null); var modal=s11[0]; var setModal=s11[1];
   var s11b=useState(null); var matchDetail=s11b[0]; var setMatchDetail=s11b[1];
   // ── Theme state ────────────────────────────────────────────────────────
+  // ── Super admin routing ─────────────────────────────────────────────────
+  var s_sa = useState(window.location.hash === '#superadmin');
+  var isSuperAdmin = s_sa[0];
+
+  // Listen for hash changes
+  useEffect(function(){
+    function onHash(){ s_sa[1](window.location.hash === '#superadmin'); }
+    window.addEventListener('hashchange', onHash);
+    return function(){ window.removeEventListener('hashchange', onHash); };
+  }, []);
+
   var s_th = useState(localStorage.getItem('wc26_theme') || 'light');
   var theme = s_th[0]; var setTheme = s_th[1];
   useEffect(function(){
@@ -2717,7 +3087,7 @@ function App() {
     nr[id] = {id:id, name:name, code:code, by:user.id, adminPass:pass, members:[user.id], created:new Date().toISOString()};
     Store.set('rooms', nr);
     var na = Object.assign({}, adminAuth); na[id] = true;
-    setAdminAuth(na); localStorage.setItem('wc26_adm_'+id, '1');
+    setAdminAuth(na); // Admin auth in memory only — enter passphrase each session for security
     setRoom(nr[id]); setModal(null); setTab('matches'); setScr('room');
     notify('Room created! Share code: ' + code);
   }
@@ -2731,7 +3101,6 @@ function App() {
       Store.set('rooms', nr);
     }
     setRoom(upd); setModal(null); setTab('matches'); setScr('room'); subscribeChatRoom(upd.id);
-    if(localStorage.getItem('wc26_adm_'+upd.id)){var na=Object.assign({},adminAuth);na[upd.id]=true;setAdminAuth(na);}
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
@@ -2817,7 +3186,7 @@ function App() {
     if (room.adminPass === pass.trim()) {
       var na = Object.assign({}, adminAuth); na[room.id] = true;
       setAdminAuth(na);
-      localStorage.setItem('wc26_adm_' + room.id, '1');
+      // Admin auth kept in memory only (no localStorage) — prevents cross-user leaks
       return true;
     }
     return false;
@@ -2870,6 +3239,9 @@ function App() {
   // Show setup screen if GS_URL not configured
   if (!Store._ready()) return html`<${SetupScreen} />`;
 
+  // Route to super admin
+  if (isSuperAdmin) return html`<${SuperAdminApp} />`;
+
   if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,background:'var(--bg)'}}>
     <svg viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg" width="56" height="64">
       <path d="M10 8 H46 L42 38 Q39 47 28 50 Q17 47 14 38 Z" fill="#f0b429"/>
@@ -2915,7 +3287,7 @@ function App() {
     <div class="page">
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');subscribeChatRoom(r.id);if(localStorage.getItem('wc26_adm_'+r.id)){var na=Object.assign({},adminAuth);na[r.id]=true;setAdminAuth(na);}}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');subscribeChatRoom(r.id);}}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
 
       ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} users=${users} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
