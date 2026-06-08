@@ -526,50 +526,7 @@ var QQ=[
   {q:'Which match kicks off WC 2026?',o:['USA vs Mexico','Brazil vs Argentina','Mexico vs South Africa','England vs France'],a:2},
 ];
 var FACTS=['The 2026 World Cup is the first with 48 teams!','104 matches across 16 venues in USA, Canada and Mexico.','Argentina are the defending champions from Qatar 2022.','Opens June 11 with Mexico vs South Africa.','Final: July 19 at MetLife Stadium, New York/NJ.','The Round of 32 is a brand-new knockout round for 2026!','Three co-hosts: USA, Canada and Mexico.','2 pts correct result · 2 pts exact score · +5 pts tournament winner!'];
-var PLY=[{n:'Lionel Messi',t:'Argentina',p:'Forward',i:'2022 WC winner',sid:41959},{n:'Kylian Mbappé',t:'France',p:'Forward',i:'Top scorer contender',sid:342658},{n:'Erling Haaland',t:'Norway',p:'Forward',i:'Premier League top scorer',sid:839956},{n:'Vinicius Jr.',t:'Brazil',p:'Forward',i:'Champions League star',sid:700026},{n:'Pedri',t:'Spain',p:'Midfielder',i:'Barcelona midfield maestro',sid:888013},{n:'Jude Bellingham',t:'England',p:'Midfielder',i:'Real Madrid star',sid:816250},{n:'Cristiano Ronaldo',t:'Portugal',p:'Forward',i:'All-time top scorer',sid:874},{n:'Kevin De Bruyne',t:'Belgium',p:'Midfielder',i:'World-class playmaker',sid:70996}]
-// ── Knockout Stage: 31 matches ──────────────────────────────────────────
-// h_slot/a_slot = initial qualifier slot ('W-A','R-B','3rd-1' etc.)
-// h_from/a_from = winner of a prior KO match id (or 'L-id' for loser)
-var KO_MS = [
-  // Round of 32
-  {id:'r32_01',rd:'R32',h_slot:'W-A', a_slot:'3rd-1',utc:'2026-06-28T19:00:00Z'},
-  {id:'r32_02',rd:'R32',h_slot:'W-B', a_slot:'R-A',  utc:'2026-06-28T23:00:00Z'},
-  {id:'r32_03',rd:'R32',h_slot:'W-C', a_slot:'3rd-2',utc:'2026-06-29T19:00:00Z'},
-  {id:'r32_04',rd:'R32',h_slot:'R-B', a_slot:'R-C',  utc:'2026-06-29T23:00:00Z'},
-  {id:'r32_05',rd:'R32',h_slot:'W-D', a_slot:'3rd-3',utc:'2026-06-30T19:00:00Z'},
-  {id:'r32_06',rd:'R32',h_slot:'W-E', a_slot:'R-D',  utc:'2026-06-30T23:00:00Z'},
-  {id:'r32_07',rd:'R32',h_slot:'W-F', a_slot:'3rd-4',utc:'2026-07-01T19:00:00Z'},
-  {id:'r32_08',rd:'R32',h_slot:'R-E', a_slot:'R-F',  utc:'2026-07-01T23:00:00Z'},
-  {id:'r32_09',rd:'R32',h_slot:'W-G', a_slot:'3rd-5',utc:'2026-07-02T19:00:00Z'},
-  {id:'r32_10',rd:'R32',h_slot:'W-H', a_slot:'R-G',  utc:'2026-07-02T23:00:00Z'},
-  {id:'r32_11',rd:'R32',h_slot:'W-I', a_slot:'3rd-6',utc:'2026-07-03T15:00:00Z'},
-  {id:'r32_12',rd:'R32',h_slot:'R-H', a_slot:'R-I',  utc:'2026-07-03T19:00:00Z'},
-  {id:'r32_13',rd:'R32',h_slot:'W-J', a_slot:'3rd-7',utc:'2026-07-03T23:00:00Z'},
-  {id:'r32_14',rd:'R32',h_slot:'W-K', a_slot:'R-J',  utc:'2026-07-04T15:00:00Z'},
-  {id:'r32_15',rd:'R32',h_slot:'W-L', a_slot:'3rd-8',utc:'2026-07-04T19:00:00Z'},
-  {id:'r32_16',rd:'R32',h_slot:'R-K', a_slot:'R-L',  utc:'2026-07-04T23:00:00Z'},
-  // Round of 16
-  {id:'r16_01',rd:'R16',h_from:'r32_01',a_from:'r32_02',utc:'2026-07-06T19:00:00Z'},
-  {id:'r16_02',rd:'R16',h_from:'r32_03',a_from:'r32_04',utc:'2026-07-06T23:00:00Z'},
-  {id:'r16_03',rd:'R16',h_from:'r32_05',a_from:'r32_06',utc:'2026-07-07T19:00:00Z'},
-  {id:'r16_04',rd:'R16',h_from:'r32_07',a_from:'r32_08',utc:'2026-07-07T23:00:00Z'},
-  {id:'r16_05',rd:'R16',h_from:'r32_09',a_from:'r32_10',utc:'2026-07-08T19:00:00Z'},
-  {id:'r16_06',rd:'R16',h_from:'r32_11',a_from:'r32_12',utc:'2026-07-08T23:00:00Z'},
-  {id:'r16_07',rd:'R16',h_from:'r32_13',a_from:'r32_14',utc:'2026-07-09T19:00:00Z'},
-  {id:'r16_08',rd:'R16',h_from:'r32_15',a_from:'r32_16',utc:'2026-07-09T23:00:00Z'},
-  // Quarter-finals
-  {id:'qf_01',rd:'QF',h_from:'r16_01',a_from:'r16_02',utc:'2026-07-12T19:00:00Z'},
-  {id:'qf_02',rd:'QF',h_from:'r16_03',a_from:'r16_04',utc:'2026-07-12T23:00:00Z'},
-  {id:'qf_03',rd:'QF',h_from:'r16_05',a_from:'r16_06',utc:'2026-07-13T19:00:00Z'},
-  {id:'qf_04',rd:'QF',h_from:'r16_07',a_from:'r16_08',utc:'2026-07-13T23:00:00Z'},
-  // Semi-finals
-  {id:'sf_01',rd:'SF',h_from:'qf_01',a_from:'qf_02',utc:'2026-07-17T23:00:00Z'},
-  {id:'sf_02',rd:'SF',h_from:'qf_03',a_from:'qf_04',utc:'2026-07-18T23:00:00Z'},
-  // 3rd place
-  {id:'tpp_01',rd:'3PL',h_from:'L-sf_01',a_from:'L-sf_02',utc:'2026-07-19T17:00:00Z'},
-  // Final
-  {id:'fin_01',rd:'FIN',h_from:'W-sf_01',a_from:'W-sf_02',utc:'2026-07-19T21:00:00Z'},
-];
+var PLY=[{n:'Cristiano Ronaldo',t:'Portugal',p:'Forward',i:'All-time top scorer',sid:874},{n:'Lionel Messi',t:'Argentina',p:'Forward',i:'2022 WC winner',sid:41959},{n:'Kylian Mbappé',t:'France',p:'Forward',i:'Top scorer contender',sid:342658},{n:'Erling Haaland',t:'Norway',p:'Forward',i:'Premier League top scorer',sid:839956},{n:'Vinicius Jr.',t:'Brazil',p:'Forward',i:'Champions League star',sid:700026},{n:'Pedri',t:'Spain',p:'Midfielder',i:'Barcelona midfield maestro',sid:888013},{n:'Jude Bellingham',t:'England',p:'Midfielder',i:'Real Madrid star',sid:816250},{n:'Kevin De Bruyne',t:'Belgium',p:'Midfielder',i:'World-class playmaker',sid:70996}];
 var KO_ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-finals',SF:'Semi-finals','3PL':'3rd Place',FIN:'Final'};
 
 // football-data.org → our team names
@@ -1086,10 +1043,11 @@ var Sess = {
 // Helpers
 function calcPts(p, r) {
   if (!p || !r) return null;
-  if (p.h === r.h && p.a === r.a) return 2;
+  var exact = (p.h === r.h && p.a === r.a);
+  if (exact) return 4; // 2pts exact score + 2pts correct winner
   var pw = p.h > p.a ? 1 : p.h < p.a ? -1 : 0;
   var rw = r.h > r.a ? 1 : r.h < r.a ? -1 : 0;
-  return pw === rw ? 2 : 0;
+  return pw === rw ? 2 : 0; // 2pts correct winner only
 }
 function fmtTime(iso) {
   var d   = new Date(iso);
@@ -1835,41 +1793,45 @@ function DashPage(props) {
       </div>
     </div>`}
 
-    <!-- Featured Players (Image 3 style) -->
+    <!-- Featured Players — real photos via SofaScore CDN -->
     <div style=${{marginBottom:20}}>
       <h2 style=${{margin:'0 0 14px'}}>⚽ Featured Players</h2>
-      <div style=${{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(100px,1fr))',gap:10}}>
+      <div style=${{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(110px,1fr))',gap:10}}>
         ${PLY.map(function(p,i){
-          var photoUrl = playerPhotoUrl(p.sid);
-          var isActive = i===props.plyrI;
+          var photoUrl = 'https://api.sofascore.app/api/v1/player/'+p.sid+'/image';
+          var initials = ((p.n.split(' ')[0]||'?')[0]+((p.n.split(' ')[1]||' ')[0]||'')).toUpperCase();
           return html`<div key=${i} style=${{
-            background:'var(--bg2)',border:'1px solid '+(isActive?'rgba(240,180,41,.4)':'var(--bdr)'),
-            borderRadius:10,overflow:'hidden',cursor:'default',
-            boxShadow:isActive?'0 0 0 1px rgba(240,180,41,.25)':'none'
-          }}>
+            background:'var(--bg2)',border:'1px solid var(--bdr)',
+            borderRadius:12,overflow:'hidden',
+            boxShadow:'var(--shadow)',
+            transition:'transform .15s,box-shadow .15s'
+          }}
+            onMouseEnter=${function(e){e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 6px 20px rgba(0,0,0,.12)';}}
+            onMouseLeave=${function(e){e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='var(--shadow)';}}>
+
             <!-- Photo area -->
-            <div style=${{width:'100%',aspectRatio:'1/1',background:'var(--bg3)',overflow:'hidden',position:'relative'}}>
-              ${photoUrl
-                ? html`<img src=${photoUrl}
-                    style=${{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}}
-                    alt=${p.n}
-                    onError=${function(e){
-                      e.target.style.display='none';
-                      var av=e.target.parentNode.querySelector('.av-fb');
-                      if(av) av.style.display='flex';
-                    }} />
-                  <div class="av-fb" style=${{display:'none',position:'absolute',inset:0,alignItems:'center',justifyContent:'center',background:teamBg(p.t),fontSize:22,fontWeight:700,color:'white',fontFamily:'Arial'}}>
-                    ${((p.n.split(' ')[0]||'?')[0]+(( p.n.split(' ')[1]||' ')[0]||'')).toUpperCase()}
-                  </div>`
-                : html`<div style=${{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:teamBg(p.t),fontSize:22,fontWeight:700,color:'rgba(255,255,255,.9)',fontFamily:'Arial'}}>
-                    ${((p.n.split(' ')[0]||'?')[0]+((p.n.split(' ')[1]||' ')[0]||'')).toUpperCase()}
-                  </div>`
-              }
+            <div style=${{width:'100%',aspectRatio:'1/1',position:'relative',overflow:'hidden',background:teamBg(p.t)}}>
+              <!-- Colored initial as bg fallback -->
+              <div style=${{
+                position:'absolute',inset:0,display:'flex',alignItems:'center',
+                justifyContent:'center',fontSize:28,fontWeight:700,
+                color:'rgba(255,255,255,.85)',fontFamily:'Barlow Condensed,Arial,sans-serif',
+                letterSpacing:1
+              }}>${initials}</div>
+              <!-- Real photo on top — removes itself if it fails -->
+              <img
+                src=${photoUrl}
+                alt=${p.n}
+                style=${{position:'absolute',inset:0,width:'100%',height:'100%',
+                  objectFit:'cover',objectPosition:'top center'}}
+                onError=${function(e){e.target.remove();}}
+              />
             </div>
-            <!-- Info area -->
-            <div style=${{padding:'8px 8px 10px'}}>
-              <div style=${{fontSize:12,fontWeight:600,color:'var(--tx)',lineHeight:1.2,marginBottom:3}}>${p.n}</div>
-              <div style=${{fontSize:11,color:'var(--mu)',marginBottom:4}}>${p.p||'Forward'}</div>
+
+            <!-- Info -->
+            <div style=${{padding:'8px 9px 10px'}}>
+              <div style=${{fontSize:12,fontWeight:600,color:'var(--tx)',lineHeight:1.2,marginBottom:2}}>${p.n}</div>
+              <div style=${{fontSize:11,color:'var(--mu)',marginBottom:4}}>${p.p}</div>
               <div style=${{display:'flex',alignItems:'center',gap:4}}>
                 <${FlagImg} team=${p.t} w=${16} />
                 <span style=${{fontSize:11,color:'var(--dm)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${p.t}</span>
@@ -2068,6 +2030,145 @@ function KOBracketView(props) {
   </div>`;
 }
 
+
+// ── Chat Room ─────────────────────────────────────────────────────────────
+function ChatRoom(props) {
+  var user = props.user;
+  var msgs = props.msgs || [];
+  var ts = useState(''); var text = ts[0]; var setText = ts[1];
+  var rs = useState(false); var sending = rs[0]; var setSending = rs[1];
+  var endRef = { current: null };
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(function() {
+    if (endRef.current) endRef.current.scrollIntoView({behavior:'smooth'});
+  }, [msgs.length]);
+
+  function send() {
+    var msg = text.trim();
+    if (!msg || sending) return;
+    setSending(true);
+    var newMsg = {uid: user.id, name: user.name, text: msg, ts: Date.now()};
+    props.onSend(newMsg, function(){ setSending(false); setText(''); });
+  }
+
+  function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+
+  function fmtMsgTime(ts) {
+    var d = new Date(ts);
+    var now = new Date();
+    var isToday = d.toDateString() === now.toDateString();
+    return isToday
+      ? d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+      : d.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' +
+        d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  }
+
+  // Group consecutive messages from same user
+  function groupMsgs(msgs) {
+    var groups = [];
+    msgs.forEach(function(m, i) {
+      var prev = msgs[i-1];
+      var sameUser = prev && prev.uid === m.uid && (m.ts - prev.ts) < 300000; // 5 min gap
+      if (sameUser) {
+        groups[groups.length-1].messages.push(m);
+      } else {
+        groups.push({uid: m.uid, name: m.name, messages: [m]});
+      }
+    });
+    return groups;
+  }
+
+  var grouped = groupMsgs(msgs);
+  var myId = user.id;
+
+  return html`<div style=${{display:'flex',flexDirection:'column',height:'calc(100vh - 180px)',minHeight:300,maxHeight:600}}>
+    <!-- Messages area -->
+    <div style=${{flex:1,overflowY:'auto',padding:'4px 0',display:'flex',flexDirection:'column',gap:2}}>
+      ${msgs.length === 0
+        ? html`<div style=${{textAlign:'center',padding:'40px 20px'}}>
+            <div style=${{fontSize:32,marginBottom:8}}>💬</div>
+            <p style=${{color:'var(--mu)',fontSize:13}}>No messages yet — say hello!</p>
+          </div>`
+        : grouped.map(function(grp, gi) {
+            var isMe = grp.uid === myId;
+            return html`<div key=${gi} style=${{
+              display:'flex', flexDirection:'column',
+              alignItems: isMe ? 'flex-end' : 'flex-start',
+              marginBottom:8, padding:'0 4px'
+            }}>
+              <!-- Sender name (not shown for own messages) -->
+              ${!isMe && html`<div style=${{fontSize:11,color:'var(--mu)',marginBottom:2,paddingLeft:12,fontWeight:500}}>${grp.name}</div>`}
+
+              ${grp.messages.map(function(m, mi) {
+                var isLast = mi === grp.messages.length - 1;
+                return html`<div key=${m.ts} style=${{
+                  display:'flex', flexDirection: isMe?'row-reverse':'row',
+                  alignItems:'flex-end', gap:6, marginBottom: isLast?0:2
+                }}>
+                  <!-- Avatar (only on last msg in group, for others) -->
+                  ${!isMe && isLast
+                    ? html`<div style=${{width:28,height:28,borderRadius:14,flexShrink:0,
+                        background: teamBg(grp.name),
+                        display:'flex',alignItems:'center',justifyContent:'center',
+                        fontSize:11,fontWeight:700,color:'white',fontFamily:'Arial'}}>
+                        ${grp.name[0].toUpperCase()}
+                      </div>`
+                    : html`<div style=${{width:28,flexShrink:0}}></div>`
+                  }
+                  <!-- Bubble -->
+                  <div style=${{
+                    maxWidth:'72%', padding:'8px 12px',
+                    borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                    background: isMe ? '#1a56db' : 'var(--bg2)',
+                    border: isMe ? 'none' : '1px solid var(--bdr)',
+                    color: isMe ? '#fff' : 'var(--tx)',
+                    fontSize:13, lineHeight:1.4,
+                    wordBreak:'break-word',
+                    boxShadow: isMe ? 'none' : 'var(--shadow)'
+                  }}>
+                    ${m.text}
+                  </div>
+                </div>`;
+              })}
+
+              <!-- Timestamp on last message -->
+              <div style=${{fontSize:10,color:'var(--dm)',marginTop:2,
+                paddingLeft: isMe?0:40, paddingRight: isMe?4:0}}>
+                ${fmtMsgTime(grp.messages[grp.messages.length-1].ts)}
+              </div>
+            </div>`;
+          })
+      }
+      <!-- Scroll anchor -->
+      <div ref=${function(el){endRef.current=el;}}></div>
+    </div>
+
+    <!-- Input bar -->
+    <div style=${{borderTop:'1px solid var(--bdr)',padding:'10px 0 0',display:'flex',gap:8,alignItems:'flex-end'}}>
+      <textarea
+        value=${text}
+        onChange=${function(e){ setText(e.target.value); }}
+        onKeyDown=${handleKey}
+        placeholder="Type a message… (Enter to send)"
+        rows="1"
+        style=${{
+          flex:1, resize:'none', border:'1px solid var(--bdr)',
+          borderRadius:'var(--rs)', padding:'9px 12px',
+          background:'var(--bg3)', color:'var(--tx)',
+          fontFamily:'DM Sans,sans-serif', fontSize:13,
+          lineHeight:1.4, outline:'none', maxHeight:80,
+          width:'100%'
+        }}
+      ></textarea>
+      <button class="btn-p" style=${{padding:'9px 14px',flexShrink:0,opacity:sending||!text.trim()?0.5:1}}
+        onClick=${send} disabled=${sending || !text.trim()}>
+        ${sending ? '...' : '↑'}
+      </button>
+    </div>
+  </div>`;
+}
+
 function RoomPage(props) {
   var gMs = MS.filter(function(m){ return !props.grp || m.gr === props.grp; });
   return html`<div>
@@ -2080,7 +2181,7 @@ function RoomPage(props) {
       ${props.canPick&&html`<button class="btn" style=${{fontSize:12,background:props.myPick?'var(--gdim)':undefined,borderColor:props.myPick?'rgba(240,180,41,.35)':undefined,color:props.myPick?'var(--gold)':undefined,whiteSpace:'nowrap',flexShrink:0}} onClick=${props.onPickW}>🏆 ${props.myPick?(F[props.myPick]||'')+' '+props.myPick:'Pick winner'}</button>`}
     </div>
     <div class="tabs">
-      ${[['matches','⚽ Matches'],['knockout','🏆 Knockout'],['leaderboard','📋 Standings'],['groups','📊 Groups'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
+      ${[['matches','⚽ Matches'],['knockout','🏆 Knockout'],['leaderboard','📋 Standings'],['groups','📊 Groups'],['chat','💬 Chat'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
     </div>
 
     ${props.tab==='matches'&&html`<div>
@@ -2131,7 +2232,7 @@ function RoomPage(props) {
                   ? html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:24,fontWeight:700,letterSpacing:1,lineHeight:1}}>
                       ${res.h}<span style=${{color:'var(--dm)',margin:'0 3px'}}>–</span>${res.a}
                     </div>
-                    ${ep!==null&&html`<div style=${{fontSize:11,marginTop:4,color:ep===4?'#4ade80':ep===2?'#60a5fa':'#f87171',fontWeight:500}}>${ep===4?'🎯 Exact':ep===2?'✓ Winner':'✗ Missed'}</div>`}`
+                    ${ep!==null&&html`<div style=${{fontSize:11,marginTop:4,color:ep===4?'#4ade80':ep===2?'#60a5fa':'#f87171',fontWeight:500}}>${ep===4?'🎯 +4pts':ep===2?'✓ +2pts':'✗ 0pts'}</div>`}`
                   : html`<div style=${{fontSize:11,color:'var(--dm)',fontWeight:500,letterSpacing:.3}}>${tv.day}</div>
                     <div style=${{fontSize:14,fontWeight:700,color:'var(--tx)',lineHeight:1.15}}>${tv.date}</div>
                     <div style=${{fontSize:12,color:isLive?'#ef4444':'var(--mu)',fontWeight:isLive?700:400,marginTop:1}}>${isLive?'🔴 LIVE':tv.time}</div>`
@@ -2145,7 +2246,7 @@ function RoomPage(props) {
                 ${st==='soon'&&html`<span style=${{fontSize:12,color:pred?'var(--mu)':'var(--dm)'}}>
                   ${pred?html`Pick: <strong style=${{color:'var(--tx)'}}>${pred.h}–${pred.a}</strong>`:html`<em>No prediction</em>`}
                 </span>`}
-                ${res&&pred&&html`<span style=${{fontSize:12,color:'var(--mu)'}}>${ep===4?'🎯':ep===2?'✅':'—'} Predicted: <strong>${pred.h}–${pred.a}</strong></span>`}
+                ${res&&pred&&html`<span style=${{fontSize:12,color:'var(--mu)'}}>${ep===4?'🎯 +4pts':ep===2?'✓ +2pts':'✗ 0pts'} Predicted: <strong>${pred.h}–${pred.a}</strong></span>`}
               </div>
               <div style=${{display:'flex',gap:6}}>\n                ${props.isAdmin&&st!=='done'&&html`<button class="btn" style=${{fontSize:11,padding:'3px 9px'}} onClick=${function(e){e.stopPropagation();props.onResult(m);}}>+ Result</button>`}
                 ${st==='soon'&&html`<button class="btn-p" style=${{fontSize:12,padding:'5px 14px'}} onClick=${function(e){e.stopPropagation();props.onPredict(m);}}>${pred?'Edit':'Predict ⚽'}</button>`}
@@ -2263,6 +2364,14 @@ function RoomPage(props) {
       })}
       <p style=${{fontSize:11,color:'var(--dm)',textAlign:'center',marginTop:4}}>★ Top 2 teams in each group advance · Pts updated live as admin enters results</p>
     </div>`}
+    ${props.tab==='chat'&&html`<div>
+      <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+        <h2 style=${{margin:0}}>💬 Room Chat</h2>
+        <span style=${{fontSize:12,color:'var(--mu)'}}>${(props.roomMsgs||[]).length} messages</span>
+      </div>
+      <${ChatRoom} user=${props.user} msgs=${props.roomMsgs||[]} onSend=${props.onSendChat} />
+    </div>`}
+
     ${props.tab==='quiz'&&html`<div>
       <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
         <h2 style=${{margin:0}}>Daily Quiz</h2>
@@ -2338,22 +2447,6 @@ function RoomPage(props) {
         </div>
       </div>
 
-      <!-- Google Sheet access -->
-      <div class="card" style=${{background:'rgba(34,197,94,.04)',borderColor:'rgba(34,197,94,.2)'}}>
-        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-          <div>
-            <h3 style=${{margin:'0 0 4px',color:'#4ade80'}}>📊 Google Sheet Database</h3>
-            <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Your live data — users, rooms, predictions, results.</p>
-          </div>
-          <a href="https://docs.google.com/spreadsheets/d/1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw" target="_blank" style=${{padding:'8px 14px',borderRadius:'var(--rs)',background:'rgba(34,197,94,.15)',border:'1px solid rgba(34,197,94,.3)',color:'#4ade80',fontSize:13,fontWeight:500,textDecoration:'none',display:'inline-flex',alignItems:'center',gap:6,flexShrink:0}}>
-            <i class="ti ti-external-link"></i> Open Sheet
-          </a>
-        </div>
-        <div style=${{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',padding:'10px 12px',fontSize:12,color:'var(--mu)',lineHeight:1.6}}>
-          <strong style=${{color:'var(--tx)'}}>💡 Enter results directly in the Sheet:</strong><br/>
-          Find the <code style=${{background:'rgba(255,255,255,.05)',padding:'1px 5px',borderRadius:3}}>wc26_results</code> row → edit the JSON value to add <code style=${{background:'rgba(255,255,255,.05)',padding:'1px 5px',borderRadius:3}}>{"m01":{"h":2,"a":1}}</code> format. Points auto-update for all members within 5 seconds.
-        </div>
-      </div>
 
       <!-- Enter results section -->
       <div class="card">
@@ -2499,8 +2592,9 @@ function App() {
   var s11e=useState(false); var newsLoading=s11e[0]; var setNewsLoading=s11e[1];
   var s11f=useState(function(){ return JSON.parse(localStorage.getItem('wc26_kores')||'{}'); });
   var koResults=s11f[0]; var setKoResults=s11f[1];
-  var s11g=useState(localStorage.getItem('wc26_apikey')||'');
+  var s11g=useState(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');
   var apiKey=s11g[0]; var setApiKey=s11g[1];
+  var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
   var s12=useState(null); var toast=s12[0]; var setToast=s12[1];
   var s13=useState(0); var factI=s13[0]; var setFactI=s13[1];
   var s14=useState(0); var plyrI=s14[0]; var setPlyrI=s14[1];
@@ -2531,6 +2625,19 @@ function App() {
     Store.listen('preds', function(v) { setPreds(v||{}); });
     Store.listen('tpicks', function(v) { setTpicks(v||{}); });
     Store.listen('results', function(v) { setResults(v||{}); });
+    // Chat messages — per room, keyed as wc26_chat_{roomId}
+    var chatUnsub = null;
+    function subscribeChatRoom(roomId) {
+      if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+      if (!roomId) return;
+      chatUnsub = Store.listen('chat_' + roomId, function(v) {
+        setChatMsgs(function(prev) {
+          var updated = Object.assign({}, prev);
+          updated[roomId] = Array.isArray(v) ? v : [];
+          return updated;
+        });
+      });
+    }
 
     // ── Live score auto-sync every 60 s ────────────────────────────────
     var _syncTimer = null;
@@ -2546,8 +2653,8 @@ function App() {
         if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));return n;});
       });
     }
-    var _initKey = localStorage.getItem('wc26_apikey')||'';
-    if (_initKey) { runSync(_initKey); _syncTimer=setInterval(function(){runSync(localStorage.getItem('wc26_apikey')||'');},60000); }
+    var _initKey = localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2';
+    if (_initKey) { runSync(_initKey); _syncTimer=setInterval(function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');},60000); }
     return function(){if(_syncTimer)clearInterval(_syncTimer);};
 
     var fallback = setTimeout(function() {
@@ -2587,7 +2694,9 @@ function App() {
 
   function doReg(name, phone, favT, favP) {
     if (!name.trim()||!phone.trim()) return notify('Name & phone required','err');
-    if (Object.values(users).find(function(x){return x.phone===phone.trim();})) return notify('Phone already registered','err');
+    var ph=phone.trim();
+    if (!/^[79]\d{6}$/.test(ph)) return notify('Phone must start with 7 or 9 and be 7 digits','err');
+    if (Object.values(users).find(function(x){return x.phone===ph;})) return notify('Phone already registered','err');
     var id = genId();
     var nu = Object.assign({}, users);
     nu[id] = {id:id, name:name.trim(), phone:phone.trim(), favT:favT, favP:favP, joined:new Date().toISOString()};
@@ -2621,7 +2730,7 @@ function App() {
       var nr = Object.assign({}, rooms); nr[f.id] = upd;
       Store.set('rooms', nr);
     }
-    setRoom(upd); setModal(null); setTab('matches'); setScr('room');
+    setRoom(upd); setModal(null); setTab('matches'); setScr('room'); subscribeChatRoom(upd.id);
     if(localStorage.getItem('wc26_adm_'+upd.id)){var na=Object.assign({},adminAuth);na[upd.id]=true;setAdminAuth(na);}
     notify('Joined "' + f.name + '"! 🎉');
   }
@@ -2665,6 +2774,20 @@ function App() {
   var myPick = room ? (tpicks[user&&user.id+'_'+room.id]||{}).team : null;
   var isAdmin = room && adminAuth[room.id] === true;
   var qualifiers = getKOQualifiers(results);
+
+  function sendChatMessage(newMsg, onDone) {
+    if (!room) return;
+    var roomId = room.id;
+    var existing = (chatMsgs[roomId] || []).slice(-200); // keep last 200 msgs
+    var updated = existing.concat([newMsg]);
+    Store.set('chat_' + roomId, updated);
+    setChatMsgs(function(prev) {
+      var n = Object.assign({}, prev);
+      n[roomId] = updated;
+      return n;
+    });
+    if (onDone) onDone();
+  }
 
   function saveAPIKey(key) {
     localStorage.setItem('wc26_apikey', key);
@@ -2792,11 +2915,13 @@ function App() {
     <div class="page">
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');if(localStorage.getItem('wc26_adm_'+r.id)){var na=Object.assign({},adminAuth);na[r.id]=true;setAdminAuth(na);}}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('matches');setScr('room');subscribeChatRoom(r.id);if(localStorage.getItem('wc26_adm_'+r.id)){var na=Object.assign({},adminAuth);na[r.id]=true;setAdminAuth(na);}}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
 
       ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} users=${users} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
+          roomMsgs=${room&&chatMsgs[room.id]||[]}
+          onSendChat=${sendChatMessage}
           onKOResult=${function(km,h,a){
             var hs=prompt('Score for '+h+'?','0');
             var as=prompt('Score for '+a+'?','0');
