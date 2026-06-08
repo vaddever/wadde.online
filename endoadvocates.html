@@ -271,6 +271,40 @@
   footer a:hover{color:var(--amber)}
   .fbot{border-top:1px solid rgba(251,246,236,.18);padding-top:24px;font-size:.82rem;color:rgba(251,246,236,.6);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
 
+  /* ── ADMIN BAR ── */
+  .admin-bar{position:fixed;bottom:0;left:0;right:0;z-index:500;background:var(--plum);padding:0;display:none;box-shadow:0 -4px 24px -4px rgba(0,0,0,.3)}
+  .admin-bar.show{display:block}
+  .ab-inner{display:flex;align-items:center;gap:10px;max-width:var(--maxw);margin:0 auto;padding:10px 20px;flex-wrap:wrap}
+  .ab-page{font-size:.78rem;font-weight:600;color:rgba(255,255,255,.6)}
+  .ab-btn{background:rgba(255,255,255,.1);color:var(--ivory);border:1px solid rgba(255,255,255,.18);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:.83rem;font-family:inherit;font-weight:600;transition:.2s;white-space:nowrap}
+  .ab-btn:hover{background:rgba(255,255,255,.22)}
+  .ab-user{font-size:.78rem;color:rgba(255,255,255,.55);margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  .ab-out{color:#ffb3b3!important;border-color:rgba(255,179,179,.35)!important}
+  /* ── EDIT DRAWER ── */
+  .edit-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;display:none;backdrop-filter:blur(2px)}
+  .edit-overlay.show{display:block}
+  .edit-drawer{position:fixed;top:0;right:0;bottom:0;width:500px;max-width:96vw;background:var(--ivory);z-index:700;transform:translateX(105%);transition:.32s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;box-shadow:-10px 0 50px rgba(0,0,0,.18)}
+  .edit-drawer.open{transform:none}
+  .ed-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px 14px;border-bottom:1px solid var(--line);flex-shrink:0;gap:12px}
+  .ed-head h3{font-size:1.15rem;color:var(--plum)}
+  .ed-close{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--ink-soft);line-height:1;padding:2px 6px;border-radius:6px}
+  .ed-close:hover{background:var(--ivory-2)}
+  #edBody{flex:1;padding:18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:0}
+  .ed-foot{padding:14px 24px;border-top:1px solid var(--line);display:flex;gap:10px;flex-shrink:0;background:var(--card)}
+  .ed-section{margin-bottom:6px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  .ed-section:last-child{border-bottom:none}
+  .ed-section>h4{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber-deep);margin-bottom:14px;font-family:'Schibsted Grotesk',sans-serif}
+  .ed-field{margin-bottom:12px}
+  .ed-hint{font-size:.8rem;color:var(--ink-soft);margin-bottom:8px;line-height:1.5}
+  .ed-hint code{background:var(--ivory-2);padding:1px 5px;border-radius:4px;font-size:.78rem}
+  /* ── PDF UPLOAD BUTTON ── */
+  .pdf-upload-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:10px;border:1.5px dashed var(--line);background:var(--ivory-2);color:var(--ink-soft);cursor:pointer;font-size:.88rem;font-weight:600;margin-bottom:8px;transition:.2s;font-family:inherit;width:100%;justify-content:center}
+  .pdf-upload-btn:hover{border-color:var(--amber);color:var(--ink)}
+  .pdf-upload-btn:disabled{opacity:.5;cursor:wait}
+  @media(prefers-color-scheme:dark){
+    .edit-drawer{background:var(--ivory);border-left:1px solid var(--line)}
+    .ed-foot{background:var(--card)}
+  }
   @media(max-width:860px){
     .cond-grid{grid-template-columns:1fr}
     .cond-aside{position:static}
@@ -323,6 +357,9 @@
     .tab.active{background:var(--amber);color:#241a08;border-color:var(--amber)}
   }
 </style>
+  <!-- PDF.js for text extraction from uploaded PDFs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>if(typeof pdfjsLib!=="undefined") pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
   <!-- Firebase SDK (compat v10) -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -379,7 +416,7 @@
     <div class="sec-head">
       <div class="eyebrow">The Conditions</div>
       <h2>Two conditions, often confused — and often together.</h2>
-      <p>Endometriosis and adenomyosis are chronic conditions where tissue similar to the lining of the uterus grows where it shouldn't. They share many symptoms, can occur at the same time, and are both frequently dismissed or diagnosed late. Here's what they actually are.</p>
+      <p id="pg-cond-intro">Endometriosis and adenomyosis are chronic conditions where tissue similar to the lining of the uterus grows where it shouldn't. They share many symptoms, can occur at the same time, and are both frequently dismissed or diagnosed late. Here's what they actually are.</p>
     </div>
     <div class="tabs">
       <button class="tab active" data-c="endo" onclick="condTab('endo')">Endometriosis</button>
@@ -388,7 +425,7 @@
 
     <div class="cond-panel show" id="c-endo">
       <div class="cond-grid">
-        <div class="cond-body">
+        <div class="cond-body" id="pg-endo-body">
           <h3>What it is</h3>
           <p>Endometriosis is a chronic, inflammatory condition in which tissue similar to the endometrium — the lining of the uterus — grows <em>outside</em> the uterus. These growths, called lesions, are most often found in the pelvis: on the ovaries, fallopian tubes, the tissue lining the pelvis, and sometimes the bowel or bladder. In rarer cases lesions appear elsewhere in the body.</p>
           <p>Each cycle this tissue responds to hormones much like the uterine lining does — it thickens and bleeds — but it has no way to leave the body. The result is inflammation, scar tissue (adhesions), and often significant pain.</p>
@@ -420,7 +457,7 @@
 
     <div class="cond-panel" id="c-adeno">
       <div class="cond-grid">
-        <div class="cond-body">
+        <div class="cond-body" id="pg-adeno-body">
           <h3>What it is</h3>
           <p>Adenomyosis is a condition in which tissue similar to the uterine lining grows <em>into the muscular wall of the uterus</em> (the myometrium) — rather than outside the uterus as in endometriosis. The trapped tissue still responds to the menstrual cycle, causing the uterine wall to thicken, the uterus to enlarge and become tender, and periods to become heavy and painful.</p>
           <p>It can be focal (confined to one area) or diffuse (spread throughout the uterine wall). It's possible to have both adenomyosis and endometriosis at the same time.</p>
@@ -502,12 +539,12 @@
     <div class="sec-head">
       <div class="eyebrow">Find a Specialist</div>
       <h2>Getting the right care matters.</h2>
-      <p>Endometriosis and adenomyosis are best managed by clinicians who specialise in them. A general practitioner is a good first step, but for diagnosis and surgery you want someone with specific expertise.</p>
+      <p id="pg-spec-guide">Endometriosis and adenomyosis are best managed by clinicians who specialise in them. A general practitioner is a good first step, but for diagnosis and surgery you want someone with specific expertise.</p>
     </div>
 
     <div class="admin-card" style="margin-bottom:40px">
       <h3>How to find the right specialist</h3>
-      <div class="cond-body">
+      <div class="cond-body" id="pg-spec-guide-body">
         <ul>
           <li><b>Start with a gynaecologist</b> — ideally one with a stated interest in endometriosis/adenomyosis or pelvic pain.</li>
           <li><b>Look for an accredited endometriosis centre</b> or a surgeon experienced in excision surgery if surgery is on the table.</li>
@@ -515,6 +552,7 @@
           <li><b>Keep a symptom diary</b> before your appointment (the Self-Check below can generate one) so nothing gets forgotten.</li>
           <li><b>Questions worth asking:</b> How many cases like mine do you see? What are my diagnosis and treatment options? What happens if the first approach doesn't work?</li>
         </ul>
+        </div>
       </div>
     </div>
 
@@ -559,38 +597,45 @@
     <div class="sec-head">
       <div class="eyebrow">Support & Community</div>
       <h2>You don't have to carry this alone.</h2>
-      <p>Chronic pain affects far more than the body. Whatever stage you're at — newly suspecting something, freshly diagnosed, or years into managing it — there is support and there are strategies that help.</p>
+      <p id="pg-supp-intro">Chronic pain affects far more than the body. Whatever stage you're at — newly suspecting something, freshly diagnosed, or years into managing it — there is support and there are strategies that help.</p>
     </div>
     <div class="support-grid">
       <div class="sup-card">
-        <h3>🫂 Peer & emotional support</h3>
+        <h3 id="pg-supp-c1h">🫂 Peer & emotional support</h3>
+        <div id="pg-supp-c1b">
         <p>Connecting with others who understand reduces isolation and helps you feel believed.</p>
         <ul>
           <li>Join a local or online support group for endometriosis/adenomyosis.</li>
           <li>Bring a trusted friend or family member to appointments.</li>
           <li>Consider talking to a counsellor or psychologist — chronic pain and anxiety/low mood often travel together, and support helps.</li>
         </ul>
+        </div>
       </div>
       <div class="sup-card">
-        <h3>🛠️ Practical coping strategies</h3>
+        <h3 id="pg-supp-c2h">🛠️ Practical coping strategies</h3>
+        <div id="pg-supp-c2b">
         <p>Small, consistent tools can make daily life more manageable alongside medical treatment.</p>
         <ul>
           <li>Keep a symptom and pain diary to spot patterns and inform your care.</li>
           <li>Heat, gentle movement, rest and pacing can ease flares for many.</li>
           <li>Ask your care team about pelvic-floor physiotherapy and pain-management services.</li>
         </ul>
+        </div>
       </div>
       <div class="sup-card">
-        <h3>🗣️ Advocating for yourself</h3>
+        <h3 id="pg-supp-c3h">🗣️ Advocating for yourself</h3>
+        <div id="pg-supp-c3b">
         <p>Many people are dismissed for years. Being prepared helps you be heard.</p>
         <ul>
           <li>Write down your symptoms, how long, and how they affect your life.</li>
           <li>Be specific about pain severity and its impact on work, sleep and relationships.</li>
           <li>It's okay to ask for a referral to a specialist or a second opinion.</li>
         </ul>
+        </div>
       </div>
       <div class="sup-card">
-        <h3>💛 If things feel overwhelming</h3>
+        <h3 id="pg-supp-c4h">💛 If things feel overwhelming</h3>
+        <div id="pg-supp-c4b">
         <p>Living with persistent pain can take a real toll on mental health. That is understandable, and help is available.</p>
         <ul>
           <li>Reach out to your doctor about how you're coping emotionally, not just physically.</li>
@@ -661,6 +706,31 @@
   </div>
 </footer>
 
+<!-- ============ ADMIN TOOLBAR ============ -->
+<div id="adminBar" class="admin-bar">
+  <div class="ab-inner">
+    <span id="abPageName" class="ab-page"></span>
+    <button class="ab-btn" onclick="openPageEditor()">✏️ Edit this page</button>
+    <button class="ab-btn" onclick="go('admin');closePageEditor()">⚙️ Admin Panel</button>
+    <span id="abUser" class="ab-user"></span>
+    <button class="ab-btn ab-out" onclick="adminSignOut()">Sign out</button>
+  </div>
+</div>
+
+<!-- ============ PAGE EDIT DRAWER ============ -->
+<div id="editOverlay" class="edit-overlay" onclick="closePageEditor()"></div>
+<div id="editDrawer" class="edit-drawer">
+  <div class="ed-head">
+    <h3 id="edTitle">Edit page</h3>
+    <button class="ed-close" onclick="closePageEditor()" title="Close">✕</button>
+  </div>
+  <div id="edBody"></div>
+  <div class="ed-foot">
+    <button class="btn btn-primary" onclick="savePageEdits()">Save changes</button>
+    <button class="btn btn-ghost" onclick="closePageEditor()">Cancel</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -668,12 +738,12 @@
    FIREBASE CONFIGURATION  — paste your values here
    ============================================================ */
 const firebaseConfig = {
-  apiKey: "AIzaSyDx3VwQAklCNzbaFtkhWg1G9WLjprBU_h4",
-  authDomain: "endoadvocates-9285b.firebaseapp.com",
-  projectId: "endoadvocates-9285b",
-  storageBucket: "endoadvocates-9285b.firebasestorage.app",
-  messagingSenderId: "957930794866",
-  appId: "1:957930794866:web:c7f1ff6a01fc2fb22cf7eb"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
 
 /* ============================================================
@@ -700,6 +770,7 @@ auth.onAuthStateChanged(user => {
   isAdmin = !!(user && adminEmails.includes(user.email));
   const el = document.getElementById('admin');
   if (el && el.classList.contains('show')) renderAdmin();
+  updateAdminBar();
 });
 
 /* ============================================================
@@ -794,20 +865,23 @@ const DEFAULT_MENU = [
    ============================================================ */
 async function loadConfig() {
   try {
-    const [aDoc, cDoc, mDoc] = await Promise.all([
+    const [aDoc, cDoc, mDoc, pcDoc] = await Promise.all([
       db.collection('siteConfig').doc('admins').get(),
       db.collection('siteConfig').doc('content').get(),
-      db.collection('siteConfig').doc('menu').get()
+      db.collection('siteConfig').doc('menu').get(),
+      db.collection('siteConfig').doc('pageContent').get()
     ]);
     const list = aDoc.exists ? (aDoc.data().list || []) : [];
     adminEmails = [...new Set([...ADMIN_EMAILS, ...list])];
     siteContent = cDoc.exists ? { ...DEFAULT_CONTENT, ...cDoc.data() } : { ...DEFAULT_CONTENT };
-    menuConfig  = mDoc.exists ? (mDoc.data().items || [...DEFAULT_MENU]) : [...DEFAULT_MENU];
+    menuConfig   = mDoc.exists ? (mDoc.data().items || [...DEFAULT_MENU]) : [...DEFAULT_MENU];
+    pageContent  = pcDoc.exists ? { ...DEFAULT_PAGE_CONTENT, ...pcDoc.data() } : { ...DEFAULT_PAGE_CONTENT };
   } catch(e) {
     console.warn('loadConfig fallback:', e.message);
     adminEmails = [...ADMIN_EMAILS];
     siteContent = { ...DEFAULT_CONTENT };
     menuConfig  = [...DEFAULT_MENU];
+    pageContent = { ...DEFAULT_PAGE_CONTENT };
   }
   isAdmin = !!(currentUser && adminEmails.includes(currentUser.email));
 }
@@ -1156,6 +1230,7 @@ async function renderAdmin() {
           '<div><label>Symbol</label><input id="naSym" placeholder="§" value="✦" maxlength="2"></div></div>' +
         '<label>Short excerpt (card preview)</label><input id="naExcerpt" placeholder="One-sentence summary">' +
         '<label>Body — blank line = new paragraph; "## " at line start = heading</label>' +
+        '<button class="pdf-upload-btn" id="pdfUploadBtn" type="button" onclick="triggerPDFUpload()">📄 Upload PDF — extract text automatically</button>' +
         '<textarea id="naBody" placeholder="Write your article here..."></textarea>' +
         '<div style="display:flex;gap:10px;align-items:center">' +
           '<button class="btn btn-primary" id="artSaveBtn" onclick="saveArticle()">Publish article</button>' +
@@ -1566,6 +1641,360 @@ async function removeAdmin(email) {
 }
 
 /* ============================================================
+   PAGE CONTENT — per-page editable text stored in Firestore
+   ============================================================ */
+let pageContent = {};
+
+const DEFAULT_PAGE_CONTENT = {
+  cond_intro: "Endometriosis and adenomyosis are chronic conditions where tissue similar to the lining of the uterus grows where it shouldn't. They share many symptoms, can occur at the same time, and are both frequently dismissed or diagnosed late. Here's what they actually are.",
+  cond_endo:
+`### What it is
+
+Endometriosis is a chronic, inflammatory condition in which tissue similar to the endometrium — the lining of the uterus — grows outside the uterus. These growths are most often found on the ovaries, fallopian tubes, and the tissue lining the pelvis; sometimes the bowel or bladder.
+
+Each cycle this tissue responds to hormones much like the uterine lining does — it thickens and bleeds — but it has no way to leave the body. The result is inflammation, scar tissue, and often significant pain.
+
+### Common symptoms
+
+- Severe, often debilitating period pain (dysmenorrhea)
+- Chronic pelvic pain that continues between periods
+- Pain during or after sex (dyspareunia)
+- Painful bowel movements or urination, especially during periods
+- Heavy or irregular bleeding
+- Bloating and nausea ("endo belly"), fatigue
+- Difficulty getting pregnant (affects an estimated 30–50%)
+
+Symptoms vary enormously from person to person, and severity doesn't always match the amount of disease present.
+
+### How it's diagnosed
+
+Diagnosis has historically required laparoscopy — keyhole surgery to view and biopsy lesions, still considered the gold standard. Today, international guidelines also support a clinical diagnosis based on symptoms plus imaging such as transvaginal ultrasound or MRI.
+
+### How it's managed
+
+There is currently no cure, but symptoms can often be managed well. Approaches include anti-inflammatory pain relief (NSAIDs), hormonal therapies, GnRH agonists or the newer oral GnRH antagonists, and surgery to remove lesions. Care increasingly includes physiotherapy, pain specialists and mental-health support.`,
+
+  cond_adeno:
+`### What it is
+
+Adenomyosis is a condition in which tissue similar to the uterine lining grows into the muscular wall of the uterus (the myometrium) — rather than outside the uterus as in endometriosis. The trapped tissue still responds to the menstrual cycle, causing the uterine wall to thicken and the uterus to enlarge.
+
+It can be focal (confined to one area) or diffuse (spread throughout the uterine wall). It is possible to have both adenomyosis and endometriosis at the same time.
+
+### Common symptoms
+
+- Heavy, prolonged menstrual bleeding
+- Severe cramping and period pain
+- Chronic pelvic pain or a feeling of pressure / heaviness
+- An enlarged, tender uterus
+- Bloating and abdominal discomfort
+- Pain during sex
+
+Adenomyosis pain is often more constant and centred on the uterus, while classic endometriosis pain tends to flare cyclically.
+
+### How it's diagnosed
+
+Adenomyosis is usually identified through imaging — transvaginal ultrasound or MRI — which can show thickening and changes in the uterine wall. Imaging now allows diagnosis without surgery in most cases.
+
+### How it's managed
+
+Treatment focuses on controlling pain and heavy bleeding: NSAIDs, hormonal options (the pill, hormonal IUD, progestins), and non-hormonal medicines such as tranexamic acid. Hysterectomy — removing the uterus — is the one definitive cure, but it ends fertility.`,
+
+  supp_intro: "Chronic pain affects far more than the body. Whatever stage you're at — newly suspecting something, freshly diagnosed, or years into managing it — there is support and there are strategies that help.",
+  supp_c1_title: "🫂 Peer & emotional support",
+  supp_c1_body:
+`Connecting with others who understand reduces isolation and helps you feel believed.
+
+- Join a local or online support group for endometriosis/adenomyosis.
+- Bring a trusted friend or family member to appointments.
+- Consider talking to a counsellor or psychologist — chronic pain and anxiety/low mood often travel together.`,
+
+  supp_c2_title: "🛠️ Practical coping strategies",
+  supp_c2_body:
+`Small, consistent tools can make daily life more manageable alongside medical treatment.
+
+- Keep a symptom and pain diary to spot patterns and inform your care.
+- Heat, gentle movement, rest and pacing can ease flares for many.
+- Ask your care team about pelvic-floor physiotherapy and pain-management services.`,
+
+  supp_c3_title: "🗣️ Advocating for yourself",
+  supp_c3_body:
+`Many people are dismissed for years. Being prepared helps you be heard.
+
+- Write down your symptoms, how long, and how they affect your life.
+- Be specific about pain severity and its impact on work, sleep and relationships.
+- It's okay to ask for a referral to a specialist or a second opinion.`,
+
+  supp_c4_title: "💛 If things feel overwhelming",
+  supp_c4_body:
+`Living with persistent pain can take a real toll on mental health. That is understandable, and help is available.
+
+- Reach out to your doctor about how you're coping emotionally, not just physically.
+- If you ever feel unable to cope or unsafe, please contact a trusted person or a local health professional right away.
+- You deserve care for your whole self.`,
+
+  spec_guide: "Endometriosis and adenomyosis are best managed by clinicians who specialise in them. A general practitioner is a good first step, but for diagnosis and surgery you want someone with specific expertise.",
+  spec_guide_bullets:
+`- Start with a gynaecologist — ideally one with a stated interest in endometriosis/adenomyosis or pelvic pain.
+- Look for an accredited endometriosis centre or a surgeon experienced in excision surgery.
+- Ask about a multidisciplinary team — the best care combines gynaecology, pain management, physiotherapy, and mental-health support.
+- Keep a symptom diary before your appointment so nothing gets forgotten.
+- Questions worth asking: How many cases like mine do you see? What are my diagnosis and treatment options?`
+};
+
+async function loadPageContent() {
+  try {
+    const doc = await db.collection('siteConfig').doc('pageContent').get();
+    pageContent = doc.exists ? { ...DEFAULT_PAGE_CONTENT, ...doc.data() } : { ...DEFAULT_PAGE_CONTENT };
+  } catch(e) {
+    pageContent = { ...DEFAULT_PAGE_CONTENT };
+  }
+}
+
+function applyPageContent(pc) {
+  const s = (id, txt) => { const el=document.getElementById(id); if(el && txt!=null) el.textContent=txt; };
+
+  // Conditions
+  s('pg-cond-intro', pc.cond_intro);
+  const endoEl  = document.getElementById('pg-endo-body');
+  const adenoEl = document.getElementById('pg-adeno-body');
+  if (endoEl  && pc.cond_endo)  endoEl.innerHTML  = bodyToHtml(pc.cond_endo);
+  if (adenoEl && pc.cond_adeno) adenoEl.innerHTML = bodyToHtml(pc.cond_adeno);
+
+  // Support
+  s('pg-supp-intro', pc.supp_intro);
+  [1,2,3,4].forEach(i => {
+    s('pg-supp-c'+i+'h', pc['supp_c'+i+'_title']);
+    const el = document.getElementById('pg-supp-c'+i+'b');
+    if (el && pc['supp_c'+i+'_body']) el.innerHTML = bodyToHtml(pc['supp_c'+i+'_body']);
+  });
+
+  // Specialists
+  s('pg-spec-guide', pc.spec_guide);
+  const specBullets = document.getElementById('pg-spec-guide-body');
+  if (specBullets && pc.spec_guide_bullets) specBullets.innerHTML = bodyToHtml(pc.spec_guide_bullets);
+}
+
+/* ============================================================
+   ADMIN TOOLBAR — floating bar for signed-in admins
+   ============================================================ */
+function updateAdminBar() {
+  const bar  = document.getElementById('adminBar');
+  if (!bar) return;
+  if (isAdmin) {
+    bar.classList.add('show');
+    document.body.style.paddingBottom = '58px';
+    const u = document.getElementById('abUser');
+    if (u && currentUser) u.textContent = currentUser.email;
+    updatePageLabel();
+  } else {
+    bar.classList.remove('show');
+    document.body.style.paddingBottom = '';
+  }
+}
+
+function updatePageLabel() {
+  if (!isAdmin) return;
+  const el = document.getElementById('abPageName');
+  if (!el) return;
+  const page = (location.hash || '#home').slice(1).split('/')[0] || 'home';
+  const labels = { home:'Home', conditions:'Conditions', articles:'Articles', specialists:'Specialists', support:'Support', check:'Symptom Check', submit:'Submit Article', admin:'Admin Panel' };
+  el.textContent = '📄 ' + (labels[page] || page.charAt(0).toUpperCase()+page.slice(1));
+}
+
+/* ============================================================
+   PAGE EDITOR — slide-in drawer per page
+   ============================================================ */
+function openPageEditor() {
+  const page = (location.hash || '#home').slice(1).split('/')[0] || 'home';
+  const labels = { home:'Home', conditions:'Conditions', specialists:'Specialists', support:'Support', submit:'Submit Article', check:'Symptom Check', articles:'Articles', admin:'Admin Panel' };
+  document.getElementById('edTitle').textContent = 'Editing: ' + (labels[page]||page);
+
+  const edBody = document.getElementById('edBody');
+  if (page === 'home')        edBody.innerHTML = buildHomeEditor();
+  else if (page === 'conditions')  edBody.innerHTML = buildConditionsEditor();
+  else if (page === 'support')     edBody.innerHTML = buildSupportEditor();
+  else if (page === 'specialists') edBody.innerHTML = buildSpecialistsEditor();
+  else edBody.innerHTML =
+    '<p style="color:var(--ink-soft);margin-bottom:20px">Content for this page is managed in the Admin Panel.</p>' +
+    '<button class="btn btn-primary" onclick="go(\'admin\');closePageEditor()">Open Admin Panel →</button>';
+
+  document.getElementById('editOverlay').classList.add('show');
+  document.getElementById('editDrawer').classList.add('open');
+}
+
+function closePageEditor() {
+  document.getElementById('editOverlay').classList.remove('show');
+  document.getElementById('editDrawer').classList.remove('open');
+}
+
+function edFld(label, id, value, type) {
+  const isTA = type === 'textarea';
+  return '<div class="ed-field"><label>' + label + '</label>' +
+    (isTA
+      ? '<textarea id="' + id + '" style="min-height:' + (value && value.length > 200 ? '220px' : '70px') + '">' + esc(value||'') + '</textarea>'
+      : '<input id="' + id + '" value="' + esc(value||'') + '">') +
+    '</div>';
+}
+
+function buildHomeEditor() {
+  const c = siteContent;
+  return '<div class="ed-section"><h4>Hero heading</h4>' +
+    edFld('Text before the italic word', 'ed-pre', c.hero_pre) +
+    edFld('Italic accent word', 'ed-accent', c.hero_accent) +
+    edFld('Text after the italic word', 'ed-post', c.hero_post) +
+    edFld('Eyebrow label', 'ed-eyebrow', c.hero_eyebrow) +
+    edFld('Lead paragraph', 'ed-lead', c.hero_lead, 'textarea') +
+    edFld('Primary button text', 'ed-btncta', c.hero_btn_cta) +
+    edFld('Secondary button text', 'ed-btnghost', c.hero_btn_ghost) +
+    '</div>' +
+    '<div class="ed-section"><h4>Statistics</h4>' +
+    '<div class="row2"><div>' + edFld('Stat 1 — number', 'ed-s1n', c.stat1_num) + '</div><div>' + edFld('Stat 1 — label', 'ed-s1l', c.stat1_label) + '</div></div>' +
+    '<div class="row2"><div>' + edFld('Stat 2 — number', 'ed-s2n', c.stat2_num) + '</div><div>' + edFld('Stat 2 — label', 'ed-s2l', c.stat2_label) + '</div></div>' +
+    '<div class="row2"><div>' + edFld('Stat 3 — number', 'ed-s3n', c.stat3_num) + '</div><div>' + edFld('Stat 3 — label', 'ed-s3l', c.stat3_label) + '</div></div>' +
+    '</div>' +
+    '<div class="ed-section"><h4>Footer</h4>' +
+    edFld('Footer tagline', 'ed-footer-tag', c.footer_tagline, 'textarea') +
+    edFld('Footer credit line', 'ed-footer-credit', c.footer_credit) +
+    '</div>';
+}
+
+function buildConditionsEditor() {
+  const pc = pageContent;
+  return '<div class="ed-section"><h4>Section intro</h4>' +
+    edFld('Intro paragraph', 'ed-cond-intro', pc.cond_intro, 'textarea') + '</div>' +
+    '<div class="ed-section"><h4>Endometriosis content</h4>' +
+    '<p class="ed-hint">Use <code>### Heading</code> for subheadings, <code>- item</code> for bullet lists, blank line between sections.</p>' +
+    edFld('', 'ed-cond-endo', pc.cond_endo, 'textarea') + '</div>' +
+    '<div class="ed-section"><h4>Adenomyosis content</h4>' +
+    edFld('', 'ed-cond-adeno', pc.cond_adeno, 'textarea') + '</div>';
+}
+
+function buildSupportEditor() {
+  const pc = pageContent;
+  return '<div class="ed-section"><h4>Section intro</h4>' +
+    edFld('Intro paragraph', 'ed-supp-intro', pc.supp_intro, 'textarea') + '</div>' +
+    [1,2,3,4].map(i =>
+      '<div class="ed-section"><h4>Card ' + i + '</h4>' +
+      edFld('Card title', 'ed-supp-c'+i+'h', pc['supp_c'+i+'_title']) +
+      edFld('Card body (- for bullets)', 'ed-supp-c'+i+'b', pc['supp_c'+i+'_body'], 'textarea') +
+      '</div>'
+    ).join('');
+}
+
+function buildSpecialistsEditor() {
+  const pc = pageContent;
+  return '<div class="ed-section"><h4>Section intro</h4>' +
+    edFld('Lead sentence', 'ed-spec-guide', pc.spec_guide, 'textarea') + '</div>' +
+    '<div class="ed-section"><h4>Guide bullet points</h4>' +
+    '<p class="ed-hint">One bullet per line, start each with <code>- </code></p>' +
+    edFld('', 'ed-spec-bullets', pc.spec_guide_bullets, 'textarea') + '</div>';
+}
+
+async function savePageEdits() {
+  const page = (location.hash || '#home').slice(1).split('/')[0] || 'home';
+  const v = id => { const el=document.getElementById(id); return el ? el.value : null; };
+  const btn = document.querySelector('.ed-foot .btn-primary');
+  if (btn) { btn.textContent='Saving…'; btn.disabled=true; }
+
+  try {
+    if (page === 'home') {
+      const updates = {
+        hero_pre: v('ed-pre'), hero_accent: v('ed-accent'), hero_post: v('ed-post'),
+        hero_eyebrow: v('ed-eyebrow'), hero_lead: v('ed-lead'),
+        hero_btn_cta: v('ed-btncta'), hero_btn_ghost: v('ed-btnghost'),
+        stat1_num: v('ed-s1n'), stat1_label: v('ed-s1l'),
+        stat2_num: v('ed-s2n'), stat2_label: v('ed-s2l'),
+        stat3_num: v('ed-s3n'), stat3_label: v('ed-s3l'),
+        footer_tagline: v('ed-footer-tag'), footer_credit: v('ed-footer-credit')
+      };
+      const filtered = Object.fromEntries(Object.entries(updates).filter(([,val])=>val!==null));
+      Object.assign(siteContent, filtered);
+      await db.collection('siteConfig').doc('content').set(siteContent);
+      applyContent(siteContent);
+
+    } else {
+      let updates = {};
+      if (page === 'conditions') {
+        updates = { cond_intro: v('ed-cond-intro'), cond_endo: v('ed-cond-endo'), cond_adeno: v('ed-cond-adeno') };
+      } else if (page === 'support') {
+        updates = { supp_intro: v('ed-supp-intro') };
+        [1,2,3,4].forEach(i => {
+          updates['supp_c'+i+'_title'] = v('ed-supp-c'+i+'h');
+          updates['supp_c'+i+'_body']  = v('ed-supp-c'+i+'b');
+        });
+      } else if (page === 'specialists') {
+        updates = { spec_guide: v('ed-spec-guide'), spec_guide_bullets: v('ed-spec-bullets') };
+      }
+      const filtered = Object.fromEntries(Object.entries(updates).filter(([,val])=>val!==null));
+      Object.assign(pageContent, filtered);
+      await db.collection('siteConfig').doc('pageContent').set(pageContent);
+      applyPageContent(pageContent);
+    }
+
+    toast('Saved ✓');
+    closePageEditor();
+  } catch(e) {
+    toast('Save failed: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent='Save changes'; btn.disabled=false; }
+  }
+}
+
+/* ============================================================
+   PDF TEXT EXTRACTION — fill article body from uploaded PDF
+   ============================================================ */
+function triggerPDFUpload() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.pdf,application/pdf';
+  inp.onchange = e => { if(e.target.files[0]) extractPDFText(e.target.files[0]); };
+  inp.click();
+}
+
+async function extractPDFText(file) {
+  const bodyEl = document.getElementById('naBody');
+  const btn    = document.getElementById('pdfUploadBtn');
+  if (!bodyEl) return;
+
+  if (btn) { btn.textContent = '⏳ Extracting…'; btn.disabled = true; }
+  bodyEl.value = '';
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    if (typeof pdfjsLib === 'undefined') { toast('PDF.js not loaded — check your connection'); return; }
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let full = '';
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page    = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      let lastY = null, line = '';
+      content.items.forEach(item => {
+        if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+          full += line.trim() + '\n';
+          line = '';
+        }
+        line += item.str + ' ';
+        lastY = item.transform[5];
+      });
+      if (line.trim()) full += line.trim() + '\n';
+      full += '\n';
+    }
+    // Clean extracted text into paragraphs
+    full = full
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    bodyEl.value = full;
+    toast('Extracted ' + pdf.numPages + ' page' + (pdf.numPages>1?'s':'') + ' — review and edit before publishing');
+  } catch(e) {
+    toast('Could not read PDF — try a text-based PDF');
+    console.error('PDF error:', e);
+  } finally {
+    if (btn) { btn.textContent = '📄 Upload PDF'; btn.disabled = false; }
+  }
+}
+
+/* ============================================================
    BOOT
    ============================================================ */
 (async function () {
@@ -1582,6 +2011,7 @@ async function removeAdmin(email) {
   await loadConfig();
   renderNav(menuConfig);
   applyContent(siteContent);
+  applyPageContent(pageContent);
 
   try { await ensureSeeded(); } catch(e) { console.warn('Seed skipped:', e.message); }
 
