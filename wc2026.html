@@ -1456,16 +1456,31 @@ function SuperAdminApp() {
   var opS = useState(''); var oldPw = opS[0]; var setOldPw = opS[1];
   var pwMsgS = useState(''); var pwMsg = pwMsgS[0]; var setPwMsg = pwMsgS[1];
 
+  // ── Password helpers (local-first, GAS optional) ────────────────────
+  function getSuperHash() {
+    // Default hash of 'wadde2026'; user can override in localStorage
+    return localStorage.getItem('wc26_superpw_hash') || btoa('wadde2026');
+  }
+  function verifyLocal(pw) { return btoa(pw) === getSuperHash(); }
+
   function doLogin() {
     if (!pass.trim()) return;
-    setErr('Verifying…');
+    // 1. Verify locally first (works without GAS)
+    if (verifyLocal(pass.trim())) {
+      setAuthed(true); setErr(''); loadAll(); return;
+    }
+    // 2. Fall back to GAS verification (works once GAS is updated)
+    setErr('Checking…');
     fetch(GS_URL + '?action=superlogin&pass=' + encodeURIComponent(pass.trim()))
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.ok) { setAuthed(true); setErr(''); loadAll(); }
-        else setErr('✗ ' + (d.error || 'Wrong password'));
+        if (d.ok) {
+          // Sync local hash from GAS
+          localStorage.setItem('wc26_superpw_hash', btoa(pass.trim()));
+          setAuthed(true); setErr(''); loadAll();
+        } else setErr('✗ Wrong password');
       })
-      .catch(function(){ setErr('✗ Network error'); });
+      .catch(function(){ setErr('✗ Wrong password'); });
   }
 
   function loadAll() {
@@ -1474,12 +1489,12 @@ function SuperAdminApp() {
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults};
+    function tick() { done++; if (done >= keys.length) setLoading(false); }
     keys.forEach(function(k){
       fetch(GS_URL + '?action=get&key=' + k)
         .then(function(r){ return r.json(); })
-        .then(function(d){ setters[k](d.value||{}); })
-        .catch(function(){})
-        .finally(function(){ done++; if(done===keys.length) setLoading(false); });
+        .then(function(d){ setters[k](d.value||{}); tick(); })
+        .catch(function(){ tick(); });
     });
   }
 
@@ -1503,12 +1518,17 @@ function SuperAdminApp() {
 
   function changePw() {
     if (!oldPw || !newPw || newPw.length < 6) { setPwMsg('✗ New password must be 6+ characters'); return; }
-    setPwMsg('Saving…');
+    if (!verifyLocal(oldPw)) { setPwMsg('✗ Current password is wrong'); return; }
+    // Update local hash immediately (works without GAS)
+    localStorage.setItem('wc26_superpw_hash', btoa(newPw));
+    setOldPw(''); setNewPw('');
+    setPwMsg('✓ Password updated locally!');
+    // Also try to update GAS (optional — fails silently if GAS not updated)
     fetch(GS_URL + '?action=setsuperpw&oldpass=' + encodeURIComponent(oldPw) +
           '&newpass=' + encodeURIComponent(newPw))
       .then(function(r){ return r.json(); })
-      .then(function(d){ setPwMsg(d.ok ? '✓ Password updated!' : '✗ ' + d.error); })
-      .catch(function(){ setPwMsg('✗ Network error'); });
+      .then(function(d){ if (d.ok) setPwMsg('✓ Password updated (local + GAS)!'); })
+      .catch(function(){});
   }
 
   // ── Login screen ─────────────────────────────────────────────
@@ -2620,12 +2640,18 @@ function RoomPage(props) {
       <div style=${{fontSize:11,color:'var(--dm)',marginTop:8,textAlign:'center'}}>All times in Maldives Time (MVT, UTC+5)</div>
     </div>`}
     ${props.tab==='knockout'&&html`<div>
-      <${KOBracketView}
-        qualifiers=${props.qualifiers}
-        koResults=${props.koResults}
-        isAdmin=${props.isAdmin}
-        apiKey=${props.apiKey}
-        onResult=${function(km,h,a){ props.onKOResult&&props.onKOResult(km,h,a); }} />
+      ${!props.qualifiers
+        ? html`<div style=${{textAlign:'center',padding:'40px 20px',color:'var(--mu)'}}>
+            <div style=${{fontSize:32,marginBottom:8}}>⏳</div>
+            <p>Loading bracket…</p>
+          </div>`
+        : html`<${KOBracketView}
+          qualifiers=${props.qualifiers}
+          koResults=${props.koResults||{}}
+          isAdmin=${props.isAdmin}
+          apiKey=${props.apiKey}
+          onResult=${function(km,h,a){ props.onKOResult&&props.onKOResult(km,h,a); }} />`
+      }
     </div>`}
 
     ${props.tab==='leaderboard'&&html`<div>
