@@ -1039,7 +1039,7 @@ var Sess = {
 function calcPts(p, r) {
   if (!p || !r) return null;
   var exact = (p.h === r.h && p.a === r.a);
-  if (exact) return 4; // 2pts exact score + 2pts correct winner
+  if (exact) return 2; // exact score = 2 pts
   var pw = p.h > p.a ? 1 : p.h < p.a ? -1 : 0;
   var rw = r.h > r.a ? 1 : r.h < r.a ? -1 : 0;
   return pw === rw ? 2 : 0; // 2pts correct winner only
@@ -1499,21 +1499,27 @@ function SuperAdminApp() {
   }
 
   function deleteUser(uid) {
-    if (!confirm('Delete user '+uid+'? This cannot be undone.')) return;
+    var u = saUsers[uid];
+    if (!confirm('Delete user "' + (u&&u.name||uid) + '"?\nCannot be undone.')) return;
     var nu = Object.assign({}, saUsers);
     delete nu[uid];
-    setSaUsers(nu);
-    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'set', key:'wc26_users', value:nu})});
+    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'set', key:'wc26_users', value:nu})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if(d.ok!==false) setSaUsers(nu); else alert('Save error: '+(d.error||'?')); })
+      .catch(function(e){ alert('Network error: '+e.message); });
   }
 
   function deleteRoom(rid) {
-    if (!confirm('Delete room '+rid+'? All predictions in this room will remain.')) return;
+    var r = saRooms[rid];
+    if (!confirm('Delete room "' + (r&&r.name||rid) + '"?\nMembers lose access.')) return;
     var nr = Object.assign({}, saRooms);
     delete nr[rid];
-    setSaRooms(nr);
-    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'set', key:'wc26_rooms', value:nr})});
+    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'set', key:'wc26_rooms', value:nr})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if(d.ok!==false) setSaRooms(nr); else alert('Save error: '+(d.error||'?')); })
+      .catch(function(e){ alert('Network error: '+e.message); });
   }
 
   function changePw() {
@@ -1835,12 +1841,21 @@ function WelcomePage(props) {
     </div>
     <div class="g2" style=${{marginBottom:12}}>
 
-      <div class="card-dark" style=${{borderColor:'rgba(240,180,41,.15)'}}>
-        <div style=${{fontSize:10,color:'var(--mu)',letterSpacing:1.5,marginBottom:10,fontFamily:'Barlow Condensed',fontWeight:600}}>SCORING</div>
-        <div style=${{display:'flex',flexDirection:'column',gap:7,fontSize:12}}>
-          <div style=${{display:'flex',justifyContent:'space-between'}}><span style=${{color:'var(--mu)'}}>🎯 Exact score</span><span style=${{color:'var(--gn)',fontWeight:500}}>2 pts</span></div>
-          <div style=${{display:'flex',justifyContent:'space-between'}}><span style=${{color:'var(--mu)'}}>✅ Correct winner</span><span style=${{color:'var(--bl)',fontWeight:500}}>2 pts</span></div>
-          <div style=${{display:'flex',justifyContent:'space-between'}}><span style=${{color:'var(--mu)'}}>🏆 Tournament pick</span><span style=${{color:'var(--gold)',fontWeight:500}}>+5 pts</span></div>
+      <div class="card-dark" style=${{borderColor:'rgba(240,180,41,.15)',padding:'16px'}}>
+        <div style=${{fontSize:10,color:'var(--gold)',letterSpacing:2,fontFamily:'Barlow Condensed',fontWeight:700,marginBottom:12}}>POINT DETAILS</div>
+        <div style=${{display:'flex',flexDirection:'column',gap:9}}>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+            <span style=${{color:'var(--mu)',fontSize:13}}>🎯 Exact score</span>
+            <strong style=${{color:'#22c55e',fontSize:14,flexShrink:0}}>+2 pts</strong>
+          </div>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+            <span style=${{color:'var(--mu)',fontSize:13}}>✅ Correct winner</span>
+            <strong style=${{color:'#60a5fa',fontSize:14,flexShrink:0}}>+2 pts</strong>
+          </div>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+            <span style=${{color:'var(--mu)',fontSize:13}}>🏆 Champion Team</span>
+            <strong style=${{color:'var(--gold)',fontSize:14,flexShrink:0}}>+5 pts</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -1946,6 +1961,7 @@ function PlayerPicker(props) {
 function AuthPage(props) {
   var ns=useState(''); var name=ns[0]; var setName=ns[1];
   var ps=useState(''); var phone=ps[0]; var setPhone=ps[1];
+  var pis=useState(''); var pin=pis[0]; var setPin=pis[1];
   var fs=useState([]); var favT=fs[0]; var setFavT=fs[1];
   var fp=useState([]); var favP=fp[0]; var setFavP=fp[1];
   var ss=useState(1); var step=ss[0]; var setStep=ss[1];
@@ -1953,10 +1969,10 @@ function AuthPage(props) {
   function togT(t){ if(favT.includes(t))setFavT(favT.filter(function(x){return x!==t;}));else if(favT.length<1)setFavT(favT.concat([t])); }
   function reset(m){ props.setMode(m); setStep(1); setName(''); setPhone(''); setFavT([]); setFavP(['','','']); }
   function sub(){
-    if(props.mode==='login'){props.onLogin(name,phone);return;}
-    if(step===1){if(!name||!phone)return;setStep(2);}
+    if(props.mode==='login'){props.onLogin(name,phone,pin);return;}
+    if(step===1){if(!name||!phone||!pin||pin.length<4)return notify('Name, phone & PIN required','err');setStep(2);}
     else if(step===2){if(!favT.length)return;setStep(3);}
-    else props.onReg(name,phone,favT,favP?[favP]:[]);
+    else props.onReg(name,phone,pin,favT,favP?[favP]:[]);
   }
   return html`<div style=${{maxWidth:480,margin:'0 auto',paddingTop:8}}>
     <button class="btn" onClick=${props.onBack} style=${{marginBottom:14}}><i class="ti ti-arrow-left"></i> Back</button>
@@ -1968,13 +1984,19 @@ function AuthPage(props) {
         <h2>Welcome back</h2>
         <div><label>Name</label><input value=${name} onChange=${function(e){setName(e.target.value);}} placeholder="Your name" /></div>
         <div><label>Phone</label><input value=${phone} onChange=${function(e){setPhone(e.target.value);}} placeholder="+1234567890" /></div>
+        <div><label>PIN</label><input type="password" inputMode="numeric" maxLength="6" value=${pin} onChange=${function(e){setPin(e.target.value.replace(/\D/g,''));}} placeholder="4–6 digit PIN" /></div>
+        <p style=${{fontSize:11,color:'var(--dm)',margin:'-8px 0 0'}}>No PIN? Leave blank (older accounts work without it)</p>
         <button class="btn-p" style=${{width:'100%',marginTop:4}} onClick=${sub}>Log in →</button>
       </div>` : html`<div>
         ${step===1&&html`<div style=${{display:'flex',flexDirection:'column',gap:14}}>
           <h2>Create profile <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>1 of 3</span></h2>
           <div><label>Your name</label><input value=${name} onChange=${function(e){setName(e.target.value);}} placeholder="Full name" /></div>
           <div><label>Phone</label><input value=${phone} onChange=${function(e){setPhone(e.target.value);}} placeholder="+1234567890" /></div>
-          <button class="btn-p" style=${{width:'100%',opacity:(!name||!phone)?0.45:1}} disabled=${!name||!phone} onClick=${sub}>Next: Pick teams →</button>
+          <div>
+            <label>Create a PIN <span style=${{color:'var(--dm)',fontWeight:400,fontSize:12}}>(4–6 digits, required to log in)</span></label>
+            <input type="password" inputMode="numeric" maxLength="6" value=${pin} onChange=${function(e){setPin(e.target.value.replace(/\D/g,''));}} placeholder="e.g. 1234" />
+          </div>
+          <button class="btn-p" style=${{width:'100%',opacity:(!name||!phone||pin.length<4)?0.45:1}} disabled=${!name||!phone||pin.length<4} onClick=${sub}>Next: Pick teams →</button>
         </div>`}
         ${step===2&&html`<div>
           <h2>Favorite teams <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>2 of 3 · pick 1</span></h2>
@@ -2075,7 +2097,7 @@ function DashPage(props) {
       <div class="card" style=${{padding:'12px 14px',background:'var(--bg2)'}}>
         <h3 style=${{fontSize:13,margin:'0 0 8px',color:'var(--tx)'}}>🏅 Points Details</h3>
         <div style=${{display:'flex',flexDirection:'column',gap:5,fontSize:12,color:'var(--mu)'}}>
-          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}> +4 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}> +2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner<strong style=${{color:'#60a5fa'}}> +2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>❌ Wrong<strong style=${{color:'var(--dm)'}}> 0 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Champion Team<strong style=${{color:'var(--gold)'}}> +5 pts</strong></div>
@@ -2713,7 +2735,7 @@ function RoomPage(props) {
       <div class="card" style=${{marginTop:14,background:'var(--bg3)'}}>
         <h3 style=${{margin:'0 0 10px'}}>🏅 Points Details</h3>
         <div style=${{display:'flex',flexDirection:'column',gap:6,fontSize:13,color:'var(--mu)'}}>
-          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}>+4 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}>+2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner / draw<strong style=${{color:'#60a5fa'}}>2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>❌ Wrong prediction<strong style=${{color:'var(--dm)'}}>0 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style=${{color:'var(--gold)'}}>+5 pts</strong></div>
@@ -2827,6 +2849,36 @@ function RoomPage(props) {
       ${!props.isAdmin
         ? html`<${AdminLock} onUnlock=${props.onAdminUnlock} />`
         : html`<div style=${{display:'flex',flexDirection:'column',gap:12}}>
+            <!-- Announcements -->
+            <div class="card" style=${{padding:'14px 16px'}}>
+              <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                <h3 style=${{margin:0,fontSize:15}}>📢 Announcements</h3>
+                <button class="btn-p" style=${{fontSize:12,padding:'5px 12px'}}
+                  onClick=${function(){props.onAddAnn&&props.onAddAnn();}}>+ Add</button>
+              </div>
+              ${(props.announcements||[]).length===0
+                ? html`<p style=${{fontSize:12,color:'var(--dm)',margin:0}}>No announcements yet. Tap + Add to pin a message visible to all members.</p>`
+                : html`<div style=${{display:'flex',flexDirection:'column',gap:6}}>
+                    ${(props.announcements||[]).map(function(a,i){
+                      return html`<div key=${a.id||i} style=${{
+                        background:'var(--bg3)',borderRadius:'var(--rs)',
+                        padding:'10px 12px',border:'1px solid var(--bdr)'
+                      }}>
+                        <div style=${{fontSize:13,fontWeight:500,marginBottom:a.body?3:0}}>${a.title||'(no title)'}</div>
+                        ${a.body&&html`<div style=${{fontSize:12,color:'var(--mu)',whiteSpace:'pre-wrap'}}>${a.body.slice(0,100)}${a.body.length>100?'…':''}</div>`}
+                        ${a.imageUrl&&html`<div style=${{fontSize:11,color:'var(--dm)',marginTop:3}}>🖼 Image attached</div>`}
+                        <div style=${{display:'flex',gap:6,marginTop:6}}>
+                          <button class="btn" style=${{fontSize:11,padding:'3px 10px'}}
+                            onClick=${function(){props.onEditAnn&&props.onEditAnn(a);}}>Edit</button>
+                          <button class="btn" style=${{fontSize:11,padding:'3px 10px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
+                            onClick=${function(){props.onDeleteAnn&&props.onDeleteAnn(a.id||i);}}>Remove</button>
+                        </div>
+                      </div>`;
+                    })}
+                  </div>`
+              }
+            </div>
+
             <!-- API Key configuration -->
             <div class="card" style=${{padding:'14px 16px'}}>
               <div style=${{fontWeight:600,marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
@@ -3041,13 +3093,20 @@ function App() {
     var unsub = Store.listen('users', function(v) {
       var uu = v || {};
       setUsers(uu);
-      // Always keep user profile fresh
-      if (sess && uu[sess]) setUser(uu[sess]);
-      // Only navigate on FIRST load — never push user out of current screen
+      // Keep user fresh from GAS but ONLY if the ID still matches
+      if (sess && uu[sess] && uu[sess].id === sess) {
+        Sess.set('wc26_u', uu[sess]); // keep cache in sync
+        setUser(uu[sess]);
+      }
+      // Only navigate on FIRST load
       if (_firstUserLoad) {
         _firstUserLoad = false;
-        if (sess && uu[sess]) setScr('dash');
-        else { if(sess) Sess.del('wc26s'); setScr('welcome'); }
+        var cached = Sess.get('wc26_u');
+        if (sess && (uu[sess] || cached)) {
+          var u0 = uu[sess] || cached;
+          if (u0.id === sess) { setUser(u0); setScr('dash'); }
+          else { Sess.del('wc26s'); Sess.del('wc26_u'); setScr('welcome'); }
+        } else { if(sess) { Sess.del('wc26s'); Sess.del('wc26_u'); } setScr('welcome'); }
       }
     });
     Store.listen('rooms', function(v) { setRooms(v||{}); });
@@ -3129,22 +3188,25 @@ function App() {
     setTimeout(function(){setToast(null);}, 3000);
   }
 
-  function doReg(name, phone, favT, favP) {
+  function doReg(name, phone, pin, favT, favP) {
     if (!name.trim()||!phone.trim()) return notify('Name & phone required','err');
+    if (!pin||!/^\d{4,6}$/.test(pin)) return notify('PIN must be 4–6 digits','err');
     var ph=phone.trim();
     if (!/^[79]\d{6}$/.test(ph)) return notify('Phone must start with 7 or 9 and be 7 digits','err');
     if (Object.values(users).find(function(x){return x.phone===ph;})) return notify('Phone already registered','err');
     var id = genId();
     var nu = Object.assign({}, users);
-    nu[id] = {id:id, name:name.trim(), phone:phone.trim(), favT:favT, favP:favP, joined:new Date().toISOString()};
+    nu[id] = {id:id, name:name.trim(), phone:phone.trim(), pin:btoa(pin), favT:favT, favP:favP, joined:new Date().toISOString()};
     Store.set('users', nu);
-    Sess.set('wc26s', id);
+    Sess.set('wc26s', id); Sess.set('wc26_u', nu[id]);
     setUser(nu[id]); setScr('dash'); notify('Welcome ' + name + '! 🎉');
   }
-  function doLogin(name, phone) {
+  function doLogin(name, phone, pin) {
     var f = Object.values(users).find(function(x){return x.name.toLowerCase()===name.toLowerCase().trim()&&x.phone===phone.trim();});
-    if (!f) return notify('User not found','err');
-    Sess.set('wc26s', f.id); setUser(f); setScr('dash'); notify('Welcome back ' + f.name + '!');
+    if (!f) return notify('User not found. Check your name & phone.','err');
+    // Check PIN if user has one set (older accounts without PIN still work)
+    if (f.pin && btoa(pin||'') !== f.pin) return notify('Incorrect PIN','err');
+    Sess.set('wc26s', f.id); Sess.set('wc26_u', f); setUser(f); setScr('dash'); notify('Welcome back ' + f.name + '!');
   }
   function doLogout() { Sess.del('wc26s'); setUser(null); setRoom(null); setScr('welcome'); }
 
