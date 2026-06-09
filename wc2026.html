@@ -1501,13 +1501,37 @@ function SuperAdminApp() {
 
   function deleteUser(uid) {
     var u = saUsers[uid];
-    if (!confirm('Delete user "' + (u&&u.name||uid) + '"?\nCannot be undone.')) return;
+    if (!confirm('Delete user "' + (u&&u.name||uid) + '"?\nThis also removes them from all rooms. Cannot be undone.')) return;
+
+    // 1. Remove from users
     var nu = Object.assign({}, saUsers);
     delete nu[uid];
+
+    // 2. Remove from every room they belong to
+    var nr = Object.assign({}, saRooms);
+    var roomsChanged = false;
+    Object.keys(nr).forEach(function(rid) {
+      var r = nr[rid];
+      if (r.members && r.members.includes(uid)) {
+        nr[rid] = Object.assign({}, r, {members: r.members.filter(function(m){ return m !== uid; })});
+        roomsChanged = true;
+      }
+    });
+
+    // 3. Save users (required) — rooms (if changed)
     fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({action:'set', key:'wc26_users', value:nu})})
       .then(function(r){ return r.json(); })
-      .then(function(d){ if(d.ok!==false) setSaUsers(nu); else alert('Save error: '+(d.error||'?')); })
+      .then(function(d){
+        if (d.ok !== false) {
+          setSaUsers(nu);
+          if (roomsChanged) {
+            setSaRooms(nr);
+            return fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+              body:JSON.stringify({action:'set', key:'wc26_rooms', value:nr})});
+          }
+        } else { alert('Save error: '+(d.error||'?')); }
+      })
       .catch(function(e){ alert('Network error: '+e.message); });
   }
 
@@ -2616,7 +2640,7 @@ function RoomPage(props) {
       <button class="btn" style=${{padding:'8px 10px'}} onClick=${props.onBack}><i class="ti ti-arrow-left"></i></button>
       <div style=${{flex:1,minWidth:0}}>
         <h1 style=${{fontSize:18,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2}}>${props.room.name}</h1>
-        <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).length} members</p>
+        <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).filter(function(id){return !!props.users[id];}).length} members</p>
       </div>
 
     </div>
@@ -3007,7 +3031,7 @@ function RoomPage(props) {
       <div class="card">
         <h3 style=${{marginBottom:12}}>👥 Members (${(props.room.members||[]).length})</h3>
         <div style=${{display:'flex',flexDirection:'column',gap:6}}>
-          ${(props.room.members||[]).map(function(uid){
+          ${(props.room.members||[]).filter(function(uid){return !!props.users[uid];}).map(function(uid){
             var u=props.users[uid]||{name:'?'};
             var isMe=uid===props.user.id;
             var isOwner=uid===props.room.by;
@@ -3343,7 +3367,9 @@ function App() {
   }
   function getLb() {
     if (!room) return [];
-    return (room.members||[]).map(function(uid){
+    return (room.members||[])
+      .filter(function(uid){ return !!users[uid]; })  // skip deleted users
+      .map(function(uid){
       return {user:users[uid]||{name:'?',id:uid}, pts:uPts(uid), np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length, pick:(users[uid]||{}).champTeam||null};
     }).sort(function(a,b){return b.pts-a.pts||b.np-a.np;});
   }
@@ -3536,7 +3562,7 @@ function App() {
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
       ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
-      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
+      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
           roomMsgs=${room&&chatMsgs[room.id]||[]}
