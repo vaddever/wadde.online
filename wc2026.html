@@ -2643,6 +2643,7 @@ function RoomPage(props) {
         <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).filter(function(id){return !!props.users[id];}).length} members</p>
       </div>
 
+      ${!props.isAdmin&&html`<button class="btn" style=${{fontSize:12,color:'var(--rd)',borderColor:'rgba(239,68,68,.25)',padding:'7px 12px'}} onClick=${props.onLeaveRoom}>↩ Leave</button>`}
     </div>
     <!-- 📢 Announcements — always visible above tabs -->
     <${AnnouncementsPanel}
@@ -3029,12 +3030,26 @@ function RoomPage(props) {
 
       <!-- Members list -->
       <div class="card">
-        <h3 style=${{marginBottom:12}}>👥 Members (${(props.room.members||[]).length})</h3>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <h3 style=${{margin:0}}>👥 Members (${(props.room.members||[]).filter(function(id){return !!props.users[id];}).length})</h3>
+        </div>
+        <!-- Add by phone -->
+        <div style=${{display:'flex',gap:8,marginBottom:12}}>
+          <input id="addMemberPhone" type="tel" placeholder="Phone number to add (e.g. 7XXXXXX)"
+            style=${{flex:1,fontSize:13}} />
+          <button class="btn-p" style=${{fontSize:12,flexShrink:0,padding:'8px 14px'}}
+            onClick=${function(){
+              var inp=document.getElementById('addMemberPhone');
+              props.onAddToRoom&&props.onAddToRoom(inp.value);
+              inp.value='';
+            }}>+ Add</button>
+        </div>
         <div style=${{display:'flex',flexDirection:'column',gap:6}}>
           ${(props.room.members||[]).filter(function(uid){return !!props.users[uid];}).map(function(uid){
             var u=props.users[uid]||{name:'?'};
             var isMe=uid===props.user.id;
             var isOwner=uid===props.room.by;
+            var canRemove=!isMe&&!isOwner;
             return html`<div key=${uid} style=${{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'var(--bg3)',borderRadius:'var(--rs)'}}>
               <div style=${{width:32,height:32,borderRadius:16,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:600,color:'#fff',flexShrink:0}}>
                 ${(u.name||'?')[0].toUpperCase()}
@@ -3045,6 +3060,8 @@ function RoomPage(props) {
               </div>
               ${isOwner&&html`<span style=${{fontSize:10,background:'rgba(240,180,41,.12)',color:'var(--gold)',border:'1px solid rgba(240,180,41,.3)',padding:'2px 8px',borderRadius:10}}>Admin</span>`}
               <${FlagImg} team=${u.favT&&u.favT[0]||''} w=${24} />
+              ${canRemove&&html`<button class="btn" style=${{fontSize:11,padding:'3px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)',flexShrink:0}}
+                onClick=${function(e){e.stopPropagation();props.onRemoveFromRoom&&props.onRemoveFromRoom(uid);}}>✕</button>`}
             </div>`;
           })}
         </div>
@@ -3233,9 +3250,20 @@ function App() {
       });
       // Also listen for announcements
       Store.listen('ann_' + roomId, function(v) {
+        var anns = Array.isArray(v) ? v : [];
+        // If GAS returns nothing, fall back to localStorage
+        if (anns.length === 0) {
+          try {
+            var local = JSON.parse(localStorage.getItem('wc26_ann_' + roomId) || '[]');
+            if (Array.isArray(local) && local.length > 0) anns = local;
+          } catch(e) {}
+        } else {
+          // Sync localStorage with whatever GAS returned
+          try { localStorage.setItem('wc26_ann_' + roomId, JSON.stringify(anns)); } catch(e) {}
+        }
         setAnnsByRoom(function(prev) {
           var upd = Object.assign({}, prev);
-          upd[roomId] = Array.isArray(v) ? v : [];
+          upd[roomId] = anns;
           return upd;
         });
       });
@@ -3398,6 +3426,9 @@ function App() {
     var updated = ann.id && existing.find(function(a){ return a.id === ann.id; })
       ? existing.map(function(a){ return a.id === ann.id ? ann : a; })
       : existing.concat([ann]);
+    // Primary: localStorage (instant, no GAS dependency)
+    try { localStorage.setItem('wc26_ann_'+rid, JSON.stringify(updated)); } catch(e){}
+    // Also try GAS (may fail silently on old deployment)
     Store.set('ann_' + rid, updated);
     setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
     setAnnModal(null);
@@ -3408,9 +3439,45 @@ function App() {
     if (!room) return;
     var rid = room.id;
     var updated = (annsByRoom[rid] || []).filter(function(a){ return a.id !== annId; });
+    try { localStorage.setItem('wc26_ann_'+rid, JSON.stringify(updated)); } catch(e){}
     Store.set('ann_' + rid, updated);
     setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
     notify('Announcement removed');
+  }
+
+  function leaveRoom() {
+    if (!room || !user) return;
+    if (!confirm('Leave "' + room.name + '"? You can rejoin with the room code.')) return;
+    var nr = Object.assign({}, rooms);
+    var upd = Object.assign({}, room, {members: (room.members||[]).filter(function(id){return id!==user.id;})});
+    nr[room.id] = upd;
+    Store.set('rooms', nr);
+    setScr('dash');
+    notify('You left "' + room.name + '"');
+  }
+
+  function removeFromRoom(uid) {
+    if (!room) return;
+    var u = users[uid];
+    if (!confirm('Remove "' + (u&&u.name||uid) + '" from this room?')) return;
+    var upd = Object.assign({}, room, {members: (room.members||[]).filter(function(id){return id!==uid;})});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr);
+    setRoom(upd);
+    notify((u&&u.name||'User') + ' removed');
+  }
+
+  function addToRoomByPhone(phone) {
+    if (!room || !phone) return;
+    var ph = phone.trim();
+    var found = Object.values(users).find(function(u){ return u.phone===ph; });
+    if (!found) return notify('No user found with that phone number', 'err');
+    if ((room.members||[]).includes(found.id)) return notify(found.name + ' is already in this room', 'err');
+    var upd = Object.assign({}, room, {members: (room.members||[]).concat([found.id])});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr);
+    setRoom(upd);
+    notify(found.name + ' added to room!');
   }
 
   function sendChatMessage(newMsg, onDone) {
@@ -3568,7 +3635,7 @@ function App() {
           roomMsgs=${room&&chatMsgs[room.id]||[]}
           onSendChat=${sendChatMessage}
           announcements=${room&&annsByRoom[room.id]||[]}
-          onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          onLeaveRoom=${leaveRoom} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
