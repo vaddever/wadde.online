@@ -2693,7 +2693,23 @@ function RoomPage(props) {
       </div>`}
 
     <div class="tabs">
-      ${[['leaderboard','📋 Standings'],['chat','💬 Chat'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
+      ${[['leaderboard','📋 Standings'],['chat','💬 Chat'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){
+        var isChat = p[0]==='chat';
+        return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')}
+          onClick=${function(){
+            props.setTab(p[0]);
+            if(isChat && props.onChatRead) props.onChatRead();
+          }}>
+          <span style=${{position:'relative',display:'inline-flex',alignItems:'center',gap:4}}>
+            ${p[1]}
+            ${isChat&&props.unreadChat>0&&html`<span style=${{
+              background:'#ef4444',color:'#fff',fontSize:9,fontWeight:700,
+              borderRadius:10,padding:'1px 5px',minWidth:16,textAlign:'center',
+              lineHeight:'14px',display:'inline-block',flexShrink:0
+            }}>${props.unreadChat>99?'99+':props.unreadChat}</span>`}
+          </span>
+        </button>`;
+      })}
     </div>
 
     ${props.tab==='matches'&&html`<div>
@@ -2887,6 +2903,7 @@ function RoomPage(props) {
       <p style=${{fontSize:11,color:'var(--dm)',textAlign:'center',marginTop:4}}>★ Top 2 teams in each group advance · Pts updated live as admin enters results</p>
     </div>`}
     ${props.tab==='chat'&&html`<div>
+      ${props.onChatRead&&props.onChatRead()}
       <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
         <h2 style=${{margin:0}}>💬 Room Chat</h2>
         <span style=${{fontSize:12,color:'var(--mu)'}}>${(props.roomMsgs||[]).length} messages</span>
@@ -3199,6 +3216,7 @@ function App() {
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
   var s11i=useState({}); var annsByRoom=s11i[0]; var setAnnsByRoom=s11i[1];
   var s11j=useState(null); var annModal=s11j[0]; var setAnnModal=s11j[1];
+  var s11k=useState({}); var lastReadChat=s11k[0]; var setLastReadChat=s11k[1];
   var s12=useState(null); var toast=s12[0]; var setToast=s12[1];
   var s13=useState(0); var factI=s13[0]; var setFactI=s13[1];
   var s14=useState(0); var plyrI=s14[0]; var setPlyrI=s14[1];
@@ -3242,11 +3260,16 @@ function App() {
       if (chatUnsub) { chatUnsub(); chatUnsub = null; }
       if (!roomId) return;
       chatUnsub = Store.listen('chat_' + roomId, function(v) {
-        setChatMsgs(function(prev) {
-          var updated = Object.assign({}, prev);
-          updated[roomId] = Array.isArray(v) ? v : [];
-          return updated;
-        });
+        var msgs = Array.isArray(v) ? v : [];
+        if (msgs.length === 0) {
+          try {
+            var local = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]');
+            if (Array.isArray(local) && local.length > 0) msgs = local;
+          } catch(e) {}
+        } else {
+          try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(msgs)); } catch(e) {}
+        }
+        setChatMsgs(function(prev) { var n = Object.assign({}, prev); n[roomId] = msgs; return n; });
       });
       // Also listen for announcements
       Store.listen('ann_' + roomId, function(v) {
@@ -3418,6 +3441,7 @@ function App() {
   var myPick = room ? (tpicks[user&&user.id+'_'+room.id]||{}).team : null;
   var isAdmin = room && adminAuth[room.id] === true;
   var qualifiers = getKOQualifiers(results);
+  var unreadChat = room ? Math.max(0, (chatMsgs[room.id]||[]).length - (lastReadChat[room.id]||0)) : 0;
 
   function saveAnnouncement(ann) {
     if (!room) return;
@@ -3443,6 +3467,12 @@ function App() {
     Store.set('ann_' + rid, updated);
     setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
     notify('Announcement removed');
+  }
+
+  function markChatRead() {
+    if (!room) return;
+    var count = (chatMsgs[room.id]||[]).length;
+    setLastReadChat(function(prev){ var n=Object.assign({},prev); n[room.id]=count; return n; });
   }
 
   function leaveRoom() {
@@ -3483,14 +3513,12 @@ function App() {
   function sendChatMessage(newMsg, onDone) {
     if (!room) return;
     var roomId = room.id;
-    var existing = (chatMsgs[roomId] || []).slice(-200); // keep last 200 msgs
+    var existing = (chatMsgs[roomId] || []).slice(-200);
     var updated = existing.concat([newMsg]);
+    // Primary: localStorage (persists even if GAS fails)
+    try { localStorage.setItem('wc26_chat_'+roomId, JSON.stringify(updated)); } catch(e){}
     Store.set('chat_' + roomId, updated);
-    setChatMsgs(function(prev) {
-      var n = Object.assign({}, prev);
-      n[roomId] = updated;
-      return n;
-    });
+    setChatMsgs(function(prev) { var n = Object.assign({}, prev); n[roomId] = updated; return n; });
     if (onDone) onDone();
   }
 
@@ -3635,7 +3663,7 @@ function App() {
           roomMsgs=${room&&chatMsgs[room.id]||[]}
           onSendChat=${sendChatMessage}
           announcements=${room&&annsByRoom[room.id]||[]}
-          onLeaveRoom=${leaveRoom} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          onLeaveRoom=${leaveRoom} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
