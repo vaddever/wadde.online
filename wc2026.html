@@ -2777,12 +2777,12 @@ function RoomPage(props) {
             <div style=${{width:32,height:32,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0,background:i===0?'rgba(240,180,41,.15)':i===1?'rgba(148,163,184,.1)':i===2?'rgba(180,100,30,.1)':'var(--bg3)'}}>${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
             <div style=${{flex:1,minWidth:0}}>
               <div style=${{fontWeight:500,fontSize:14,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                ${e.user&&e.user.favT&&e.user.favT[0]&&html`<${FlagImg} team=${e.user.favT[0]} w=${18} />`}
+                ${e.user&&e.user.favT&&typeof e.user.favT[0]==='string'&&e.user.favT[0]&&html`<${FlagImg} team=${e.user.favT[0]} w=${18} />`}
                 <span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${e.user&&e.user.name}</span>
                 ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8,flexShrink:0}}>you</span>`}
               </div>
               <div style=${{fontSize:11,color:'var(--mu)',marginTop:3,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                ${e.user&&e.user.favP&&e.user.favP[0]&&html`<span>⚽ ${e.user.favP[0].split(' ').pop()}</span>`}
+                ${e.user&&e.user.favP&&typeof e.user.favP[0]==='string'&&e.user.favP[0]&&html`<span>⚽ ${e.user.favP[0].split(' ').pop()}</span>`}
                 ${e.pick&&html`<span style=${{display:'flex',alignItems:'center',gap:3}}>🏆 <${FlagImg} team=${e.pick} w=${14} /><span>${e.pick}</span></span>`}
                 ${!e.pick&&html`<span style=${{color:'var(--dm)'}}>No champion pick</span>`}
               </div>
@@ -3091,6 +3091,29 @@ function SetupScreen() {
 }
 
 // Main App
+
+// ── Error Boundary: prevents blank screen on render errors ──────────
+class RoomErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {err: null};
+  }
+  static getDerivedStateFromError(e) { return {err: e}; }
+  render() {
+    if (this.state.err) {
+      var msg = this.state.err && this.state.err.message || 'Unknown error';
+      return React.createElement('div', {style:{padding:'40px 24px',textAlign:'center',background:'var(--bg)'}},
+        React.createElement('div', {style:{fontSize:48,marginBottom:12}}, '⚠️'),
+        React.createElement('h2', {style:{marginBottom:8,fontFamily:'Barlow Condensed,sans-serif'}}, 'Something went wrong'),
+        React.createElement('p', {style:{fontSize:13,color:'var(--mu)',marginBottom:6}}, msg),
+        React.createElement('p', {style:{fontSize:12,color:'var(--dm)',marginBottom:20}}, 'Your data is safe — please refresh the page.'),
+        React.createElement('button', {class:'btn', onClick:function(){window.location.reload();}}, '↻ Refresh')
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   var s0=useState('loading'); var scr=s0[0]; var setScr=s0[1];
   var s1=useState(null); var user=s1[0]; var setUser=s1[1];
@@ -3286,7 +3309,7 @@ function App() {
     if (!f) return notify('Room not found','err');
     var upd = f;
     if (!f.members.includes(user.id)) {
-      upd = Object.assign({}, f, {members: f.members.concat([user.id])});
+      upd = Object.assign({}, f, {members: (f.members||[]).concat([user.id])});
       var nr = Object.assign({}, rooms); nr[f.id] = upd;
       Store.set('rooms', nr);
     }
@@ -3320,7 +3343,7 @@ function App() {
   }
   function getLb() {
     if (!room) return [];
-    return room.members.map(function(uid){
+    return (room.members||[]).map(function(uid){
       return {user:users[uid]||{name:'?',id:uid}, pts:uPts(uid), np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length, pick:(users[uid]||{}).champTeam||null};
     }).sort(function(a,b){return b.pts-a.pts||b.np-a.np;});
   }
@@ -3513,7 +3536,7 @@ function App() {
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
       ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
-      ${scr==='room'&&room&&user&&html`<${RoomPage} user=${user} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
+      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
           roomMsgs=${room&&chatMsgs[room.id]||[]}
@@ -3526,7 +3549,7 @@ function App() {
             var hs=prompt('Score for '+h+'?','0');
             var as=prompt('Score for '+a+'?','0');
             if(hs!==null&&as!==null) doKOResult(km,h,a,hs,as);
-          }} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} />`}
+          }} factI=${factI} qIdx=${qIdx} qScore=${qScore} qDone=${qDone} qSel=${qSel} qSet=${qSet} onAnswer=${ansQ} onNewQuiz=${newQuiz} onResetQuiz=${function(){setQIdx(0);setQScore(0);setQDone(false);setQSel(null);}} onExport=${doExport} /></${RoomErrorBoundary}>`}
     </div>
   </div>`;
 }
