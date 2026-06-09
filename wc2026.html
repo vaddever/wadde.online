@@ -1450,6 +1450,7 @@ function SuperAdminApp() {
   var prS = useState({}); var saPreds = prS[0]; var setSaPreds = prS[1];
   var reS = useState({}); var saResults = reS[0]; var setSaResults = reS[1];
   var lS  = useState(false); var loading = lS[0]; var setLoading = lS[1];
+  var erS = useState(null);  var expandedRoom = erS[0]; var setExpandedRoom = erS[1];
 
   // Password change
   var npS = useState(''); var newPw = npS[0]; var setNewPw = npS[1];
@@ -1678,15 +1679,63 @@ function SuperAdminApp() {
                 ? html`<tr><td colspan="6" style=${{padding:20,textAlign:'center',color:'var(--dm)'}}>No rooms yet</td></tr>`
                 : rList.map(function(r){
                   var creator = saUsers[r.by];
-                  return html`<tr key=${r.id} style=${{borderBottom:'1px solid var(--bdr)'}}>
-                    <td style=${{padding:'9px 12px',fontWeight:500}}>${r.name}</td>
-                    <td style=${{padding:'9px 12px',fontFamily:'monospace',fontWeight:700,color:'var(--gold)',letterSpacing:1}}>${r.code}</td>
-                    <td style=${{padding:'9px 12px',textAlign:'center'}}>${(r.members||[]).length}</td>
-                    <td style=${{padding:'9px 12px',fontFamily:'monospace',fontSize:11,color:'var(--mu)'}}>${r.adminPass||'(none)'}</td>
-                    <td style=${{padding:'9px 12px',color:'var(--dm)',fontSize:11,whiteSpace:'nowrap'}}>${r.created?new Date(r.created).toLocaleDateString():''}</td>
-                    <td style=${{padding:'9px 12px'}}>
-                      <button class="btn" style=${{fontSize:11,padding:'3px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
-                        onClick=${function(){deleteRoom(r.id);}}>Delete</button>
+                  var isOpen = expandedRoom === r.id;
+                  return html`<tr key=${r.id}>
+                    <td colspan="6" style=${{padding:0,borderBottom:'1px solid var(--bdr)'}}>
+                      <!-- Clickable room row -->
+                      <div onClick=${function(){setExpandedRoom(isOpen ? null : r.id);}}
+                        style=${{
+                          display:'grid', gridTemplateColumns:'1fr auto auto auto auto auto',
+                          alignItems:'center', padding:'10px 12px', cursor:'pointer',
+                          background: isOpen ? 'rgba(26,86,219,.06)' : 'transparent',
+                          gap:12
+                        }}>
+                        <span style=${{fontWeight:500,fontSize:13}}>${r.name}</span>
+                        <span style=${{fontFamily:'monospace',fontWeight:700,color:'var(--gold)',letterSpacing:1,fontSize:13}}>${r.code}</span>
+                        <span style=${{textAlign:'center',fontSize:13,color:'var(--mu)',minWidth:60}}>👥 ${(r.members||[]).length}</span>
+                        <span style=${{fontFamily:'monospace',fontSize:11,color:'var(--mu)',minWidth:50}}>${r.adminPass||'—'}</span>
+                        <span style=${{fontSize:11,color:'var(--dm)',whiteSpace:'nowrap'}}>${r.created?new Date(r.created).toLocaleDateString():''}</span>
+                        <span style=${{fontSize:13,color:'var(--mu)',transition:'transform .2s',transform:isOpen?'rotate(90deg)':'rotate(0deg)'}}>›</span>
+                      </div>
+                      <!-- Expanded member list -->
+                      ${isOpen&&html`<div style=${{
+                        borderTop:'1px solid var(--bdr)',
+                        background:'var(--bg3)',
+                        padding:'12px 16px'
+                      }}>
+                        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                          <span style=${{fontSize:11,fontWeight:700,letterSpacing:1,color:'var(--mu)',fontFamily:'Barlow Condensed'}}>MEMBERS (${(r.members||[]).length})</span>
+                          <button class="btn" style=${{fontSize:11,padding:'3px 10px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
+                            onClick=${function(e){e.stopPropagation();deleteRoom(r.id);}}>Delete Room</button>
+                        </div>
+                        ${(r.members||[]).length===0
+                          ? html`<p style=${{fontSize:12,color:'var(--dm)',margin:0}}>No members</p>`
+                          : html`<div style=${{display:'flex',flexDirection:'column',gap:6}}>
+                              ${(r.members||[]).map(function(uid){
+                                var u = saUsers[uid]||{};
+                                var isOwner = uid === r.by;
+                                return html`<div key=${uid} style=${{
+                                  display:'flex', alignItems:'center', gap:10,
+                                  padding:'8px 10px', background:'var(--bg2)',
+                                  borderRadius:'var(--rs)', border:'1px solid var(--bdr)'
+                                }}>
+                                  <div style=${{width:30,height:30,borderRadius:15,background:'#1a56db',
+                                    display:'flex',alignItems:'center',justifyContent:'center',
+                                    fontSize:13,fontWeight:700,color:'#fff',flexShrink:0}}>
+                                    ${(u.name||'?')[0].toUpperCase()}
+                                  </div>
+                                  <div style=${{flex:1}}>
+                                    <div style=${{fontSize:13,fontWeight:500}}>${u.name||uid.slice(0,8)+'…'}
+                                      ${isOwner&&html`<span style=${{fontSize:10,color:'var(--gold)',marginLeft:6,background:'rgba(240,180,41,.12)',border:'1px solid rgba(240,180,41,.3)',padding:'1px 6px',borderRadius:8}}>creator</span>`}
+                                    </div>
+                                    <div style=${{fontSize:11,color:'var(--mu)'}}>${u.phone||''} ${u.favT&&u.favT[0]?'· '+(u.favT[0]):''}${u.champTeam?' · 🏆 '+u.champTeam:''}</div>
+                                  </div>
+                                  <div style=${{fontSize:12,fontWeight:700,color:'var(--gold)',flexShrink:0}}>${u.pts!==undefined?u.pts+' pts':''}</div>
+                                </div>`;
+                              })}
+                            </div>`
+                        }
+                      </div>`}
                     </td>
                   </tr>`;
                 })
