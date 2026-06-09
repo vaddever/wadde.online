@@ -2903,7 +2903,6 @@ function RoomPage(props) {
       <p style=${{fontSize:11,color:'var(--dm)',textAlign:'center',marginTop:4}}>★ Top 2 teams in each group advance · Pts updated live as admin enters results</p>
     </div>`}
     ${props.tab==='chat'&&html`<div>
-      ${props.onChatRead&&props.onChatRead()}
       <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
         <h2 style=${{margin:0}}>💬 Room Chat</h2>
         <span style=${{fontSize:12,color:'var(--mu)'}}>${(props.roomMsgs||[]).length} messages</span>
