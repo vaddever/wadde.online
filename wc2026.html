@@ -1834,17 +1834,7 @@ function WelcomePage(props) {
       </div>
     </div>
     <div class="g2" style=${{marginBottom:12}}>
-      <div class="card-dark" style=${{borderColor:'rgba(240,180,41,.15)'}}>
-        <div style=${{fontSize:10,color:'var(--mu)',letterSpacing:1.5,marginBottom:10,fontFamily:'Barlow Condensed',fontWeight:600}}>FEATURED PLAYER</div>
-        <div style=${{display:'flex',alignItems:'center',gap:10}}>
-          <span style=${{fontSize:28}}>${F[PLY[props.plyrI].t]||'⚽'}</span>
-          <div>
-            <div style=${{fontWeight:500,fontSize:14}}>${PLY[props.plyrI].n}</div>
-            <div style=${{fontSize:12,color:'var(--mu)'}}>${PLY[props.plyrI].t}</div>
-            <div style=${{fontSize:11,color:'var(--dm)',marginTop:2}}>${PLY[props.plyrI].i}</div>
-          </div>
-        </div>
-      </div>
+
       <div class="card-dark" style=${{borderColor:'rgba(240,180,41,.15)'}}>
         <div style=${{fontSize:10,color:'var(--mu)',letterSpacing:1.5,marginBottom:10,fontFamily:'Barlow Condensed',fontWeight:600}}>SCORING</div>
         <div style=${{display:'flex',flexDirection:'column',gap:7,fontSize:12}}>
@@ -2079,6 +2069,33 @@ function DashPage(props) {
     </div>
     <${CountdownBanner} />
     <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px 14px',marginBottom:16,fontSize:13,color:'#93c5fd'}}>⚽ ${FACTS[props.factI]}</div>
+
+    <!-- Points Details + Champion Team above My Rooms -->
+    <div style=${{marginBottom:16,display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,alignItems:'start'}}>
+      <div class="card" style=${{padding:'12px 14px',background:'var(--bg2)'}}>
+        <h3 style=${{fontSize:13,margin:'0 0 8px',color:'var(--tx)'}}>🏅 Points Details</h3>
+        <div style=${{display:'flex',flexDirection:'column',gap:5,fontSize:12,color:'var(--mu)'}}>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}> +4 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner<strong style=${{color:'#60a5fa'}}> +2 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>❌ Wrong<strong style=${{color:'var(--dm)'}}> 0 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Champion Team<strong style=${{color:'var(--gold)'}}> +5 pts</strong></div>
+        </div>
+      </div>
+      <div class="card" style=${{padding:'12px 14px',background:'var(--bg2)'}}>
+        <h3 style=${{fontSize:13,margin:'0 0 8px',color:'var(--tx)'}}>🏆 Champion Team</h3>
+        ${props.myChampion
+          ? html`<div style=${{display:'flex',alignItems:'center',gap:8}}>
+              <${FlagImg} team=${props.myChampion} w=${28} />
+              <div>
+                <div style=${{fontWeight:600,fontSize:13}}>${props.myChampion}</div>
+                <div style=${{fontSize:11,color:'var(--mu)'}}>Your pick</div>
+              </div>
+            </div>`
+          : html`<p style=${{fontSize:12,color:'var(--dm)',margin:0}}>No champion pick yet — enter a room to pick!</p>`
+        }
+      </div>
+    </div>
+
 
     <!-- My Rooms -->
     <div style=${{marginBottom:20}}>
@@ -2442,6 +2459,73 @@ function ChatRoom(props) {
   </div>`;
 }
 
+
+// ── Room Announcements ───────────────────────────────────────────────────
+function AnnouncementsPanel(props) {
+  var anns = props.announcements || [];
+  if (anns.length === 0 && !props.isAdmin) return null;
+
+  return html`<div style=${{marginBottom:12}}>
+    ${anns.length > 0 && html`<div style=${{display:'flex',flexDirection:'column',gap:6,marginBottom:props.isAdmin?8:0}}>
+      ${anns.map(function(a, i) {
+        return html`<div key=${a.id||i} style=${{
+          background:'linear-gradient(135deg,rgba(26,86,219,.08) 0%,rgba(26,86,219,.03) 100%)',
+          border:'1px solid rgba(26,86,219,.2)', borderLeft:'3px solid #1a56db',
+          borderRadius:'var(--rs)', padding:'10px 14px', position:'relative'
+        }}>
+          ${a.imageUrl&&html`<img src=${a.imageUrl} alt="" style=${{width:'100%',maxHeight:180,objectFit:'cover',borderRadius:6,marginBottom:8,display:'block'}} onError=${function(e){e.target.style.display='none';}} />`}
+          ${a.title&&html`<div style=${{fontWeight:600,fontSize:13,marginBottom:a.body?4:0}}>${a.title}</div>`}
+          ${a.body&&html`<div style=${{fontSize:13,color:'var(--mu)',lineHeight:1.5}}>${a.body}</div>`}
+          <div style=${{fontSize:10,color:'var(--dm)',marginTop:4}}>${new Date(a.ts).toLocaleDateString()}</div>
+          ${props.isAdmin&&html`<div style=${{display:'flex',gap:6,marginTop:6}}>
+            <button class="btn" style=${{fontSize:11,padding:'2px 8px'}} onClick=${function(){props.onEdit(a);}}>Edit</button>
+            <button class="btn" style=${{fontSize:11,padding:'2px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}} onClick=${function(){props.onDelete(a.id||i);}}>Remove</button>
+          </div>`}
+        </div>`;
+      })}
+    </div>`}
+    ${props.isAdmin&&html`<button class="btn-p" style=${{width:'100%',fontSize:13}} onClick=${props.onAdd}>+ Add Announcement</button>`}
+  </div>`;
+}
+
+// Announcement editor modal
+function AnnouncementModal(props) {
+  var a = props.ann || {};
+  var ts = useState(a.title||''); var title=ts[0]; var setTitle=ts[1];
+  var bs = useState(a.body||''); var body=bs[0]; var setBody=bs[1];
+  var is = useState(a.imageUrl||''); var imgUrl=is[0]; var setImgUrl=is[1];
+
+  function save() {
+    if (!title.trim() && !body.trim()) return;
+    props.onSave({id:a.id||('ann_'+Date.now()), title:title.trim(), body:body.trim(), imageUrl:imgUrl.trim(), ts:a.ts||Date.now()});
+  }
+
+  return html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}}>
+    <div class="modal">
+      <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+        <h2 style=${{margin:0,fontSize:16}}>${a.id?'Edit':'New'} Announcement</h2>
+        <button class="btn" style=${{padding:'4px 8px'}} onClick=${props.onClose}>×</button>
+      </div>
+      <div style=${{display:'flex',flexDirection:'column',gap:10}}>
+        <div><label>Title</label><input value=${title} onChange=${function(e){setTitle(e.target.value);}} placeholder="Announcement title" /></div>
+        <div><label>Message</label>
+          <textarea value=${body} onChange=${function(e){setBody(e.target.value);}} placeholder="Announcement text…" rows="3"
+            style=${{width:'100%',resize:'vertical',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',padding:'10px',background:'var(--bg3)',color:'var(--tx)',fontFamily:'DM Sans,sans-serif',fontSize:13}}></textarea>
+        </div>
+        <div><label>Image URL <span style=${{color:'var(--dm)',fontWeight:400}}>(optional)</span></label>
+          <input value=${imgUrl} onChange=${function(e){setImgUrl(e.target.value);}} placeholder="https://example.com/photo.jpg" />
+          ${imgUrl&&html`<img src=${imgUrl} alt="" style=${{width:'100%',maxHeight:120,objectFit:'cover',borderRadius:6,marginTop:6}} onError=${function(e){e.target.style.display='none';}} />`}
+        </div>
+        <div style=${{display:'flex',gap:8,marginTop:4}}>
+          <button class="btn" style=${{flex:1}} onClick=${props.onClose}>Cancel</button>
+          <button class="btn-p" style=${{flex:2}} onClick=${save} disabled=${!title.trim()&&!body.trim()}>Save Announcement</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+
 function RoomPage(props) {
   var gMs = MS.filter(function(m){ return !props.grp || m.gr === props.grp; })
              .sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); });
@@ -2455,14 +2539,17 @@ function RoomPage(props) {
         <h1 style=${{fontSize:18,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2}}>${props.room.name}</h1>
         <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).length} members</p>
       </div>
-      ${props.canPick&&html`<button class="btn" style=${{fontSize:12,background:props.myPick?'var(--gdim)':undefined,borderColor:props.myPick?'rgba(240,180,41,.35)':undefined,color:props.myPick?'var(--gold)':undefined,whiteSpace:'nowrap',flexShrink:0}} onClick=${props.onPickW}>🏆 ${props.myPick?(F[props.myPick]||'')+' '+props.myPick:'Pick winner'}</button>`}
+      ${props.canPick&&html`<button class="btn" style=${{fontSize:12,background:props.myPick?'var(--gdim)':undefined,borderColor:props.myPick?'rgba(240,180,41,.35)':undefined,color:props.myPick?'var(--gold)':undefined,whiteSpace:'nowrap',flexShrink:0}} onClick=${props.onPickW}>🏆 ${props.myPick?(F[props.myPick]||'')+' '+props.myPick:'🏆 Champion Team'}</button>`}
     </div>
-    <div class="tabs">
-      ${[['leaderboard','📋 Standings'],['chat','💬 Chat'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
-    </div>
+    <!-- 📢 Announcements — always visible above tabs -->
+    <${AnnouncementsPanel}
+      announcements=${props.announcements||[]}
+      isAdmin=${props.isAdmin}
+      onAdd=${function(){ props.onAddAnn&&props.onAddAnn(); }}
+      onEdit=${function(a){ props.onEditAnn&&props.onEditAnn(a); }}
+      onDelete=${function(id){ props.onDeleteAnn&&props.onDeleteAnn(id); }} />
 
-    ${props.tab==='matches'&&html`<div>
-      <!-- Next 2 upcoming matches dashboard banner -->
+    <!-- ⚡ Up Next — always visible above tabs -->
       ${upNext.length>0&&html`<div style=${{marginBottom:14}}>
         <div style=${{fontSize:11,fontWeight:700,letterSpacing:1,color:'var(--gold)',textTransform:'uppercase',marginBottom:8}}>⚡ Up Next</div>
         <div style=${{display:'grid',gridTemplateColumns:upNext.length>1?'1fr 1fr':'1fr',gap:8,marginBottom:4}}>
@@ -2500,6 +2587,13 @@ function RoomPage(props) {
           })}
         </div>
       </div>`}
+
+    <div class="tabs">
+      ${[['leaderboard','📋 Standings'],['chat','💬 Chat'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){ return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')} onClick=${function(){props.setTab(p[0]);}}>${p[1]}</button>`; })}
+    </div>
+
+    ${props.tab==='matches'&&html`<div>
+      <!-- Next 2 upcoming matches dashboard banner -->
 
       <!-- Group filter pills -->
       <div style=${{display:'flex',gap:5,marginBottom:16,flexWrap:'wrap'}}>
@@ -2617,9 +2711,9 @@ function RoomPage(props) {
         </div>`
       }
       <div class="card" style=${{marginTop:14,background:'var(--bg3)'}}>
-        <h3>Scoring guide</h3>
+        <h3 style=${{margin:'0 0 10px'}}>🏅 Points Details</h3>
         <div style=${{display:'flex',flexDirection:'column',gap:6,fontSize:13,color:'var(--mu)'}}>
-          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}>2 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}>+4 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner / draw<strong style=${{color:'#60a5fa'}}>2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>❌ Wrong prediction<strong style=${{color:'var(--dm)'}}>0 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style=${{color:'var(--gold)'}}>+5 pts</strong></div>
@@ -2928,6 +3022,8 @@ function App() {
   var s11g=useState(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');
   var apiKey=s11g[0]; var setApiKey=s11g[1];
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
+  var s11i=useState({}); var annsByRoom=s11i[0]; var setAnnsByRoom=s11i[1];
+  var s11j=useState(null); var annModal=s11j[0]; var setAnnModal=s11j[1];
   var s12=useState(null); var toast=s12[0]; var setToast=s12[1];
   var s13=useState(0); var factI=s13[0]; var setFactI=s13[1];
   var s14=useState(0); var plyrI=s14[0]; var setPlyrI=s14[1];
@@ -2968,6 +3064,14 @@ function App() {
           var updated = Object.assign({}, prev);
           updated[roomId] = Array.isArray(v) ? v : [];
           return updated;
+        });
+      });
+      // Also listen for announcements
+      Store.listen('ann_' + roomId, function(v) {
+        setAnnsByRoom(function(prev) {
+          var upd = Object.assign({}, prev);
+          upd[roomId] = Array.isArray(v) ? v : [];
+          return upd;
         });
       });
     }
@@ -3045,6 +3149,8 @@ function App() {
   function doLogout() { Sess.del('wc26s'); setUser(null); setRoom(null); setScr('welcome'); }
 
   function doCreate(name, pass) {
+    var myRoomCount = Object.values(rooms).filter(function(r){ return r.by === user.id; }).length;
+    if (myRoomCount >= 5) return notify('You can create a maximum of 5 rooms','err');
     var code=genCode(), id=genId();
     var nr = Object.assign({}, rooms);
     nr[id] = {id:id, name:name, code:code, by:user.id, adminPass:pass, members:[user.id], created:new Date().toISOString()};
@@ -3106,6 +3212,28 @@ function App() {
   var myPick = room ? (tpicks[user&&user.id+'_'+room.id]||{}).team : null;
   var isAdmin = room && adminAuth[room.id] === true;
   var qualifiers = getKOQualifiers(results);
+
+  function saveAnnouncement(ann) {
+    if (!room) return;
+    var rid = room.id;
+    var existing = (annsByRoom[rid] || []);
+    var updated = ann.id && existing.find(function(a){ return a.id === ann.id; })
+      ? existing.map(function(a){ return a.id === ann.id ? ann : a; })
+      : existing.concat([ann]);
+    Store.set('ann_' + rid, updated);
+    setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
+    setAnnModal(null);
+    notify('Announcement saved!');
+  }
+
+  function deleteAnnouncement(annId) {
+    if (!room) return;
+    var rid = room.id;
+    var updated = (annsByRoom[rid] || []).filter(function(a){ return a.id !== annId; });
+    Store.set('ann_' + rid, updated);
+    setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
+    notify('Announcement removed');
+  }
 
   function sendChatMessage(newMsg, onDone) {
     if (!room) return;
@@ -3235,6 +3363,11 @@ function App() {
 
     ${toast&&html`<div class=${'toast '+(toast.t==='err'?'ter':'tok')}>${toast.msg}</div>`}
 
+    ${annModal&&html`<${AnnouncementModal}
+      ann=${annModal.ann||{}}
+      onSave=${saveAnnouncement}
+      onClose=${function(){setAnnModal(null);}} />`}
+
     ${modal&&html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)setModal(null);}}>
       ${modal.t==='pred'&&html`<${PredModal} match=${modal.m} existing=${preds[user&&user.id+'_'+modal.m.id]} onSave=${doPredict} onClose=${function(){setModal(null);}} />`}
       ${modal.t==='create'&&html`<${CreateModal} onSave=${doCreate} onClose=${function(){setModal(null);}} />`}
@@ -3250,13 +3383,16 @@ function App() {
     <div class="page">
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
-
-      ${scr==='room'&&room&&user&&html`<${RoomPage} room=${room} user=${user} users=${users} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
+      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${(function(){var tp=Object.values(tpicks);for(var i=0;i<tp.length;i++){if(tp[i]&&typeof tp[i]==='string')return tp[i];}return null;})()} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+      ${scr==='room'&&room&&user&&html`<${RoomPage} user=${user} room=${room} ta${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
           roomMsgs=${room&&chatMsgs[room.id]||[]}
           onSendChat=${sendChatMessage}
+          announcements=${room&&annsByRoom[room.id]||[]}
+          onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
+          onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
             var hs=prompt('Score for '+h+'?','0');
             var as=prompt('Score for '+a+'?','0');
