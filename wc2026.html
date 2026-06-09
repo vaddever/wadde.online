@@ -1344,7 +1344,7 @@ function WinnerModal(props) {
       <h2 style=${{margin:0}}>🏆 Tournament Winner</h2>
       <button class="btn" style=${{padding:'4px 8px'}} onClick=${props.onClose}><i class="ti ti-x"></i></button>
     </div>
-    <p style=${{fontSize:13,color:'var(--mu)',marginBottom:12}}>Pick before June 28 (Round of 32). Correct pick = +10 bonus points!</p>
+    <p style=${{fontSize:13,color:'var(--mu)',marginBottom:12}}>Pick your champion — the team you think will win WC 2026. Correct = +5 pts! Can be changed anytime before Jun 28.</p>
     <input value=${filter} onChange=${function(e){setFilter(e.target.value);}} placeholder="Search team..." style=${{marginBottom:10}} />
     <div class="g3" style=${{maxHeight:260,overflowY:'auto',marginBottom:16,padding:2}}>
       ${filtered.map(function(t){ return html`<button key=${t} onClick=${function(){setSel(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:sel===t?'2px solid #1a56db':'1px solid var(--bdr)',background:sel===t?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
@@ -2106,14 +2106,20 @@ function DashPage(props) {
       <div class="card" style=${{padding:'12px 14px',background:'var(--bg2)'}}>
         <h3 style=${{fontSize:13,margin:'0 0 8px',color:'var(--tx)'}}>🏆 Champion Team</h3>
         ${props.myChampion
-          ? html`<div style=${{display:'flex',alignItems:'center',gap:8}}>
-              <${FlagImg} team=${props.myChampion} w=${28} />
-              <div>
-                <div style=${{fontWeight:600,fontSize:13}}>${props.myChampion}</div>
-                <div style=${{fontSize:11,color:'var(--mu)'}}>Your pick</div>
+          ? html`<div>
+              <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                <${FlagImg} team=${props.myChampion} w=${28} />
+                <div>
+                  <div style=${{fontWeight:600,fontSize:13}}>${props.myChampion}</div>
+                  <div style=${{fontSize:11,color:'var(--mu)'}}>Your pick</div>
+                </div>
               </div>
+              <button class="btn" style=${{width:'100%',fontSize:11,padding:'5px'}} onClick=${props.onPickChampion}>Change pick</button>
             </div>`
-          : html`<p style=${{fontSize:12,color:'var(--dm)',margin:0}}>No champion pick yet — enter a room to pick!</p>`
+          : html`<div>
+              <p style=${{fontSize:12,color:'var(--dm)',margin:'0 0 8px'}}>Pick your champion team for +5 pts!</p>
+              <button class="btn-p" style=${{width:'100%',fontSize:12,padding:'7px'}} onClick=${props.onPickChampion}>🏆 Pick Now</button>
+            </div>`
         }
       </div>
     </div>
@@ -2561,7 +2567,7 @@ function RoomPage(props) {
         <h1 style=${{fontSize:18,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2}}>${props.room.name}</h1>
         <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).length} members</p>
       </div>
-      ${props.canPick&&html`<button class="btn" style=${{fontSize:12,background:props.myPick?'var(--gdim)':undefined,borderColor:props.myPick?'rgba(240,180,41,.35)':undefined,color:props.myPick?'var(--gold)':undefined,whiteSpace:'nowrap',flexShrink:0}} onClick=${props.onPickW}>🏆 ${props.myPick?(F[props.myPick]||'')+' '+props.myPick:'🏆 Champion Team'}</button>`}
+
     </div>
     <!-- 📢 Announcements — always visible above tabs -->
     <${AnnouncementsPanel}
@@ -2717,18 +2723,20 @@ function RoomPage(props) {
         ?html`<div class="card" style=${{textAlign:'center',padding:32}}><div style=${{fontSize:32,marginBottom:10}}>📊</div><p style=${{color:'var(--mu)'}}>No members yet</p></div>`
         :html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
           ${props.lboard.map(function(e,i){ return html`<div key=${(e.user&&e.user.id)||i} class="lbr" style=${{borderColor:i===0?'rgba(240,180,41,.22)':e.user&&e.user.id===props.user.id?'rgba(59,130,246,.3)':undefined,background:i===0?'rgba(240,180,41,.03)':undefined}}>
-            <div style=${{width:32,height:32,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,background:i===0?'rgba(240,180,41,.15)':i===1?'rgba(148,163,184,.1)':i===2?'rgba(180,100,30,.1)':'var(--bg3)'}}>${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
-            <div style=${{flex:1}}>
-              <div style=${{fontWeight:500,fontSize:15,display:'flex',alignItems:'center',gap:6}}>
-                ${e.user&&e.user.name}
-                ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8}}>you</span>`}
+            <div style=${{width:32,height:32,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0,background:i===0?'rgba(240,180,41,.15)':i===1?'rgba(148,163,184,.1)':i===2?'rgba(180,100,30,.1)':'var(--bg3)'}}>${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
+            <div style=${{flex:1,minWidth:0}}>
+              <div style=${{fontWeight:500,fontSize:14,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                ${e.user&&e.user.favT&&e.user.favT[0]&&html`<${FlagImg} team=${e.user.favT[0]} w=${18} />`}
+                <span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${e.user&&e.user.name}</span>
+                ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8,flexShrink:0}}>you</span>`}
               </div>
-              <div style=${{fontSize:12,color:'var(--mu)',marginTop:2}}>
-                ${e.np} predictions
-                ${e.pick&&html` · <${FlagImg} team=${e.pick} w=${18} /> ${e.pick}`}
+              <div style=${{fontSize:11,color:'var(--mu)',marginTop:3,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                ${e.user&&e.user.favP&&e.user.favP[0]&&html`<span>⚽ ${e.user.favP[0].split(' ').pop()}</span>`}
+                ${e.pick&&html`<span style=${{display:'flex',alignItems:'center',gap:3}}>🏆 <${FlagImg} team=${e.pick} w=${14} /><span>${e.pick}</span></span>`}
+                ${!e.pick&&html`<span style=${{color:'var(--dm)'}}>No champion pick</span>`}
               </div>
             </div>
-            <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
+            <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)',flexShrink:0}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
           </div>`; })}
         </div>`
       }
@@ -3239,9 +3247,17 @@ function App() {
     setModal(null); notify('Prediction saved! ⚽');
   }
   function doPickW(team) {
-    if (!room) return;
-    Store.set('tpicks/' + user.id + '_' + room.id, {team:team, ts:new Date().toISOString()});
-    setModal(null); notify('Picked ' + (F[team]||'') + ' ' + team + '! 🏆');
+    // Global champion pick — saved once to user profile (not per-room)
+    var nu = Object.assign({}, users);
+    if (!user || !nu[user.id]) return;
+    nu[user.id] = Object.assign({}, nu[user.id], {champTeam:team});
+    Store.set('users', nu);
+    setUsers(nu);
+    var updatedUser = nu[user.id];
+    Sess.set('wc26_u', updatedUser);
+    setUser(updatedUser);
+    setModal(null);
+    notify('Champion Team: ' + (F[team]||'') + ' ' + team + '! 🏆');
   }
   function doResult(mId, h, a) {
     Store.set('results/' + mId, {h:h, a:a, ts:new Date().toISOString()});
@@ -3254,7 +3270,7 @@ function App() {
   function getLb() {
     if (!room) return [];
     return room.members.map(function(uid){
-      return {user:users[uid]||{name:'?',id:uid}, pts:uPts(uid), np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length, pick:(tpicks[uid+'_'+room.id]||{}).team||null};
+      return {user:users[uid]||{name:'?',id:uid}, pts:uPts(uid), np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length, pick:(users[uid]||{}).champTeam||null};
     }).sort(function(a,b){return b.pts-a.pts||b.np-a.np;});
   }
   function newQuiz() { setQSet(shuffle(QQ).slice(0,5)); setQIdx(0); setQScore(0); setQDone(false); setQSel(null); }
@@ -3445,7 +3461,7 @@ function App() {
     <div class="page">
       ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${(function(){var tp=Object.values(tpicks);for(var i=0;i<tp.length;i++){if(tp[i]&&typeof tp[i]==='string')return tp[i];}return null;})()} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomPage} user=${user} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
