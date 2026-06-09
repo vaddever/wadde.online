@@ -1962,6 +1962,7 @@ function AuthPage(props) {
   var ns=useState(''); var name=ns[0]; var setName=ns[1];
   var ps=useState(''); var phone=ps[0]; var setPhone=ps[1];
   var pis=useState(''); var pin=pis[0]; var setPin=pis[1];
+  var ts2=useState(''); var teamSearch=ts2[0]; var setTeamSearch=ts2[1];
   var fs=useState([]); var favT=fs[0]; var setFavT=fs[1];
   var fp=useState([]); var favP=fp[0]; var setFavP=fp[1];
   var ss=useState(1); var step=ss[0]; var setStep=ss[1];
@@ -2000,8 +2001,9 @@ function AuthPage(props) {
         </div>`}
         ${step===2&&html`<div>
           <h2>Favorite teams <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>2 of 3 · pick 1</span></h2>
+          <input value=${teamSearch} onChange=${function(e){setTeamSearch(e.target.value);}} placeholder="🔍 Search teams…" style=${{marginBottom:10,fontSize:13}} autoFocus />
           <div class="g3" style=${{marginBottom:14,maxHeight:260,overflowY:'auto',padding:4}}>
-            ${TEAMS.map(function(t){ return html`<button key=${t} onClick=${function(){togT(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:favT.includes(t)?'2px solid #1a56db':'1px solid var(--bdr)',background:favT.includes(t)?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!favT.includes(t)&&favT.length>=1?0.35:1}}>
+            ${TEAMS.filter(function(t){return t.toLowerCase().includes(teamSearch.toLowerCase());}).map(function(t){ return html`<button key=${t} onClick=${function(){togT(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:favT.includes(t)?'2px solid #1a56db':'1px solid var(--bdr)',background:favT.includes(t)?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:!favT.includes(t)&&favT.length>=1?0.35:1}}>
               <${FlagImg} team=${t} w=${32} />
               <span style=${{textAlign:'center',fontSize:10,lineHeight:1.2}}>${t}</span>
             </button>`; })}
