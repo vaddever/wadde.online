@@ -1451,6 +1451,10 @@ function SuperAdminApp() {
   var reS = useState({}); var saResults = reS[0]; var setSaResults = reS[1];
   var lS  = useState(false); var loading = lS[0]; var setLoading = lS[1];
   var erS = useState(null);  var expandedRoom = erS[0]; var setExpandedRoom = erS[1];
+  var gaS = useState([]);    var globalAnns = gaS[0]; var setGlobalAnns = gaS[1];
+  var gaMod = useState(null); var gAnnModal = gaMod[0]; var setGAnnModal = gaMod[1];
+  var apiKeyS = useState(localStorage.getItem('wc26_apikey')||''); var saApiKey=apiKeyS[0]; var setSaApiKey=apiKeyS[1];
+  var syncStatus = useState('idle'); var syncSt=syncStatus[0]; var setSyncSt=syncStatus[1];
 
   // Password change
   var npS = useState(''); var newPw = npS[0]; var setNewPw = npS[1];
@@ -1486,10 +1490,11 @@ function SuperAdminApp() {
 
   function loadAll() {
     setLoading(true);
-    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results'];
+    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns'];
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
-                   wc26_preds:setSaPreds, wc26_results:setSaResults};
+                   wc26_preds:setSaPreds, wc26_results:setSaResults,
+                   wc26_global_anns:function(v){setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]);}};
     function tick() { done++; if (done >= keys.length) setLoading(false); }
     keys.forEach(function(k){
       fetch(GS_URL + '?action=get&key=' + k)
@@ -1601,6 +1606,7 @@ function SuperAdminApp() {
     {id:'rooms',     label:'🏠 Rooms ('+rList.length+')'},
     {id:'preds',     label:'⚽ Predictions ('+prList.length+')'},
     {id:'results',   label:'📊 Results ('+reList.length+')'},
+    {id:'anns',     label:'📢 Announcements'},
     {id:'settings',  label:'⚙️ Settings'},
   ];
 
@@ -1829,29 +1835,164 @@ function SuperAdminApp() {
       </div>`}
 
       <!-- Settings tab -->
-      ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16,maxWidth:420}}>
+
+      <!-- ── Global Announcements tab ────────────────────────────── -->
+      ${saTab==='anns'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14,maxWidth:540}}>
+
+        <!-- Create/Edit modal inline -->
+        ${gAnnModal!==null&&html`<div class="card" style=${{border:'2px solid var(--gold)',padding:16}}>
+          <h3 style=${{marginTop:0}}>${gAnnModal.id?'Edit':'New'} Global Announcement</h3>
+          <div style=${{display:'flex',flexDirection:'column',gap:10}}>
+            <div><label>Where to show</label>
+              <select value=${gAnnModal.scope||'all'} onChange=${function(e){setGAnnModal(Object.assign({},gAnnModal,{scope:e.target.value}));}}
+                style=${{width:'100%',padding:'8px 10px',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                <option value="all">Everywhere (front page + profile + all rooms)</option>
+                <option value="welcome">Front page only (before login)</option>
+                <option value="dash">User profile/dashboard only</option>
+                <option value="rooms">Inside rooms only</option>
+              </select>
+            </div>
+            <div><label>Title</label>
+              <input value=${gAnnModal.title||''} onChange=${function(e){setGAnnModal(Object.assign({},gAnnModal,{title:e.target.value}));}} placeholder="e.g. 🔥 Matchday 3 predictions now open!" /></div>
+            <div><label>Message</label>
+              <textarea value=${gAnnModal.body||''} onChange=${function(e){setGAnnModal(Object.assign({},gAnnModal,{body:e.target.value}));}}
+                rows="3" placeholder="Announcement text..."
+                style=${{width:'100%',padding:'10px',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',fontFamily:'DM Sans,sans-serif',fontSize:13,resize:'vertical'}}></textarea></div>
+            <div><label>Image URL <span style=${{color:'var(--dm)',fontWeight:400}}>(optional)</span></label>
+              <input value=${gAnnModal.imageUrl||''} onChange=${function(e){setGAnnModal(Object.assign({},gAnnModal,{imageUrl:e.target.value}));}} placeholder="https://example.com/banner.jpg" /></div>
+            <div style=${{display:'flex',gap:8,marginTop:4}}>
+              <button class="btn" style=${{flex:1}} onClick=${function(){setGAnnModal(null);}}>Cancel</button>
+              <button class="btn-p" style=${{flex:2}} onClick=${function(){
+                if(!gAnnModal.title&&!gAnnModal.body) return;
+                var ann=Object.assign({id:gAnnModal.id||('ga_'+Date.now()),ts:gAnnModal.ts||Date.now()},gAnnModal);
+                var upd=gAnnModal.id?globalAnns.map(function(a){return a.id===ann.id?ann:a;}):globalAnns.concat([ann]);
+                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                  body:JSON.stringify({action:'set',key:'wc26_global_anns',value:upd})})
+                  .then(function(r){return r.json();})
+                  .then(function(d){if(d.ok!==false){setGlobalAnns(upd);setGAnnModal(null);}else alert('Save error');})
+                  .catch(function(e){alert('Error: '+e.message);});
+              }}>💾 Save Announcement</button>
+            </div>
+          </div>
+        </div>`}
+
+        <!-- Announcements list -->
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <h3 style=${{margin:0}}>Global Announcements (${globalAnns.length})</h3>
+          <button class="btn-p" style=${{fontSize:12,padding:'6px 14px'}} onClick=${function(){setGAnnModal({scope:'all'});}}>+ New</button>
+        </div>
+        ${globalAnns.length===0
+          ? html`<div class="card" style=${{textAlign:'center',padding:24,color:'var(--dm)'}}>No global announcements yet. Create one to pin a message for all users.</div>`
+          : globalAnns.map(function(a,i){
+              return html`<div key=${a.id||i} class="card" style=${{padding:14}}>
+                <div style=${{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:6}}>
+                  <div>
+                    <div style=${{fontWeight:600,fontSize:14}}>${a.title||'(no title)'}</div>
+                    ${a.body&&html`<div style=${{fontSize:12,color:'var(--mu)',marginTop:2}}>${a.body.slice(0,80)}${a.body.length>80?'…':''}</div>`}
+                  </div>
+                  <span style=${{fontSize:10,background:'rgba(240,180,41,.12)',color:'var(--gold)',padding:'2px 8px',borderRadius:10,flexShrink:0,border:'1px solid rgba(240,180,41,.3)'}}>
+                    ${a.scope==='welcome'?'Front page':a.scope==='dash'?'Profile':a.scope==='rooms'?'Rooms':'Everywhere'}
+                  </span>
+                </div>
+                <div style=${{display:'flex',gap:6}}>
+                  <button class="btn" style=${{fontSize:11,padding:'3px 10px'}} onClick=${function(){setGAnnModal(a);}}>Edit</button>
+                  <button class="btn" style=${{fontSize:11,padding:'3px 10px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}} onClick=${function(){
+                    if(!confirm('Remove this announcement?')) return;
+                    var upd=globalAnns.filter(function(x){return x.id!==a.id;});
+                    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                      body:JSON.stringify({action:'set',key:'wc26_global_anns',value:upd})})
+                      .then(function(r){return r.json();}).then(function(d){if(d.ok!==false)setGlobalAnns(upd);});
+                  }}>Remove</button>
+                </div>
+              </div>`;
+            })
+        }
+      </div>`}
+
+      <!-- ── Improved Settings tab ─────────────────────────────────── -->
+      ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16,maxWidth:480}}>
+
+        <!-- Live Score API -->
+        <div class="card" style=${{padding:'14px 16px'}}>
+          <h3 style=${{marginBottom:4}}>⚡ Live Score Updates</h3>
+          <p style=${{fontSize:12,color:'var(--mu)',marginBottom:12,lineHeight:1.5}}>
+            Scores sync automatically every <strong>60 seconds</strong> from football-data.org.
+            Finished matches update results for all rooms instantly.<br/>
+            Knockout qualifiers are computed automatically from group results.
+          </p>
+          <div style=${{display:'flex',gap:8,marginBottom:10}}>
+            <input value=${saApiKey} onChange=${function(e){setSaApiKey(e.target.value.trim());}}
+              placeholder="football-data.org API key" style=${{flex:1,fontFamily:'monospace',fontSize:12}} />
+            <button class="btn-p" style=${{fontSize:12,padding:'8px 14px',flexShrink:0}} onClick=${function(){
+              if(!saApiKey) return;
+              localStorage.setItem('wc26_apikey', saApiKey);
+              // Save to GAS
+              fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                body:JSON.stringify({action:'savekey',key:saApiKey})})
+                .then(function(r){return r.json();})
+                .then(function(d){
+                  setSyncSt(d.ok!==false?'saved':'error');
+                  setTimeout(function(){setSyncSt('idle');},3000);
+                }).catch(function(){setSyncSt('error');setTimeout(function(){setSyncSt('idle');},3000);});
+            }}>Save Key</button>
+          </div>
+          <div style=${{fontSize:11,color:syncSt==='saved'?'#22c55e':syncSt==='error'?'#ef4444':'var(--dm)'}}>
+            ${syncSt==='saved'?'✓ API key saved — live scores will sync every 60s':syncSt==='error'?'✗ Save failed':saApiKey?'Key set. Click Save to apply changes.':'No key set. Get a free key at football-data.org'}
+          </div>
+          <div style=${{marginTop:12,padding:'10px 12px',background:'var(--bg3)',borderRadius:'var(--rs)',fontSize:11,color:'var(--mu)'}}>
+            <div style=${{fontWeight:600,marginBottom:4,color:'var(--tx)'}}>📋 How it works</div>
+            <div>1. Get a free API key at <strong>football-data.org</strong> → sign up → copy your key</div>
+            <div>2. Paste it above and click Save Key</div>
+            <div>3. Scores auto-update every 60s — group standings, knockout qualifiers, and all rooms update live</div>
+            <div style=${{marginTop:6,color:'var(--gold)'}}>💡 For 24/7 auto-sync without needing the app open: set up a time-based trigger in GAS calling <code>syncLiveScores()</code></div>
+          </div>
+        </div>
+
+        <!-- Password change -->
         <div class="card">
           <h3 style=${{marginBottom:12}}>🔑 Change Super-Admin Password</h3>
           <div style=${{display:'flex',flexDirection:'column',gap:10}}>
             <div><label>Current password</label>
               <input type="password" value=${oldPw} onChange=${function(e){setOldPw(e.target.value);}} placeholder="Current password" /></div>
-            <div><label>New password (6+ characters)</label>
+            <div><label>New password <span style=${{color:'var(--dm)',fontWeight:400,fontSize:11}}>(min 6 characters)</span></label>
               <input type="password" value=${newPw} onChange=${function(e){setNewPw(e.target.value);}} placeholder="New password" /></div>
-            ${pwMsg&&html`<p style=${{fontSize:12,margin:0,color:pwMsg.startsWith('✓')?'var(--gn)':'var(--rd)' }}>${pwMsg}</p>`}
-            <button class="btn-p" onClick=${changePw} disabled=${!oldPw||!newPw}>Update Password</button>
+            <button class="btn-p" onClick=${changePw}>Update Password</button>
+            ${pwMsg&&html`<div style=${{fontSize:12,color:pwMsg[0]==='✓'?'#22c55e':'#ef4444',fontWeight:500}}>${pwMsg}</div>`}
           </div>
         </div>
-        <div class="card" style=${{borderColor:'rgba(239,68,68,.2)',background:'rgba(239,68,68,.03)'}}>
-          <h3 style=${{marginBottom:8,color:'var(--rd)'}}>⚠️ Info</h3>
-          <ul style=${{fontSize:12,color:'var(--mu)',lineHeight:2,paddingLeft:18}}>
-            <li>Super-admin password is stored in GAS Script Properties</li>
-            <li>Default password: <code>wadde2026</code> — change it above</li>
+
+        <!-- System info -->
+        <div class="card">
+          <h3 style=${{marginBottom:10}}>ℹ️ System</h3>
+          <ul style=${{fontSize:12,color:'var(--mu)',paddingLeft:18,margin:0,lineHeight:1.8}}>
+            <li>Default super-admin password: <code>wadde2026</code> — change it above</li>
             <li>Access this panel via <code>#superadmin</code> in the URL</li>
-            <li>Structured Sheet tabs (Users, Rooms, etc.) auto-update on every write once GAS is redeployed</li>
+            <li>Structured Sheet tabs auto-update on every write once GAS is redeployed</li>
           </ul>
         </div>
       </div>`}
     </div>
+  </div>`;
+}
+
+
+
+// ── Global Announcements Banner ───────────────────────────────────────────
+function GlobalAnnBanner(props) {
+  var anns = (props.anns || []).filter(function(a){return a.title||a.body;});
+  if (!anns.length) return null;
+  return html`<div style=${{display:'flex',flexDirection:'column',gap:8,marginBottom:12}}>
+    ${anns.map(function(a,i){
+      return html`<div key=${a.id||i} style=${{
+        background:'linear-gradient(135deg,rgba(240,180,41,.12),rgba(240,180,41,.04))',
+        border:'1px solid rgba(240,180,41,.25)',borderLeft:'3px solid var(--gold)',
+        borderRadius:'var(--rs)',padding:'10px 14px'
+      }}>
+        ${a.imageUrl&&html`<img src=${a.imageUrl} alt="" style=${{width:'100%',maxHeight:140,objectFit:'cover',borderRadius:6,marginBottom:7,display:'block'}} onError=${function(e){e.target.style.display='none';}} />`}
+        ${a.title&&html`<div style=${{fontWeight:600,fontSize:13,marginBottom:a.body?3:0,color:'var(--gold)'}}>${a.title}</div>`}
+        ${a.body&&html`<div style=${{fontSize:12,color:'var(--mu)',lineHeight:1.5}}>${a.body}</div>`}
+      </div>`;
+    })}
   </div>`;
 }
 
@@ -1933,6 +2074,7 @@ function WelcomePage(props) {
       </div>
     </div>
     <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'9px 14px',marginBottom:16,fontSize:13,color:'#93c5fd'}}>⚽ ${FACTS[props.factI]}</div>
+    <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
     <h3>2026 World Cup Groups</h3>
     <div class="g4">${Object.entries(GRP).map(function(e){ var g=e[0]; var ts=e[1]; return html`<div key=${g} class="card card-sm">
       <div style=${{fontSize:10,fontWeight:600,color:'var(--mu)',marginBottom:6,fontFamily:'Barlow Condensed',letterSpacing:.5}}>GROUP ${g}</div>
@@ -2166,6 +2308,8 @@ function DashPage(props) {
     </div>
     <${CountdownBanner} />
     <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px 14px',marginBottom:16,fontSize:13,color:'#93c5fd'}}>⚽ ${FACTS[props.factI]}</div>
+
+    <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
 
     <!-- Points Details + Champion Team above My Rooms -->
     <div style=${{marginBottom:16,display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,alignItems:'start'}}>
@@ -3302,6 +3446,7 @@ function App() {
   var s11g=useState(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');
   var apiKey=s11g[0]; var setApiKey=s11g[1];
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
+  var s_ga=useState([]); var globalAnns=s_ga[0]; var setGlobalAnns=s_ga[1];
   var s11i=useState({}); var annsByRoom=s11i[0]; var setAnnsByRoom=s11i[1];
   var s11j=useState(null); var annModal=s11j[0]; var setAnnModal=s11j[1];
   var s11l=useState(null); var h2hUser=s11l[0]; var setH2hUser=s11l[1];
@@ -3320,6 +3465,17 @@ function App() {
     if (!sess) setScr('welcome');
 
     var _firstUserLoad = true;
+    Store.listen('global_anns', function(v) {
+      var anns = Array.isArray(v) ? v : (v ? Object.values(v) : []);
+      setGlobalAnns(anns);
+      try { localStorage.setItem('wc26_global_anns_cache', JSON.stringify(anns)); } catch(e) {}
+    });
+    // Preload from localStorage
+    try {
+      var cachedGA = JSON.parse(localStorage.getItem('wc26_global_anns_cache') || '[]');
+      if (Array.isArray(cachedGA) && cachedGA.length > 0) setGlobalAnns(cachedGA);
+    } catch(e) {}
+
     var unsub = Store.listen('users', function(v) {
       var uu = v || {};
       setUsers(uu);
@@ -3891,15 +4047,15 @@ function getAchievements(uid, predsMap, resultsMap) {
     </div>`}
 
     <div class="page">
-      ${scr==='welcome'&&html`<${WelcomePage} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
+      ${scr==='welcome'&&html`<${WelcomePage} globalAnns=${globalAnns.filter(function(a){return a.scope==="welcome"||a.scope==="all";})} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+      ${scr==='dash'&&user&&html`<${DashPage} globalAnns=${globalAnns.filter(function(a){return a.scope==="dash"||a.scope==="all";})} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
           roomMsgs=${room&&chatMsgs[room.id]||[]}
           onSendChat=${sendChatMessage}
-          announcements=${room&&annsByRoom[room.id]||[]}
+          announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
           onLeaveRoom=${leaveRoom} onH2H=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
@@ -3916,3 +4072,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
+      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
