@@ -1270,8 +1270,8 @@ function ScorePick(props) {
 
 // Modal components
 function PredModal(props) {
-  var hs = useState(props.existing ? props.existing.h : 1); var h = hs[0]; var setH = hs[1];
-  var as = useState(props.existing ? props.existing.a : 1); var a = as[0]; var setA = as[1];
+  var hs = useState(props.existing ? props.existing.h : 0); var h = hs[0]; var setH = hs[1];
+  var as = useState(props.existing ? props.existing.a : 0); var a = as[0]; var setA = as[1];
   var t = fmtTime(props.match.utc);
   return html`<div class="modal">
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
@@ -2174,7 +2174,6 @@ function DashPage(props) {
         <div style=${{display:'flex',flexDirection:'column',gap:5,fontSize:12,color:'var(--mu)'}}>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}> +2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner<strong style=${{color:'#60a5fa'}}> +2 pts</strong></div>
-          <div style=${{display:'flex',justifyContent:'space-between'}}>❌ Wrong<strong style=${{color:'var(--dm)'}}> 0 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Champion Team<strong style=${{color:'var(--gold)'}}> +5 pts</strong></div>
         </div>
       </div>
@@ -2675,7 +2674,6 @@ function HowToPlay(props) {
           ${[
             ['🎯','Exact score (e.g. 2–1)', '+2 pts', '#22c55e'],
             ['✅','Correct winner or draw', '+2 pts', '#60a5fa'],
-            ['❌','Wrong prediction', '0 pts',  'var(--dm)'],
             ['🏆','Champion Team correct', '+5 pts', 'var(--gold)']
           ].map(function(r){
             return html`<div key=${r[0]} style=${{
@@ -2909,7 +2907,6 @@ function RoomPage(props) {
         <div style=${{display:'flex',flexDirection:'column',gap:6,fontSize:13,color:'var(--mu)'}}>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}>+2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner / draw<strong style=${{color:'#60a5fa'}}>2 pts</strong></div>
-          <div style=${{display:'flex',justifyContent:'space-between'}}>❌ Wrong prediction<strong style=${{color:'var(--dm)'}}>0 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style=${{color:'var(--gold)'}}>+5 pts</strong></div>
         </div>
       </div>
@@ -3344,29 +3341,31 @@ function App() {
       } catch(e) {}
 
       chatUnsub = Store.listen('chat_' + roomId, function(v) {
-        var msgs = Array.isArray(v) ? v : [];
-        if (msgs.length === 0) {
+        var msgs = Array.isArray(v) && v.length > 0 ? v : null;
+        if (msgs) {
+          // GAS returned data — sync to localStorage
+          try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(msgs)); } catch(e) {}
+        } else {
+          // GAS empty/failed — restore from localStorage
           try {
             var local = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]');
-            if (Array.isArray(local) && local.length > 0) msgs = local;
-          } catch(e) {}
-        } else {
-          try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(msgs)); } catch(e) {}
+            msgs = Array.isArray(local) ? local : [];
+          } catch(e) { msgs = []; }
         }
         setChatMsgs(function(prev) { var n = Object.assign({}, prev); n[roomId] = msgs; return n; });
       });
       // Also listen for announcements
       Store.listen('ann_' + roomId, function(v) {
-        var anns = Array.isArray(v) ? v : [];
-        // If GAS returns nothing, fall back to localStorage
-        if (anns.length === 0) {
+        var anns = Array.isArray(v) && v.length > 0 ? v : null;
+        if (anns) {
+          // GAS returned data — sync to localStorage
+          try { localStorage.setItem('wc26_ann_' + roomId, JSON.stringify(anns)); } catch(e) {}
+        } else {
+          // GAS empty/failed — restore from localStorage
           try {
             var local = JSON.parse(localStorage.getItem('wc26_ann_' + roomId) || '[]');
-            if (Array.isArray(local) && local.length > 0) anns = local;
-          } catch(e) {}
-        } else {
-          // Sync localStorage with whatever GAS returned
-          try { localStorage.setItem('wc26_ann_' + roomId, JSON.stringify(anns)); } catch(e) {}
+            anns = Array.isArray(local) ? local : [];
+          } catch(e) { anns = []; }
         }
         setAnnsByRoom(function(prev) {
           var upd = Object.assign({}, prev);
@@ -3401,6 +3400,27 @@ function App() {
     var t2 = setInterval(function() { setPlyrI(function(i) { return (i+1)%PLY.length; }); }, 4000);
     return function() { if(unsub)unsub(); if(_syncTimer)clearInterval(_syncTimer); clearInterval(t1); clearInterval(t2); clearTimeout(fallback); };
   }, []);
+
+  // ── Auto-save chat & announcements to localStorage whenever state changes ──
+  useEffect(function() {
+    if (!room) return;
+    var rid = room.id;
+    var msgs = chatMsgs[rid];
+    if (Array.isArray(msgs) && msgs.length > 0) {
+      try { localStorage.setItem('wc26_chat_' + rid, JSON.stringify(msgs)); } catch(e) {}
+    }
+  }, [chatMsgs, room]);
+
+  useEffect(function() {
+    if (!room) return;
+    var rid = room.id;
+    var anns = annsByRoom[rid];
+    if (Array.isArray(anns) && anns.length > 0) {
+      try { localStorage.setItem('wc26_ann_' + rid, JSON.stringify(anns)); } catch(e) {}
+    }
+  }, [annsByRoom, room]);
+
+
 
   function fetchNews() {
     setNewsLoading(true);
