@@ -3256,6 +3256,10 @@ class RoomErrorBoundary extends React.Component {
   }
 }
 
+// ── Module-level state (outside React — persists across re-renders) ───────
+var _rankSnap    = {};  // {roomId: {uid: rank}} — for leaderboard position arrows
+var _prevResults = {};  // previous results snapshot — for points-earned toasts
+
 function App() {
   var s0=useState('loading'); var scr=s0[0]; var setScr=s0[1];
   var s1=useState(null); var user=s1[0]; var setUser=s1[1];
@@ -3427,6 +3431,10 @@ function App() {
       var snap = {};
       lboard.forEach(function(e, i) { if(e.user) snap[e.user.id] = i; });
       _rankSnap[room.id] = snap;
+    }
+    // Seed _prevResults so existing results don't trigger notifications on entry
+    if (Object.keys(_prevResults).length === 0 || !_prevResults['__room__'] || _prevResults['__room__'] !== room.id) {
+      _prevResults = Object.assign({'__room__': room.id}, results);
     }
   }, [room]);
 
