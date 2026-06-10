@@ -3258,6 +3258,19 @@ function App() {
     function subscribeChatRoom(roomId) {
       if (chatUnsub) { chatUnsub(); chatUnsub = null; }
       if (!roomId) return;
+
+      // ── Instantly show from localStorage (no GAS round-trip wait) ──
+      try {
+        var lc = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]');
+        if (Array.isArray(lc) && lc.length > 0)
+          setChatMsgs(function(p){ var n=Object.assign({},p); n[roomId]=lc; return n; });
+      } catch(e) {}
+      try {
+        var la = JSON.parse(localStorage.getItem('wc26_ann_' + roomId) || '[]');
+        if (Array.isArray(la) && la.length > 0)
+          setAnnsByRoom(function(p){ var n=Object.assign({},p); n[roomId]=la; return n; });
+      } catch(e) {}
+
       chatUnsub = Store.listen('chat_' + roomId, function(v) {
         var msgs = Array.isArray(v) ? v : [];
         if (msgs.length === 0) {
@@ -3375,6 +3388,7 @@ function App() {
     var na = Object.assign({}, adminAuth); na[id] = true;
     setAdminAuth(na); // Admin auth in memory only — enter passphrase each session for security
     setRoom(nr[id]); setModal(null); setTab('matches'); setScr('room');
+    subscribeChatRoom(id);
     notify('Room created! Share code: ' + code);
   }
   function doJoin(code) {
