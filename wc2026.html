@@ -2751,6 +2751,7 @@ function RoomPage(props) {
                 <div style=${{textAlign:'right',flexShrink:0}}>
                   <div style=${{fontSize:11,color:'var(--mu)'}}>${tv2.day} ${tv2.date}</div>
                   <div style=${{fontSize:14,fontWeight:700}}>${tv2.time}</div>
+                <div style=${{fontSize:10,color:'var(--dm)',marginTop:2}}>${(function(){var diff=new Date(m.utc)-Date.now();if(diff<=0)return 'Soon';var h=Math.floor(diff/3600000),mn=Math.floor((diff%3600000)/60000);return h>0?'in '+h+'h '+mn+'m':'in '+mn+'m';}())}</div>
                 </div>
               </div>
               <button class="btn-p" style=${{width:'100%',fontSize:12,padding:'6px 10px'}}
@@ -2763,7 +2764,7 @@ function RoomPage(props) {
       </div>`}
 
     <div class="tabs">
-      ${[['leaderboard','📋 Standings'],['chat','💬 Chat'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout'],['quiz','🧠 Quiz']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){
+      ${[['leaderboard','📋 Standings'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){
         var isChat = p[0]==='chat';
         return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')}
           onClick=${function(){
@@ -2832,7 +2833,7 @@ function RoomPage(props) {
                   ? html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:24,fontWeight:700,letterSpacing:1,lineHeight:1}}>
                       ${res.h}<span style=${{color:'var(--dm)',margin:'0 3px'}}>–</span>${res.a}
                     </div>
-                    ${ep!==null&&html`<div style=${{fontSize:11,marginTop:4,color:ep===4?'#4ade80':ep===2?'#60a5fa':'#f87171',fontWeight:500}}>${ep===4?'🎯 +4pts':ep===2?'✓ +2pts':'✗ 0pts'}</div>`}`
+                    ${ep!==null&&html`<div style=${{fontSize:11,marginTop:4,color:ep===2?'#4ade80':'#f87171',fontWeight:500}}>${ep===2?(pred&&res&&Number(pred.h)===Number(res.h)&&Number(pred.a)===Number(res.a)?'🎯 +2pts':'✓ +2pts'):'✗ 0pts'}</div>`}`
                   : html`<div style=${{fontSize:11,color:'var(--dm)',fontWeight:500,letterSpacing:.3}}>${tv.day}</div>
                     <div style=${{fontSize:14,fontWeight:700,color:'var(--tx)',lineHeight:1.15}}>${tv.date}</div>
                     <div style=${{fontSize:12,color:isLive?'#ef4444':'var(--mu)',fontWeight:isLive?700:400,marginTop:1}}>${isLive?'🔴 LIVE':tv.time}</div>`
@@ -2884,7 +2885,9 @@ function RoomPage(props) {
       ${props.lboard.length===0
         ?html`<div class="card" style=${{textAlign:'center',padding:32}}><div style=${{fontSize:32,marginBottom:10}}>📊</div><p style=${{color:'var(--mu)'}}>No members yet</p></div>`
         :html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
-          ${props.lboard.map(function(e,i){ return html`<div key=${(e.user&&e.user.id)||i} class="lbr" style=${{borderColor:i===0?'rgba(240,180,41,.22)':e.user&&e.user.id===props.user.id?'rgba(59,130,246,.3)':undefined,background:i===0?'rgba(240,180,41,.03)':undefined}}>
+          ${props.lboard.map(function(e,i){ return html`<div key=${(e.user&&e.user.id)||i} class="lbr"
+            onClick=${e.user&&e.user.id!==props.user.id?function(){props.onH2H&&props.onH2H(e.user);}:undefined}
+            style=${{borderColor:i===0?'rgba(240,180,41,.22)':e.user&&e.user.id===props.user.id?'rgba(59,130,246,.3)':undefined,background:i===0?'rgba(240,180,41,.03)':undefined,cursor:e.user&&e.user.id!==props.user.id?'pointer':'default'}}>
             <div style=${{width:32,height:32,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0,background:i===0?'rgba(240,180,41,.15)':i===1?'rgba(148,163,184,.1)':i===2?'rgba(180,100,30,.1)':'var(--bg3)'}}>${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
             <div style=${{flex:1,minWidth:0}}>
               <div style=${{fontWeight:500,fontSize:14,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
@@ -2894,11 +2897,28 @@ function RoomPage(props) {
               </div>
               <div style=${{fontSize:11,color:'var(--mu)',marginTop:3,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 ${e.user&&e.user.favP&&typeof e.user.favP[0]==='string'&&e.user.favP[0]&&html`<span>⚽ ${e.user.favP[0].split(' ').pop()}</span>`}
+                ${e.acc!==null&&e.acc!==undefined&&html`<span style=${{color:e.acc>=60?'#22c55e':e.acc>=40?'#f59e0b':'var(--mu)',fontWeight:500}}>${e.acc}% ✓</span>`}
                 ${e.pick&&html`<span style=${{display:'flex',alignItems:'center',gap:3}}>🏆 <${FlagImg} team=${e.pick} w=${14} /><span>${e.pick}</span></span>`}
                 ${!e.pick&&html`<span style=${{color:'var(--dm)'}}>No champion pick</span>`}
               </div>
+              ${e.badges&&e.badges.length>0&&html`<div style=${{display:'flex',gap:4,flexWrap:'wrap',marginTop:4}}>
+                ${e.badges.map(function(b){ return html`<span key=${b.id} title=${b.desc} style=${{
+                  background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.12)',
+                  borderRadius:20,padding:'1px 7px',fontSize:10,cursor:'default',
+                  color:b.col,fontWeight:600,display:'flex',alignItems:'center',gap:3
+                }}>${b.icon} ${b.label}</span>`; })}
+              </div>`}
             </div>
-            <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)',flexShrink:0}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
+            <div style=${{display:'flex',flexDirection:'column',alignItems:'flex-end',flexShrink:0}}>
+            ${(function(){
+              var snap=_rankSnap[props.room&&props.room.id];
+              var prev=snap&&snap[e.user&&e.user.id];
+              if(prev===undefined||prev===i) return null;
+              var d=prev-i;
+              return html`<span style=${{fontSize:10,fontWeight:700,color:d>0?'#22c55e':'#ef4444',marginBottom:1}}>${d>0?'↑'+d:'↓'+Math.abs(d)}</span>`;
+            })()}
+            <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
+          </div>
           </div>`; })}
         </div>`
       }
@@ -2909,108 +2929,6 @@ function RoomPage(props) {
           <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner / draw<strong style=${{color:'#60a5fa'}}>2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Correct tournament winner<strong style=${{color:'var(--gold)'}}>+5 pts</strong></div>
         </div>
-      </div>
-    </div>`}
-
-    ${props.tab==='groups'&&html`<div>
-      <!-- Group Stage / Knockout toggle -->
-      <div style=${{display:'flex',borderBottom:'1px solid var(--bdr)',marginBottom:20,gap:0}}>
-        <div style=${{padding:'8px 20px',fontSize:14,fontWeight:600,color:'var(--gold)',borderBottom:'2px solid var(--gold)',cursor:'default'}}>Group Stage</div>
-        <div style=${{padding:'8px 20px',fontSize:14,color:'var(--dm)',cursor:'default'}}>Knockout Stage</div>
-      </div>
-
-      ${Object.keys(GRP).map(function(grpKey){
-        var rows = computeGroupStandings(grpKey, props.results);
-        return html`<div key=${grpKey} style=${{marginBottom:28}}>
-          <!-- Group header -->
-          <h3 style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:700,letterSpacing:.5,margin:'0 0 0 0',color:'var(--tx)'}}>Group ${grpKey}</h3>
-
-          <!-- Standings table -->
-          <div style=${{background:'var(--bg2)',borderRadius:'var(--rs)',overflow:'hidden',border:'1px solid var(--bdr)',marginTop:8}}>
-            <!-- Header row -->
-            <div style=${{display:'grid',gridTemplateColumns:'22px 1fr 26px 24px 24px 24px 28px 28px 28px 32px',padding:'5px 8px 5px 6px',borderBottom:'1px solid var(--bdr)',fontSize:10,color:'var(--dm)',fontWeight:700,textAlign:'center',letterSpacing:.3,textTransform:'uppercase'}}>
-              <span></span>
-              <span style=${{textAlign:'left'}}>Team</span>
-              <span>MP</span><span>W</span><span>D</span><span>L</span>
-              <span>GF</span><span>GA</span><span>GD</span>
-              <span style=${{color:'var(--gold)'}}>Pts</span>
-            </div>
-
-            ${rows.map(function(row, i){
-              var isPromo = i < 2;  /* top 2 advance */
-              return html`<div key=${row.team} style=${{
-                display:'grid',
-                gridTemplateColumns:'22px 1fr 26px 24px 24px 24px 28px 28px 28px 32px',
-                padding:'7px 8px 7px 6px',
-                borderBottom: i<rows.length-1?'1px solid rgba(255,255,255,.04)':'none',
-                alignItems:'center',
-                textAlign:'center',
-                fontSize:13,
-                background: i===0?'var(--gdim)':'var(--bg2)',
-                borderLeft: isPromo?'2px solid '+(i===0?'var(--gold)':'rgba(255,255,255,.2)'):'2px solid transparent'
-              }}>
-                <span style=${{fontSize:12,color:'var(--dm)',fontWeight:500}}>${i+1}</span>
-                <div style=${{display:'flex',alignItems:'center',gap:8,textAlign:'left'}}>
-                  <${FlagImg} team=${row.team} w=${22} />
-                  <span style=${{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${row.team}</span>
-                </div>
-                <span style=${{color:'var(--mu)'}}>${row.mp}</span>
-                <span style=${{color:row.w>0?'#4ade80':'var(--mu)'}}>${row.w}</span>
-                <span style=${{color:'var(--mu)'}}>${row.d}</span>
-                <span style=${{color:row.l>0?'#f87171':'var(--mu)'}}>${row.l}</span>
-                <span style=${{color:'var(--mu)'}}>${row.gf}</span>
-                <span style=${{color:'var(--mu)'}}>${row.ga}</span>
-                <span style=${{color:row.gd>0?'#4ade80':row.gd<0?'#f87171':'var(--mu)'}}>${row.gd>0?'+':''}${row.gd}</span>
-                <span style=${{fontWeight:700,color:row.pts>0?'var(--tx)':'var(--dm)'}}>${row.pts}</span>
-              </div>`;
-            })}
-          </div>
-
-          ${rows.filter(function(r){return r.mp>0;}).length===0&&html`<p style=${{fontSize:12,color:'var(--dm)',textAlign:'center',marginTop:6}}>No results entered yet</p>`}
-        </div>`;
-      })}
-      <p style=${{fontSize:11,color:'var(--dm)',textAlign:'center',marginTop:4}}>★ Top 2 teams in each group advance · Pts updated live as admin enters results</p>
-    </div>`}
-    ${props.tab==='chat'&&html`<div>
-      <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-        <h2 style=${{margin:0}}>💬 Room Chat</h2>
-        <span style=${{fontSize:12,color:'var(--mu)'}}>${(props.roomMsgs||[]).length} messages</span>
-      </div>
-      <${ChatRoom} user=${props.user} msgs=${props.roomMsgs||[]} onSend=${props.onSendChat} />
-    </div>`}
-
-    ${props.tab==='quiz'&&html`<div>
-      <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <h2 style=${{margin:0}}>Daily Quiz</h2>
-        <button class="btn" style=${{fontSize:12}} onClick=${props.onNewQuiz}><i class="ti ti-refresh"></i> New quiz</button>
-      </div>
-      ${!props.qDone?html`<div>
-        <div style=${{display:'flex',justifyContent:'space-between',marginBottom:12,fontSize:13,color:'var(--mu)'}}><span>Question ${props.qIdx+1} of ${props.qSet.length}</span><span>${props.qScore} correct</span></div>
-        <div class="card" style=${{marginBottom:12}}><p style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:600,lineHeight:1.4,margin:0}}>${props.qSet[props.qIdx]&&props.qSet[props.qIdx].q}</p></div>
-        <div style=${{display:'flex',flexDirection:'column',gap:8}}>
-          ${props.qSet[props.qIdx]&&props.qSet[props.qIdx].o.map(function(opt,i){
-            var isC=i===(props.qSet[props.qIdx].a); var isSel=props.qSel===i;
-            var bg='var(--bg3)'; var bdr='1px solid var(--bdr)'; var cl='var(--tx)';
-            if(props.qSel!==null){if(isC){bg='rgba(34,197,94,.1)';bdr='1px solid #22c55e';cl='#4ade80';}else if(isSel){bg='rgba(239,68,68,.1)';bdr='1px solid #ef4444';cl='#f87171';}}
-            return html`<button key=${i} onClick=${function(){props.onAnswer(i);}} style=${{padding:'12px 14px',borderRadius:'var(--rs)',border:bdr,background:bg,cursor:'pointer',textAlign:'left',fontSize:14,color:cl,display:'flex',alignItems:'center',gap:10}}>
-              <span style=${{width:26,height:26,borderRadius:13,background:'rgba(255,255,255,.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:600,flexShrink:0,color:cl}}>${['A','B','C','D'][i]}</span>
-              ${opt}
-              ${props.qSel!==null&&isC&&html`<span style=${{marginLeft:'auto'}}>✓</span>`}
-            </button>`;
-          })}
-        </div>
-      </div>`:html`<div class="card" style=${{textAlign:'center',padding:36}}>
-        <div style=${{fontSize:52,marginBottom:12}}>${props.qScore>=4?'🏆':props.qScore>=3?'⭐':props.qScore>=2?'👍':'📚'}</div>
-        <h2>Quiz Complete!</h2>
-        <p style=${{fontSize:16,color:'var(--mu)',marginBottom:6}}>${props.qScore} / ${props.qSet.length} correct</p>
-        <p style=${{fontSize:14,color:'var(--dm)',marginBottom:24}}>${props.qScore===5?'Perfect! Football genius!':props.qScore>=3?'Great knowledge! ⚽':'Keep learning!'}</p>
-        <div style=${{display:'flex',gap:10,justifyContent:'center'}}>
-          <button class="btn" onClick=${props.onResetQuiz}>Try again</button>
-          <button class="btn-p" onClick=${props.onNewQuiz}><i class="ti ti-refresh"></i> New quiz</button>
-        </div>
-      </div>`}
-      <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'10px 14px',marginTop:14,fontSize:13,color:'#93c5fd'}}>
-        <strong style=${{color:'#60a5fa',fontSize:11,letterSpacing:1,fontFamily:'Barlow Condensed'}}>DID YOU KNOW? </strong>${FACTS[props.factI]}
       </div>
     </div>`}
 
@@ -3219,6 +3137,104 @@ function SetupScreen() {
 // Main App
 
 // ── Error Boundary: prevents blank screen on render errors ──────────
+
+// ── Head-to-Head Comparison Modal ─────────────────────────────────────────
+function H2HModal(props) {
+  var ua = props.userA, ub = props.userB;
+  if (!ua || !ub) return null;
+  var predsA = props.preds, predsB = props.preds;
+  var results = props.results;
+  var done = MS.filter(function(m){ return results[m.id]; });
+
+  var aWins=0, bWins=0, draws=0;
+  done.forEach(function(m){
+    var pa=predsA[ua.id+'_'+m.id], pb=predsB[ub.id+'_'+m.id], r=results[m.id];
+    var ptA=calcPts(pa,r)||0, ptB=calcPts(pb,r)||0;
+    if(ptA>ptB) aWins++;
+    else if(ptB>ptA) bWins++;
+    else if(pa||pb) draws++;
+  });
+
+  return html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}}>
+    <div class="modal" style=${{padding:0,overflow:'hidden',maxHeight:'85vh',display:'flex',flexDirection:'column'}}>
+
+      <!-- Header -->
+      <div style=${{background:'linear-gradient(135deg,#1a56db,#1e40af)',padding:'16px 20px',flexShrink:0}}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <h2 style=${{margin:0,fontSize:16,color:'#fff'}}>⚔️ Head-to-Head</h2>
+          <button class="btn" style=${{padding:'4px 10px',fontSize:12}} onClick=${props.onClose}>✕</button>
+        </div>
+        <div style=${{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:8}}>
+          <div style=${{textAlign:'center'}}>
+            ${ua.favT&&ua.favT[0]&&html`<${FlagImg} team=${ua.favT[0]} w=${28} />`}
+            <div style=${{fontSize:14,fontWeight:700,color:'#fff',marginTop:4}}>${ua.name}</div>
+            <div style=${{fontSize:22,fontWeight:900,color:'#4ade80',fontFamily:'Barlow Condensed'}}>${aWins}</div>
+          </div>
+          <div style=${{textAlign:'center',color:'rgba(255,255,255,.5)',fontSize:11}}>
+            <div style=${{fontSize:18,fontWeight:700,color:'rgba(255,255,255,.6)'}}>${draws}</div>
+            <div>draws</div>
+          </div>
+          <div style=${{textAlign:'center'}}>
+            ${ub.favT&&ub.favT[0]&&html`<${FlagImg} team=${ub.favT[0]} w=${28} />`}
+            <div style=${{fontSize:14,fontWeight:700,color:'#fff',marginTop:4}}>${ub.name}</div>
+            <div style=${{fontSize:22,fontWeight:900,color:'#f87171',fontFamily:'Barlow Condensed'}}>${bWins}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Match rows -->
+      <div style=${{overflowY:'auto',flex:1,padding:'8px 0'}}>
+        ${done.length===0&&html`<div style=${{textAlign:'center',padding:32,color:'var(--mu)',fontSize:13}}>No results yet — check back after matches are played!</div>`}
+        ${done.map(function(m){
+          var pa=predsA[ua.id+'_'+m.id], pb=predsB[ub.id+'_'+m.id], r=results[m.id];
+          var ptA=calcPts(pa,r)||0, ptB=calcPts(pb,r)||0;
+          var isExA=pa&&r&&Number(pa.h)===Number(r.h)&&Number(pa.a)===Number(r.a);
+          var isExB=pb&&r&&Number(pb.h)===Number(r.h)&&Number(pb.a)===Number(r.a);
+          var colA=ptA===0?'var(--dm)':isExA?'#22c55e':'#60a5fa';
+          var colB=ptB===0?'var(--dm)':isExB?'#22c55e':'#60a5fa';
+          return html`<div key=${m.id} style=${{
+            display:'grid',gridTemplateColumns:'1fr auto 1fr',
+            padding:'10px 16px',borderBottom:'1px solid var(--bdr)',
+            alignItems:'center',gap:8
+          }}>
+            <!-- User A prediction -->
+            <div style=${{textAlign:'center'}}>
+              ${pa
+                ? html`<div style=${{fontSize:15,fontWeight:700,color:colA,fontFamily:'Barlow Condensed'}}>${pa.h}–${pa.a}</div>
+                    <div style=${{fontSize:10,color:colA}}>${isExA?'🎯 +'+ptA:ptA>0?'✓ +'+ptA:'✗'}</div>`
+                : html`<div style=${{fontSize:11,color:'var(--dm)'}}>—</div>`}
+            </div>
+            <!-- Match info -->
+            <div style=${{textAlign:'center',minWidth:80}}>
+              <div style=${{fontSize:10,color:'var(--dm)',marginBottom:2}}>Group ${m.gr}</div>
+              <div style=${{fontSize:11,color:'var(--mu)',whiteSpace:'nowrap'}}>${m.h.split(' ').pop()} vs ${m.a.split(' ').pop()}</div>
+              <div style=${{fontSize:14,fontWeight:700,fontFamily:'Barlow Condensed',color:'var(--tx)',marginTop:2}}>${r.h}–${r.a}</div>
+            </div>
+            <!-- User B prediction -->
+            <div style=${{textAlign:'center'}}>
+              ${pb
+                ? html`<div style=${{fontSize:15,fontWeight:700,color:colB,fontFamily:'Barlow Condensed'}}>${pb.h}–${pb.a}</div>
+                    <div style=${{fontSize:10,color:colB}}>${isExB?'🎯 +'+ptB:ptB>0?'✓ +'+ptB:'✗'}</div>`
+                : html`<div style=${{fontSize:11,color:'var(--dm)'}}>—</div>`}
+            </div>
+          </div>`;
+        })}
+      </div>
+
+      <!-- Footer total -->
+      ${done.length>0&&html`<div style=${{
+        display:'grid',gridTemplateColumns:'1fr auto 1fr',padding:'12px 16px',
+        borderTop:'1px solid var(--bdr)',background:'var(--bg3)',flexShrink:0
+      }}>
+        <div style=${{textAlign:'center',fontSize:16,fontWeight:800,fontFamily:'Barlow Condensed',color:'#4ade80'}}>${props.ptsA} pts</div>
+        <div style=${{textAlign:'center',fontSize:11,color:'var(--dm)'}}>Total pts</div>
+        <div style=${{textAlign:'center',fontSize:16,fontWeight:800,fontFamily:'Barlow Condensed',color:'#f87171'}}>${props.ptsB} pts</div>
+      </div>`}
+    </div>
+  </div>`;
+}
+
+
 class RoomErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -3284,6 +3300,7 @@ function App() {
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
   var s11i=useState({}); var annsByRoom=s11i[0]; var setAnnsByRoom=s11i[1];
   var s11j=useState(null); var annModal=s11j[0]; var setAnnModal=s11j[1];
+  var s11l=useState(null); var h2hUser=s11l[0]; var setH2hUser=s11l[1];
   var s11k=useState({}); var lastReadChat=s11k[0]; var setLastReadChat=s11k[1];
   var s12=useState(null); var toast=s12[0]; var setToast=s12[1];
   var s13=useState(0); var factI=s13[0]; var setFactI=s13[1];
@@ -3324,8 +3341,10 @@ function App() {
     Store.listen('results', function(v) { setResults(v||{}); });
     // Chat messages — per room, keyed as wc26_chat_{roomId}
     var chatUnsub = null;
+    var annUnsub  = null;
     function subscribeChatRoom(roomId) {
       if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+      if (annUnsub)  { annUnsub();  annUnsub  = null; }
       if (!roomId) return;
 
       // ── Instantly show from localStorage (no GAS round-trip wait) ──
@@ -3355,7 +3374,7 @@ function App() {
         setChatMsgs(function(prev) { var n = Object.assign({}, prev); n[roomId] = msgs; return n; });
       });
       // Also listen for announcements
-      Store.listen('ann_' + roomId, function(v) {
+      annUnsub = Store.listen('ann_' + roomId, function(v) {
         var anns = Array.isArray(v) && v.length > 0 ? v : null;
         if (anns) {
           // GAS returned data — sync to localStorage
@@ -3400,6 +3419,45 @@ function App() {
     var t2 = setInterval(function() { setPlyrI(function(i) { return (i+1)%PLY.length; }); }, 4000);
     return function() { if(unsub)unsub(); if(_syncTimer)clearInterval(_syncTimer); clearInterval(t1); clearInterval(t2); clearTimeout(fallback); };
   }, []);
+
+  // ── Rank snapshot — capture ranks when entering room ─────────────────────
+  useEffect(function() {
+    if (!room || !lboard.length) return;
+    if (!_rankSnap[room.id]) {
+      var snap = {};
+      lboard.forEach(function(e, i) { if(e.user) snap[e.user.id] = i; });
+      _rankSnap[room.id] = snap;
+    }
+  }, [room]);
+
+  // ── Points-earned toast when new results come in ──────────────────────
+  useEffect(function() {
+    if (!room || !user) return;
+    var newKeys = Object.keys(results).filter(function(k){ return !_prevResults[k]; });
+    if (newKeys.length > 0) {
+      newKeys.forEach(function(matchId) {
+        var m = MS.find(function(x){return x.id===matchId;}) ||
+                KO_MS.find(function(x){return x.id===matchId;});
+        if (!m) return;
+        var pred = preds[user.id+'_'+matchId];
+        if (!pred) return;
+        var res = results[matchId];
+        var pts = calcPts(pred, res);
+        var isEx = pts>0 && Number(pred.h)===Number(res.h) && Number(pred.a)===Number(res.a);
+        var mName = (m.h||m.h_slot||'?') + ' vs ' + (m.a||m.a_slot||'?');
+        if (pts > 0) {
+          setTimeout(function(){
+            notify((isEx?'🎯 Exact! ':'✅ Correct! ') + '+' + pts + ' pts — ' + mName);
+          }, 300);
+        } else if (pred) {
+          setTimeout(function(){
+            notify('❌ No pts — ' + mName, 'err');
+          }, 300);
+        }
+      });
+      _prevResults = Object.assign({}, results);
+    }
+  }, [results]);
 
   // ── Auto-save chat & announcements to localStorage whenever state changes ──
   useEffect(function() {
@@ -3479,7 +3537,7 @@ function App() {
     Store.set('rooms', nr);
     var na = Object.assign({}, adminAuth); na[id] = true;
     setAdminAuth(na); // Admin auth in memory only — enter passphrase each session for security
-    setRoom(nr[id]); setModal(null); setTab('matches'); setScr('room');
+    setRoom(nr[id]); setModal(null); setTab('leaderboard'); setScr('room');
     subscribeChatRoom(id);
     notify('Room created! Share code: ' + code);
   }
@@ -3520,13 +3578,73 @@ function App() {
   function uPts(uid) {
     return MS.reduce(function(t,m){ return t+(calcPts(preds[uid+'_'+m.id], results[m.id])||0); }, 0);
   }
+
+// ── Achievement Badges ────────────────────────────────────────────────────
+var BADGES = [
+  {id:'first',   icon:'⚽', col:'#60a5fa', label:'First Kick',   desc:'Made your first prediction!'},
+  {id:'sniper',  icon:'🎯', col:'#22c55e', label:'Sniper',       desc:'Scored an exact result!'},
+  {id:'marksman',icon:'🏹', col:'#f59e0b', label:'Marksman',     desc:'3+ exact scores!'},
+  {id:'fire',    icon:'🔥', col:'#ef4444', label:'On Fire',      desc:'3+ correct in a row!'},
+  {id:'early',   icon:'⚡', col:'#a78bfa', label:'Early Bird',   desc:'Predicted 12h+ before kick-off!'},
+  {id:'allin',   icon:'💯', col:'#f0b429', label:'All In',       desc:'Predicted every group match!'},
+  {id:'perfect', icon:'⭐', col:'#fbbf24', label:'Perfect!',     desc:'100% accuracy on 5+ predictions!'}
+];
+
+function getAchievements(uid, predsMap, resultsMap) {
+  var b = [];
+  var myPreds = MS.filter(function(m){ return predsMap[uid+'_'+m.id]; });
+  var donePreds = myPreds.filter(function(m){ return resultsMap[m.id]; });
+  var exactPreds = donePreds.filter(function(m){
+    var p=predsMap[uid+'_'+m.id], r=resultsMap[m.id];
+    return p&&r&&Number(p.h)===Number(r.h)&&Number(p.a)===Number(r.a);
+  });
+  var correctPreds = donePreds.filter(function(m){
+    return calcPts(predsMap[uid+'_'+m.id], resultsMap[m.id]) > 0;
+  });
+
+  if (myPreds.length >= 1)    b.push('first');
+  if (exactPreds.length >= 1) b.push('sniper');
+  if (exactPreds.length >= 3) b.push('marksman');
+  if (myPreds.length === MS.length && MS.length > 0) b.push('allin');
+  if (donePreds.length >= 5 && correctPreds.length === donePreds.length) b.push('perfect');
+
+  // Early bird: predicted a match 12+ hours before kick-off
+  var hasEarly = myPreds.some(function(m){
+    var p=predsMap[uid+'_'+m.id];
+    return p&&p.ts&&(new Date(m.utc)-new Date(p.ts))>=43200000;
+  });
+  if (hasEarly) b.push('early');
+
+  // On fire: 3+ correct in a row
+  var streak=0, best=0;
+  donePreds.forEach(function(m){
+    if(calcPts(predsMap[uid+'_'+m.id],resultsMap[m.id])>0){streak++;best=Math.max(best,streak);}
+    else streak=0;
+  });
+  if (best>=3) b.push('fire');
+
+  return b.map(function(id){ return BADGES.find(function(b){return b.id===id;}); }).filter(Boolean);
+}
+
+  function uAcc(uid) {
+    var done = MS.filter(function(m){ return results[m.id]; });
+    if (!done.length) return null;
+    var tot  = done.filter(function(m){ return preds[uid+'_'+m.id]; }).length;
+    if (!tot) return null;
+    var hits = done.filter(function(m){ return calcPts(preds[uid+'_'+m.id], results[m.id]) > 0; }).length;
+    return Math.round(hits / tot * 100);
+  }
+
   function getLb() {
     if (!room) return [];
     return (room.members||[])
-      .filter(function(uid){ return !!users[uid]; })  // skip deleted users
+      .filter(function(uid){ return !!users[uid]; })
       .map(function(uid){
-      return {user:users[uid]||{name:'?',id:uid}, pts:uPts(uid), np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length, pick:(users[uid]||{}).champTeam||null};
-    }).sort(function(a,b){return b.pts-a.pts||b.np-a.np;});
+        return {user:users[uid]||{name:'?',id:uid}, pts:uPts(uid),
+          np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length,
+          acc:uAcc(uid), pick:(users[uid]||{}).champTeam||null,
+          badges:getAchievements(uid, preds, results)};
+      }).sort(function(a,b){return (b.pts||0)-(a.pts||0)||(b.np||0)-(a.np||0);});
   }
   function newQuiz() { setQSet(shuffle(QQ).slice(0,5)); setQIdx(0); setQScore(0); setQDone(false); setQSel(null); }
   function ansQ(i) {
@@ -3581,7 +3699,7 @@ function App() {
 
   function leaveRoom() {
     if (!room || !user) return;
-    if (!confirm('Leave "' + room.name + '"? You can rejoin with the room code.')) return;
+    if (!confirm('Leave "' + room.name + '"?\nYou can rejoin with the room code.')) return;
     var nr = Object.assign({}, rooms);
     var upd = Object.assign({}, room, {members: (room.members||[]).filter(function(id){return id!==user.id;})});
     nr[room.id] = upd;
@@ -3740,6 +3858,13 @@ function App() {
 
     ${toast&&html`<div class=${'toast '+(toast.t==='err'?'ter':'tok')}>${toast.msg}</div>`}
 
+    ${h2hUser&&room&&html`<${H2HModal}
+      userA=${user} userB=${h2hUser}
+      preds=${preds} results=${results}
+      ptsA=${lboard.find(function(e){return e.user&&e.user.id===user.id;})?lboard.find(function(e){return e.user&&e.user.id===user.id;}).pts:0}
+      ptsB=${lboard.find(function(e){return e.user&&e.user.id===h2hUser.id;})?lboard.find(function(e){return e.user&&e.user.id===h2hUser.id;}).pts:0}
+      onClose=${function(){setH2hUser(null);}} />`}
+
     ${annModal&&html`<${AnnouncementModal}
       ann=${annModal.ann||{}}
       onSave=${saveAnnouncement}
@@ -3767,7 +3892,7 @@ function App() {
           roomMsgs=${room&&chatMsgs[room.id]||[]}
           onSendChat=${sendChatMessage}
           announcements=${room&&annsByRoom[room.id]||[]}
-          onLeaveRoom=${leaveRoom} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          onLeaveRoom=${leaveRoom} onH2H=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
