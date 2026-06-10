@@ -1745,7 +1745,7 @@ function SuperAdminApp() {
                                 }}>
                                   <div style=${{width:30,height:30,borderRadius:15,background:'#1a56db',
                                     display:'flex',alignItems:'center',justifyContent:'center',
-                                    fontSize:13,fontWeight:700,color:'#fff',flexShrink:0}}>
+                                    fontSize:12,fontWeight:700,color:'#fff',flexShrink:0}}>
                                     ${(u.name||'?')[0].toUpperCase()}
                                   </div>
                                   <div style=${{flex:1}}>
@@ -2200,6 +2200,8 @@ function DashPage(props) {
     </div>
 
 
+    <${HowToPlay} />
+
     <!-- My Rooms -->
     <div style=${{marginBottom:20}}>
       <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
@@ -2629,6 +2631,72 @@ function AnnouncementModal(props) {
 }
 
 
+
+// ── How To Play card ─────────────────────────────────────────────────────
+function HowToPlay(props) {
+  var os = useState(false); var open=os[0]; var setOpen=os[1];
+  return html`<div style=${{
+    background:'var(--bg2)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',
+    marginBottom:14,overflow:'hidden'
+  }}>
+    <div onClick=${function(){setOpen(!open);}} style=${{
+      display:'flex',justifyContent:'space-between',alignItems:'center',
+      padding:'11px 14px',cursor:'pointer',userSelect:'none'
+    }}>
+      <span style=${{fontWeight:600,fontSize:14}}>📖 How to Play & Points Guide</span>
+      <span style=${{fontSize:13,color:'var(--mu)',transition:'transform .2s',
+        display:'inline-block',transform:open?'rotate(90deg)':'rotate(0deg)'}}>›</span>
+    </div>
+    ${open&&html`<div style=${{padding:'0 14px 14px',borderTop:'1px solid var(--bdr)'}}>
+
+      <div style=${{marginTop:12,marginBottom:10}}>
+        <div style=${{fontSize:11,fontWeight:700,letterSpacing:1.2,color:'var(--gold)',
+          fontFamily:'Barlow Condensed,sans-serif',marginBottom:8}}>⏰ PREDICTION RULES</div>
+        <div style=${{display:'flex',flexDirection:'column',gap:6,fontSize:12,color:'var(--mu)'}}>
+          <div style=${{display:'flex',gap:8,alignItems:'flex-start'}}>
+            <span style=${{flexShrink:0}}>🔒</span>
+            <span>Predictions <strong style=${{color:'var(--tx)'}}>lock the moment a match kicks off</strong>. You must predict before kick-off.</span>
+          </div>
+          <div style=${{display:'flex',gap:8,alignItems:'flex-start'}}>
+            <span style=${{flexShrink:0}}>✏️</span>
+            <span>You can edit your prediction any time <strong style=${{color:'var(--tx)'}}>before the match starts</strong>.</span>
+          </div>
+          <div style=${{display:'flex',gap:8,alignItems:'flex-start'}}>
+            <span style=${{flexShrink:0}}>🏆</span>
+            <span><strong style=${{color:'var(--tx)'}}>Champion Team</strong> pick can be changed any time before the knockout stage begins.</span>
+          </div>
+        </div>
+      </div>
+
+      <div style=${{borderTop:'1px solid var(--bdr)',paddingTop:10}}>
+        <div style=${{fontSize:11,fontWeight:700,letterSpacing:1.2,color:'var(--gold)',
+          fontFamily:'Barlow Condensed,sans-serif',marginBottom:8}}>🏅 POINTS</div>
+        <div style=${{display:'flex',flexDirection:'column',gap:6}}>
+          ${[
+            ['🎯','Exact score (e.g. 2–1)', '+2 pts', '#22c55e'],
+            ['✅','Correct winner or draw', '+2 pts', '#60a5fa'],
+            ['❌','Wrong prediction', '0 pts',  'var(--dm)'],
+            ['🏆','Champion Team correct', '+5 pts', 'var(--gold)']
+          ].map(function(r){
+            return html`<div key=${r[0]} style=${{
+              display:'flex',justifyContent:'space-between',alignItems:'center',
+              padding:'6px 10px',background:'var(--bg3)',borderRadius:6
+            }}>
+              <span style=${{fontSize:12,color:'var(--mu)'}}>${r[0]} ${r[1]}</span>
+              <strong style=${{fontSize:13,color:r[3],flexShrink:0}}>${r[2]}</strong>
+            </div>`;
+          })}
+        </div>
+      </div>
+
+      <p style=${{fontSize:11,color:'var(--dm)',marginTop:10,marginBottom:0,lineHeight:1.5}}>
+        💡 Standings update live as results are entered by your room admin.
+      </p>
+    </div>`}
+  </div>`;
+}
+
+
 function RoomPage(props) {
   var gMs = MS.filter(function(m){ return !props.grp || m.gr === props.grp; })
              .sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); });
@@ -2645,6 +2713,10 @@ function RoomPage(props) {
 
       ${!props.isAdmin&&html`<button class="btn" style=${{fontSize:12,color:'var(--rd)',borderColor:'rgba(239,68,68,.25)',padding:'7px 12px'}} onClick=${props.onLeaveRoom}>↩ Leave</button>`}
     </div>
+
+    <!-- 📖 How to Play — only visible on Standings tab -->
+    ${props.tab==='leaderboard'&&html`<${HowToPlay} />`}
+
     <!-- 📢 Announcements — always visible above tabs -->
     <${AnnouncementsPanel}
       announcements=${props.announcements||[]}
@@ -2859,7 +2931,7 @@ function RoomPage(props) {
           <!-- Standings table -->
           <div style=${{background:'var(--bg2)',borderRadius:'var(--rs)',overflow:'hidden',border:'1px solid var(--bdr)',marginTop:8}}>
             <!-- Header row -->
-            <div style=${{display:'grid',gridTemplateColumns:'28px 1fr 36px 30px 30px 30px 36px 36px 36px 40px',padding:'6px 10px 6px 8px',borderBottom:'1px solid var(--bdr)',fontSize:11,color:'var(--dm)',fontWeight:600,textAlign:'center',letterSpacing:.4}}>
+            <div style=${{display:'grid',gridTemplateColumns:'22px 1fr 26px 24px 24px 24px 28px 28px 28px 32px',padding:'5px 8px 5px 6px',borderBottom:'1px solid var(--bdr)',fontSize:10,color:'var(--dm)',fontWeight:700,textAlign:'center',letterSpacing:.3,textTransform:'uppercase'}}>
               <span></span>
               <span style=${{textAlign:'left'}}>Team</span>
               <span>MP</span><span>W</span><span>D</span><span>L</span>
@@ -2871,8 +2943,8 @@ function RoomPage(props) {
               var isPromo = i < 2;  /* top 2 advance */
               return html`<div key=${row.team} style=${{
                 display:'grid',
-                gridTemplateColumns:'28px 1fr 36px 30px 30px 30px 36px 36px 36px 40px',
-                padding:'9px 10px 9px 8px',
+                gridTemplateColumns:'22px 1fr 26px 24px 24px 24px 28px 28px 28px 32px',
+                padding:'7px 8px 7px 6px',
                 borderBottom: i<rows.length-1?'1px solid rgba(255,255,255,.04)':'none',
                 alignItems:'center',
                 textAlign:'center',
