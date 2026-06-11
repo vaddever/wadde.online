@@ -26,6 +26,8 @@
   .ti-chevron-right::before { content:'›'; font-size:1.4em; }
   .ti-table::before       { content:'⊞'; }
   .ti-sparkles::before    { content:'✦'; }
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -896,11 +898,10 @@ function koMatchTeams(km, q, koRes) {
 
 // ── Live score API (football-data.org) ──────────────────────────────────
 // Process raw API matches array → call onUpdate with result map
-function _applyMatches(matches, onUpdate) {
+function _applyMatches(matches, onUpdate, onLive) {
   var ALL = MS.concat(KO_MS);
-  var upd = {};
+  var upd = {}, live = {};
   (matches||[]).forEach(function(am){
-    if (am.status!=='FINISHED') return;
     var sc=am.score&&am.score.fullTime;
     if (!sc||sc.home===null||sc.away===null) return;
     var hn=fdTeam(am.homeTeam&&am.homeTeam.name||'');
@@ -910,20 +911,28 @@ function _applyMatches(matches, onUpdate) {
     });
     if (!found) return;
     var sw=(found.h===an);
-    upd[found.id]={h:sw?sc.away:sc.home, a:sw?sc.home:sc.away, auto:true};
+    var h=sw?sc.away:sc.home, a=sw?sc.home:sc.away;
+    var st=am.status||'';
+    if (st==='FINISHED') {
+      upd[found.id]={h:h, a:a, auto:true};
+    } else if (st==='IN_PLAY'||st==='PAUSED'||st==='HALFTIME'||st==='LIVE') {
+      var ht=am.score.halfTime||{}; var period=st;
+      var minRaw=am.minute||am.minutesElapsed||null;
+      var minStr=minRaw?minRaw+"'":st==='PAUSED'?'HT':(st==='HALFTIME'?'HT':'LIVE');
+      live[found.id]={h:h, a:a, status:st, min:minStr, htH:sw?ht.away:ht.home, htA:sw?ht.home:ht.away};
+    }
   });
   if (Object.keys(upd).length) onUpdate(upd);
+  if (onLive) onLive(live);
 }
 
-function fetchLiveScores(apiKey, onUpdate) {
+function fetchLiveScores(apiKey, onUpdate, onLive) {
   if (!apiKey) return;
-  // Scores fetched exclusively via GAS proxy — no CORS issues.
-  // Requires the updated google-apps-script.js to be deployed.
   fetch(GS_URL + '?action=livescores')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d.ok) {
-        _applyMatches(d.matches, onUpdate);
+        _applyMatches(d.matches, onUpdate, onLive);
       } else if (d.error && d.error.indexOf('Unknown action') !== -1) {
         console.warn('Live scores: GAS needs to be redeployed with the updated script.');
       } else {
@@ -2496,6 +2505,40 @@ function WelcomePage(props) {
     </div>
     <div style=${{background:'rgba(59,130,246,.07)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'9px 14px',marginBottom:16,fontSize:13,color:'#93c5fd'}}>⚽ ${FACTS[props.factI]}</div>
     <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
+    <!-- Live match summary on front page -->
+    ${(function(){
+      var liveMatches = Object.keys(props.liveScores||{}).map(function(mid){
+        var m = MS.find(function(x){return x.id===mid;}) || KO_MS.find(function(x){return x.id===mid;});
+        var lv = (props.liveScores||{})[mid];
+        return m && lv ? {m:m, lv:lv} : null;
+      }).filter(Boolean);
+      if (!liveMatches.length) return null;
+      return html`<div style=${{marginBottom:14}}>
+        <div style=${{fontSize:11,fontWeight:700,letterSpacing:1.2,color:'#ef4444',marginBottom:8,display:'flex',alignItems:'center',gap:6}}>
+          <span style=${{width:8,height:8,borderRadius:4,background:'#ef4444',display:'inline-block',animation:'pulse 1s infinite'}}></span>
+          LIVE NOW
+        </div>
+        <div style=${{display:'flex',flexDirection:'column',gap:6}}>
+          ${liveMatches.map(function(x){
+            return html`<div key=${x.m.id} style=${{
+              background:'linear-gradient(135deg,rgba(239,68,68,.12),rgba(239,68,68,.04))',
+              border:'1px solid rgba(239,68,68,.25)',borderRadius:'var(--rs)',
+              padding:'10px 14px',display:'flex',justifyContent:'space-between',alignItems:'center'
+            }}>
+              <div style=${{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0}}>
+                <span style=${{fontSize:9,fontWeight:700,color:'#ef4444',background:'rgba(239,68,68,.15)',padding:'2px 6px',borderRadius:6,flexShrink:0}}>${x.lv.min||'LIVE'}</span>
+                <span style=${{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  ${(x.m.h||x.m.h_slot||'?')} vs ${(x.m.a||x.m.a_slot||'?')}
+                </span>
+              </div>
+              <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:22,fontWeight:800,color:'#fff',flexShrink:0,letterSpacing:1}}>
+                ${x.lv.h} <span style=${{color:'rgba(255,255,255,.3)'}}>–</span> ${x.lv.a}
+              </div>
+            </div>`;
+          })}
+        </div>
+      </div>`;
+    })()}
     <h3>2026 World Cup Groups</h3>
     <div class="g4">${Object.entries(GRP).map(function(e){ var g=e[0]; var ts=e[1]; return html`<div key=${g} class="card card-sm">
       <div style=${{fontSize:10,fontWeight:600,color:'var(--mu)',marginBottom:6,fontFamily:'Barlow Condensed',letterSpacing:.5}}>GROUP ${g}</div>
@@ -3364,11 +3407,12 @@ function RoomPage(props) {
           var st=mStat(m,props.results);
           var pred=props.preds[props.user.id+'_'+m.id];
           var res=props.results[m.id];
-          var ep=calcPts(pred,res);
+          var live=props.liveScores&&props.liveScores[m.id];
+          var ep=calcPts(pred,live&&!res?live:res);
           var tv=fmtTime(m.utc);
-          var isLive=st==='live';
+          var isLive=st==='live'||!!live;
           var isDone=st==='done'||st==='past';
-          var accColor=isLive?'#ef4444':isDone?'rgba(255,255,255,.07)':'rgba(255,255,255,.04)';
+          var accColor=isLive?'rgba(239,68,68,.08)':isDone?'rgba(255,255,255,.07)':'rgba(255,255,255,.04)';
           return html`<div key=${m.id}
             style=${{background:accColor,borderBottom:'1px solid var(--bdr)',cursor:'pointer',transition:'background .15s'}}
             onMouseEnter=${function(e){e.currentTarget.style.background=isLive?'rgba(239,68,68,.12)':'var(--bg3)';}}
@@ -3394,12 +3438,25 @@ function RoomPage(props) {
               </div>
 
               <!-- Score / Time column -->
-              <div style=${{textAlign:'right',flexShrink:0,minWidth:68}}>
+              <div style=${{textAlign:'right',flexShrink:0,minWidth:72}}>
                 ${res
                   ? html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:24,fontWeight:700,letterSpacing:1,lineHeight:1}}>
                       ${res.h}<span style=${{color:'var(--dm)',margin:'0 3px'}}>–</span>${res.a}
                     </div>
+                    <div style=${{fontSize:10,color:'var(--dm)',marginTop:2,textAlign:'right'}}>Full Time</div>
                     ${ep!==null&&html`<div style=${{fontSize:11,marginTop:4,color:ep===2?'#4ade80':'#f87171',fontWeight:500}}>${ep===2?(pred&&res&&Number(pred.h)===Number(res.h)&&Number(pred.a)===Number(res.a)?'🎯 +2pts':'✓ +2pts'):'✗ 0pts'}</div>`}`
+                  : live
+                  ? html`<div style=${{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}>
+                      <div style=${{display:'flex',alignItems:'center',gap:5,marginBottom:1}}>
+                        <span style=${{width:7,height:7,borderRadius:4,background:'#ef4444',display:'inline-block',animation:'pulse 1s infinite'}}></span>
+                        <span style=${{fontSize:10,fontWeight:700,color:'#ef4444',letterSpacing:.5}}>LIVE ${live.min||''}</span>
+                      </div>
+                      <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:26,fontWeight:800,letterSpacing:1,lineHeight:1,color:'#fff'}}>
+                        ${live.h}<span style=${{color:'rgba(255,255,255,.3)',margin:'0 3px'}}>–</span>${live.a}
+                      </div>
+                      ${live.htH!==undefined&&live.htH!==null&&html`<div style=${{fontSize:10,color:'var(--dm)',marginTop:1}}>(HT: ${live.htH}–${live.htA})</div>`}
+                      ${ep!==null&&pred&&html`<div style=${{fontSize:10,marginTop:2,color:ep===2?'#fbbf24':'rgba(255,255,255,.3)',fontWeight:600}}>${ep===2?'📍 On track':'📍 Off track'}</div>`}
+                    </div>`
                   : html`<div style=${{fontSize:11,color:'var(--dm)',fontWeight:500,letterSpacing:.3}}>${tv.day}</div>
                     <div style=${{fontSize:14,fontWeight:700,color:'var(--tx)',lineHeight:1.15}}>${tv.date}</div>
                     <div style=${{fontSize:12,color:isLive?'#ef4444':'var(--mu)',fontWeight:isLive?700:400,marginTop:1}}>${isLive?'🔴 LIVE':tv.time}</div>`
@@ -3423,6 +3480,46 @@ function RoomPage(props) {
         })}
       </div>
       <div style=${{fontSize:11,color:'var(--dm)',marginTop:8,textAlign:'center'}}>All times in Maldives Time (MVT, UTC+5)</div>
+    </div>`}
+    ${props.tab==='groups'&&html`<div>
+      <div style=${{display:'flex',borderBottom:'1px solid var(--bdr)',marginBottom:20,gap:0}}>
+        <div style=${{padding:'8px 20px',fontSize:14,fontWeight:600,color:'var(--gold)',borderBottom:'2px solid var(--gold)',cursor:'default'}}>Group Stage</div>
+      </div>
+      ${Object.keys(GRP).map(function(grpKey){
+        var rows = computeGroupStandings(grpKey, props.results);
+        return html`<div key=${grpKey} style=${{marginBottom:28}}>
+          <h3 style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:700,letterSpacing:.5,margin:'0 0 8px',color:'var(--tx)'}}>Group ${grpKey}</h3>
+          <div style=${{background:'var(--bg2)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)',overflow:'hidden'}}>
+            <div style=${{display:'grid',gridTemplateColumns:'22px 1fr 26px 24px 24px 24px 28px 28px 28px 32px',padding:'5px 8px 5px 6px',borderBottom:'1px solid var(--bdr)',fontSize:10,color:'var(--dm)',fontWeight:700,textAlign:'center',letterSpacing:.3,textTransform:'uppercase'}}>
+              <span></span><span style=${{textAlign:'left'}}>Team</span>
+              <span>MP</span><span>W</span><span>D</span><span>L</span>
+              <span>GF</span><span>GA</span><span>GD</span>
+              <span style=${{color:'var(--gold)'}}>Pts</span>
+            </div>
+            ${rows.map(function(row,ri){
+              var isQ=ri<2;
+              return html`<div key=${row.team} style=${{
+                display:'grid',gridTemplateColumns:'22px 1fr 26px 24px 24px 24px 28px 28px 28px 32px',
+                padding:'7px 8px 7px 6px',fontSize:12,alignItems:'center',
+                borderBottom:ri<rows.length-1?'1px solid rgba(255,255,255,.05)':'none',
+                borderLeft:isQ?'3px solid var(--gold)':'3px solid transparent',
+                background:isQ?'rgba(240,180,41,.03)':'transparent'
+              }}>
+                <span style=${{fontSize:11,color:'var(--dm)',textAlign:'center'}}>${ri+1}</span>
+                <div style=${{display:'flex',alignItems:'center',gap:6,minWidth:0}}>
+                  <${FlagImg} team=${row.team} w=${18} />
+                  <span style=${{fontWeight:row.pts>0?600:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${row.team}</span>
+                </div>
+                ${[row.mp,row.w,row.d,row.l,row.gf,row.ga,row.gd].map(function(v,i){
+                  return html`<span key=${i} style=${{textAlign:'center',color:i===6?(v>0?'#22c55e':v<0?'#f87171':'var(--mu)'):'var(--mu)'}}>${v}</span>`;
+                })}
+                <span style=${{textAlign:'center',fontWeight:700,color:'var(--gold)',fontFamily:'Barlow Condensed,sans-serif',fontSize:14}}>${row.pts}</span>
+              </div>`;
+            })}
+          </div>
+          ${rows.every(function(r){return r.mp===0;})&&html`<div style=${{textAlign:'center',fontSize:12,color:'var(--dm)',marginTop:6}}>No results entered yet</div>`}
+        </div>`;
+      })}
     </div>`}
     ${props.tab==='knockout'&&html`<div>
       ${!props.qualifiers
@@ -3485,7 +3582,10 @@ function RoomPage(props) {
               var d=prev-i;
               return html`<span style=${{fontSize:10,fontWeight:700,color:d>0?'#22c55e':'#ef4444',marginBottom:1}}>${d>0?'↑'+d:'↓'+Math.abs(d)}</span>`;
             })()}
-            <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
+            <div>
+              <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
+              ${e.livePts>0&&html`<div style=${{fontSize:10,color:'#ef4444',fontWeight:600,marginTop:1}}>+${e.livePts} 🔴</div>`}
+            </div>
           </div>
           </div>`; })}
         </div>`
@@ -4019,6 +4119,7 @@ function App() {
   var s11g=useState(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');
   var apiKey=s11g[0]; var setApiKey=s11g[1];
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
+  var s_ls=useState({}); var liveScores=s_ls[0]; var setLiveScores=s_ls[1];
   var s_ga=useState([]); var globalAnns=s_ga[0]; var setGlobalAnns=s_ga[1];
   var s11i=useState({}); var annsByRoom=s11i[0]; var setAnnsByRoom=s11i[1];
   var s11j=useState(null); var annModal=s11j[0]; var setAnnModal=s11j[1];
@@ -4156,6 +4257,8 @@ function App() {
         });
         if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
         if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));Store.set('koresults',n);return n;});
+      }, function(live) {
+        setLiveScores(live);  // store live match data for display
       });
     }
     var _initKey = localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2';
@@ -4397,7 +4500,16 @@ function getAchievements(uid, predsMap, resultsMap) {
     return (room.members||[])
       .map(function(uid){
         var u = users[uid] || {name:'Member #'+(room.members.indexOf(uid)+1), id:uid, _loading:!Object.keys(users).length};
-        return {user:u, pts:uPts(uid),
+        var basePts = uPts(uid);
+        // Add live projected pts (not final — shown as bonus indicator)
+        var livePts = 0;
+        Object.keys(liveScores||{}).forEach(function(mid){
+          if (results[mid]) return; // already have final result
+          var lv = liveScores[mid];
+          var lp = calcPts(preds[uid+'_'+mid], lv);
+          if (lp > 0) livePts += lp;
+        });
+        return {user:u, pts:basePts, livePts:livePts,
           np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length,
           acc:uAcc(uid), pick:(users[uid]||{}).champTeam||null,
           badges:getAchievements(uid, preds, results)};
@@ -4652,7 +4764,7 @@ function getAchievements(uid, predsMap, resultsMap) {
     </div>`}
 
     <div class="page">
-      ${scr==='welcome'&&html`<${WelcomePage} globalAnns=${globalAnns.filter(function(a){return a.scope==="welcome"||a.scope==="all";})} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
+      ${scr==='welcome'&&html`<${WelcomePage} liveScores=${liveScores} globalAnns=${globalAnns.filter(function(a){return a.scope==="welcome"||a.scope==="all";})} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
       ${scr==='dash'&&user&&html`<${DashPage} globalAnns=${globalAnns.filter(function(a){return a.scope==="dash"||a.scope==="all";})} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){
       // Restore cached room if local rooms haven't loaded yet (faster display)
@@ -4661,7 +4773,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       var useRoom = (cached&&cached.members&&cached.members.length>=(r.members||[]).length)?cached:r;
       setRoom(useRoom); setTab('leaderboard'); setScr('room'); subscribeChatRoom(r.id);
     }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
-      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
+      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
           roomMsgs=${room&&chatMsgs[room.id]||[]}
@@ -4683,4 +4795,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-      All Rights Reserved By: Mohamed Waheed (7987999)
+    All Rights Reserved By: Mohamed Waheed (7987999)
