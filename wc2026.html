@@ -1935,7 +1935,7 @@ function SuperAdminApp() {
             <button class="btn-p" style=${{flex:1}} disabled=${recLoading}
               onClick=${function(){
                 setRecLoading(true); setRecResult(null);
-                var result = {fixed:[], orphaned:[], chatScan:[]};
+                var result = {fixed:[], orphaned:[], chatScan:[], predScan:[]};
 
                 // STEP 1: Auto-fix room creators not in their own room
                 var roomsToFix = Object.values(saRooms).filter(function(r){
@@ -1973,6 +1973,73 @@ function SuperAdminApp() {
                     }).catch(function(){});
                 });
 
+                // STEP 4: Prediction-based recovery
+                // Find users with predictions but in NO room, then find their room
+                // by co-prediction timing (who predicted the same matches around the same time)
+                (function(){
+                  // Build: {uid: [{matchId, ts}]} from saPreds
+                  var userPredTimes = {};
+                  Object.keys(saPreds).forEach(function(key) {
+                    // Key format: userId_matchId  (userId=8-12 alphanumeric, matchId=mXX)
+                    var parts = key.match(/^(.+)_(m\d+)$/);
+                    if (!parts) return;
+                    var uid = parts[1], mid = parts[2];
+                    var ts = (saPreds[key] && saPreds[key].ts) ? new Date(saPreds[key].ts).getTime() : 0;
+                    if (!userPredTimes[uid]) userPredTimes[uid] = [];
+                    userPredTimes[uid].push({matchId: mid, ts: ts});
+                  });
+
+                  // Find all user IDs who have predictions
+                  var allMemberIds = [];
+                  Object.values(saRooms).forEach(function(r){ (r.members||[]).forEach(function(id){allMemberIds.push(id);}); });
+
+                  // Filter: users with predictions but in NO room
+                  var predOrphans = Object.keys(userPredTimes).filter(function(uid){
+                    return !allMemberIds.includes(uid) && saUsers[uid];
+                  });
+
+                  // For each orphaned predictor, find the best room using co-prediction timing
+                  predOrphans.forEach(function(uid) {
+                    var myPreds = userPredTimes[uid];
+                    var bestRoom = null, bestScore = 0;
+
+                    Object.values(saRooms).forEach(function(room) {
+                      var score = 0;
+                      (room.members||[]).forEach(function(memberId) {
+                        if (!userPredTimes[memberId]) return;
+                        // Score: count of matching predictions made within 6 hours of each other
+                        myPreds.forEach(function(mp) {
+                          userPredTimes[memberId].forEach(function(tp) {
+                            if (tp.matchId === mp.matchId && mp.ts > 0 && tp.ts > 0) {
+                              var diff = Math.abs(mp.ts - tp.ts);
+                              if (diff < 21600000) score += 3;       // within 6 hours: strong signal
+                              else if (diff < 86400000) score += 1;  // within 24 hours: weak signal
+                            }
+                          });
+                        });
+                      });
+                      if (score > bestScore) { bestScore = score; bestRoom = room; }
+                    });
+
+                    // Only suggest if we have meaningful evidence
+                    if (bestRoom && bestScore >= 3) {
+                      // Don't add duplicate (might already be caught by chat scan)
+                      var alreadyFound = result.chatScan.some(function(x){ return x.user.id===uid && x.room.id===bestRoom.id; });
+                      if (!alreadyFound) {
+                        result.predScan.push({
+                          room: bestRoom,
+                          user: saUsers[uid],
+                          reason: 'Predicted ' + myPreds.length + ' matches — co-prediction match (score:'+bestScore+')',
+                          score: bestScore
+                        });
+                      }
+                    }
+                  });
+
+                  // Sort by score descending
+                  result.predScan.sort(function(a,b){ return b.score - a.score; });
+                })();
+
                 Promise.all(chatFetches).then(function(){
                   setRecResult(result);
                   setRecLoading(false);
@@ -1980,11 +2047,11 @@ function SuperAdminApp() {
               }}>
               ${recLoading?'Scanning...':'🔍 Scan & Find Lost Members'}
             </button>
-            ${recResult&&(recResult.fixed.length+recResult.chatScan.length)>0&&html`
+            ${recResult&&(recResult.fixed.length+recResult.chatScan.length+recResult.predScan.length)>0&&html`
               <button class="btn-p" style=${{background:'#22c55e',flex:1}}
                 onClick=${function(){
                   // Apply all fixes
-                  var allToFix = recResult.fixed.concat(recResult.chatScan);
+                  var allToFix = recResult.fixed.concat(recResult.chatScan).concat(recResult.predScan);
                   var nr = Object.assign({}, saRooms);
                   allToFix.forEach(function(item){
                     var r = nr[item.room.id];
@@ -2003,7 +2070,7 @@ function SuperAdminApp() {
                         setRecResult(Object.assign({},recResult,{applied:true}));
                       } else alert('Save error: '+(d.error||'?'));
                     });
-                }}>✓ Restore All (${recResult.fixed.length+recResult.chatScan.length})</button>`}
+                }}>✓ Restore All (${recResult.fixed.length+recResult.chatScan.length+recResult.predScan.length})</button>`}
           </div>
         </div>
 
@@ -2037,10 +2104,33 @@ function SuperAdminApp() {
             })}
           </div>`}
 
-          ${recResult.chatScan.length===0&&recResult.fixed.length===0&&!recResult.applied&&html`
+          ${recResult.chatScan.length===0&&recResult.fixed.length===0&&recResult.predScan.length===0&&!recResult.applied&&html`
             <div class="card" style=${{textAlign:'center',padding:24,color:'var(--mu)'}}>
-              ✓ No lost members found in creator records or chat history.
+              ✓ No lost members found in creator records, chat history, or prediction data.
             </div>`}
+
+          <!-- Prediction-based recovery (main feature) -->
+          ${recResult.predScan&&recResult.predScan.length>0&&html`<div class="card" style=${{borderColor:'rgba(96,165,250,.35)'}}>
+            <h3 style=${{marginBottom:4,color:'#60a5fa'}}>🎯 Found via prediction activity — users who predicted but lost room (${recResult.predScan.length})</h3>
+            <p style=${{fontSize:11,color:'var(--mu)',marginBottom:10}}>These users have predictions but are in no room. Room determined by matching who they predicted alongside (co-prediction timing within 6 hours = same session).</p>
+            ${recResult.predScan.map(function(item,i){
+              var predCount = Object.keys(saPreds).filter(function(k){return k.startsWith(item.user.id+'_');}).length;
+              return html`<div key=${i} style=${{padding:'8px 0',borderBottom:'1px solid var(--bdr)'}}>
+                <div style=${{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
+                  <div>
+                    <div style=${{fontSize:13,fontWeight:600}}>${item.user.name}
+                      <span style=${{fontSize:11,fontWeight:400,color:'var(--mu)',marginLeft:6}}>${item.user.phone||''}</span>
+                    </div>
+                    <div style=${{fontSize:11,color:'var(--mu)',marginTop:2}}>
+                      <span style=${{color:'#60a5fa',fontWeight:500}}>${predCount} predictions</span> → Room: <strong>"${item.room.name}"</strong>
+                    </div>
+                    <div style=${{fontSize:10,color:'var(--dm)',marginTop:1}}>${item.reason}</div>
+                  </div>
+                  <span style=${{fontSize:10,background:'rgba(96,165,250,.12)',color:'#60a5fa',padding:'2px 8px',borderRadius:8,whiteSpace:'nowrap',flexShrink:0}}>Will restore</span>
+                </div>
+              </div>`;
+            })}
+          </div>`}
 
           ${recResult.applied&&html`
             <div class="card" style=${{textAlign:'center',padding:20,background:'rgba(34,197,94,.07)',borderColor:'rgba(34,197,94,.3)'}}>
