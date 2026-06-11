@@ -3397,18 +3397,20 @@ function RoomPage(props) {
         ?html`<div class="card" style=${{textAlign:'center',padding:32}}><div style=${{fontSize:32,marginBottom:10}}>📊</div><p style=${{color:'var(--mu)'}}>No members yet</p></div>`
         :html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
           ${props.lboard.map(function(e,i){ return html`<div key=${(e.user&&e.user.id)||i} class="lbr"
-            onClick=${e.user&&e.user.id!==props.user.id?function(){props.onH2H&&props.onH2H(e.user);}:undefined}
-            style=${{borderColor:i===0?'rgba(240,180,41,.22)':e.user&&e.user.id===props.user.id?'rgba(59,130,246,.3)':undefined,background:i===0?'rgba(240,180,41,.03)':undefined,cursor:e.user&&e.user.id!==props.user.id?'pointer':'default'}}>
+            onClick=${function(){props.onViewPreds&&props.onViewPreds(e.user);}}
+            style=${{borderColor:i===0?'rgba(240,180,41,.22)':e.user&&e.user.id===props.user.id?'rgba(59,130,246,.3)':undefined,background:i===0?'rgba(240,180,41,.03)':undefined,cursor:'pointer'}}>
             <div style=${{width:32,height:32,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0,background:i===0?'rgba(240,180,41,.15)':i===1?'rgba(148,163,184,.1)':i===2?'rgba(180,100,30,.1)':'var(--bg3)'}}>${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
             <div style=${{flex:1,minWidth:0}}>
               <div style=${{fontWeight:500,fontSize:14,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                 ${e.user&&e.user.favT&&typeof e.user.favT[0]==='string'&&e.user.favT[0]&&html`<${FlagImg} team=${e.user.favT[0]} w=${18} />`}
                 <span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:e.user&&e.user._loading?'var(--dm)':'inherit'}}>${e.user&&e.user.name}</span>
+                ${e.badges&&e.badges.some(function(b){return b&&(b.id==='sniper'||b.id==='marksman');})&&html`<span style=${{fontSize:13,flexShrink:0}} title="King of Prediction — got an exact score!">👑</span>`}
                 ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8,flexShrink:0}}>you</span>`}
               </div>
               <div style=${{fontSize:11,color:'var(--mu)',marginTop:3,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 ${e.user&&e.user.favP&&typeof e.user.favP[0]==='string'&&e.user.favP[0]&&html`<span>⚽ ${e.user.favP[0].split(' ').pop()}</span>`}
                 ${e.acc!==null&&e.acc!==undefined&&html`<span style=${{color:e.acc>=60?'#22c55e':e.acc>=40?'#f59e0b':'var(--mu)',fontWeight:500}}>${e.acc}% ✓</span>`}
+                <span style=${{color:'var(--dm)',fontSize:10}}>👁 tap</span>
                 ${e.pick&&html`<span style=${{display:'flex',alignItems:'center',gap:3}}>🏆 <${FlagImg} team=${e.pick} w=${14} /><span>${e.pick}</span></span>`}
                 ${!e.pick&&html`<span style=${{color:'var(--dm)'}}>No champion pick</span>`}
               </div>
@@ -3741,6 +3743,142 @@ function H2HModal(props) {
         <div style=${{textAlign:'center',fontSize:11,color:'var(--dm)'}}>Total pts</div>
         <div style=${{textAlign:'center',fontSize:16,fontWeight:800,fontFamily:'Barlow Condensed',color:'#f87171'}}>${props.ptsB} pts</div>
       </div>`}
+    </div>
+  </div>`;
+}
+
+
+
+// ── User Predictions Modal ────────────────────────────────────────────────
+function UserPredictionsModal(props) {
+  var u = props.user;
+  if (!u) return null;
+  var predsMap  = props.preds    || {};
+  var resultsMap = props.results || {};
+  var allMatches = (props.MS || []).concat(props.KO_MS || []);
+  var isMe = props.currentUser && props.currentUser.id === u.id;
+
+  // Get all matches this user predicted (sorted by predicted time)
+  var predicted = allMatches
+    .filter(function(m){ return predsMap[u.id+'_'+m.id]; })
+    .sort(function(a,b){
+      var ta = predsMap[u.id+'_'+a.id]; var tb = predsMap[u.id+'_'+b.id];
+      return ((ta&&ta.ts?new Date(ta.ts).getTime():0)) - ((tb&&tb.ts?new Date(tb.ts).getTime():0));
+    });
+
+  var totalPts = 0, exactCount = 0, winnerCount = 0;
+  predicted.forEach(function(m){
+    var p = predsMap[u.id+'_'+m.id], r = resultsMap[m.id];
+    if (!r) return;
+    var pts = calcPts(p,r)||0;
+    totalPts += pts;
+    if (pts > 0 && Number(p.h)===Number(r.h) && Number(p.a)===Number(r.a)) exactCount++;
+    else if (pts > 0) winnerCount++;
+  });
+  var done = predicted.filter(function(m){return resultsMap[m.id];}).length;
+  var isKing = exactCount >= 1;
+
+  return html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}}>
+    <div class="modal" style=${{padding:0,overflow:'hidden',maxHeight:'88vh',display:'flex',flexDirection:'column',maxWidth:480}}>
+
+      <!-- Header -->
+      <div style=${{background:'linear-gradient(135deg,#1e1b4b,#1a1035)',padding:'16px 20px',flexShrink:0}}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
+          <div style=${{display:'flex',alignItems:'center',gap:10}}>
+            <div style=${{width:42,height:42,borderRadius:21,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:700,color:'#fff',flexShrink:0}}>
+              ${(u.name||'?')[0].toUpperCase()}
+            </div>
+            <div>
+              <div style=${{fontSize:16,fontWeight:700,color:'#fff',display:'flex',alignItems:'center',gap:6}}>
+                ${u.name}
+                ${isKing&&html`<span style=${{fontSize:13}}>👑</span>`}
+                ${isMe&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.3)',color:'#93c5fd',padding:'1px 7px',borderRadius:8}}>you</span>`}
+              </div>
+              <div style=${{fontSize:12,color:'rgba(255,255,255,.5)',marginTop:1}}>
+                ${u.favT&&u.favT[0]&&(u.favT[0]+' fan')}${u.champTeam?' · 🏆 '+u.champTeam:''}
+              </div>
+            </div>
+          </div>
+          <button class="btn" style=${{padding:'4px 10px',fontSize:12,flexShrink:0}} onClick=${props.onClose}>✕</button>
+        </div>
+
+        <!-- Stats row -->
+        <div style=${{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8}}>
+          ${[
+            [predicted.length, 'Predicted'],
+            [done, 'Resolved'],
+            [exactCount, '🎯 Exact'],
+            [totalPts + ' pts', 'Score']
+          ].map(function(s,i){
+            return html`<div key=${i} style=${{textAlign:'center',background:'rgba(255,255,255,.07)',borderRadius:8,padding:'7px 4px'}}>
+              <div style=${{fontSize:18,fontWeight:800,color:i===2&&exactCount>0?'#fbbf24':'#fff',fontFamily:'Barlow Condensed'}}>${s[0]}</div>
+              <div style=${{fontSize:9,color:'rgba(255,255,255,.5)',letterSpacing:.5,textTransform:'uppercase'}}>${s[1]}</div>
+            </div>`;
+          })}
+        </div>
+
+        ${isKing&&html`<div style=${{marginTop:10,background:'rgba(251,191,36,.15)',border:'1px solid rgba(251,191,36,.35)',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:8}}>
+          <span style=${{fontSize:20}}>👑</span>
+          <div>
+            <div style=${{fontSize:13,fontWeight:700,color:'#fbbf24'}}>King of Prediction!</div>
+            <div style=${{fontSize:11,color:'rgba(255,255,255,.6)'}}>${exactCount} exact score${exactCount!==1?'s':''} — incredible accuracy!</div>
+          </div>
+        </div>`}
+      </div>
+
+      <!-- Prediction list -->
+      <div style=${{overflowY:'auto',flex:1}}>
+        ${predicted.length===0&&html`<div style=${{textAlign:'center',padding:'32px 20px',color:'var(--mu)',fontSize:13}}>No predictions made yet.</div>`}
+        ${predicted.map(function(m){
+          var p = predsMap[u.id+'_'+m.id];
+          var r = resultsMap[m.id];
+          var pts = r ? (calcPts(p,r)||0) : null;
+          var isExact = pts===2 && r && Number(p.h)===Number(r.h) && Number(p.a)===Number(r.a);
+          var isWinner = pts===2 && !isExact;
+          var isWrong  = pts===0 && r;
+          var pending  = !r;
+          return html`<div key=${m.id} style=${{
+            borderBottom:'1px solid var(--bdr)',
+            padding:'10px 16px',
+            background:isExact?'rgba(251,191,36,.05)':pending?'transparent':'transparent'
+          }}>
+            <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style=${{fontSize:9,color:'var(--dm)',fontWeight:600,letterSpacing:.5,textTransform:'uppercase',minWidth:50}}>
+                ${m.gr?'Group '+m.gr:m.rd||'KO'}
+              </span>
+              ${isExact&&html`<span style=${{fontSize:10,background:'rgba(251,191,36,.18)',color:'#fbbf24',border:'1px solid rgba(251,191,36,.4)',padding:'1px 8px',borderRadius:12,fontWeight:700}}>👑 King of Prediction</span>`}
+              ${isWinner&&html`<span style=${{fontSize:10,background:'rgba(96,165,250,.12)',color:'#60a5fa',border:'1px solid rgba(96,165,250,.25)',padding:'1px 8px',borderRadius:12}}>✅ +2 pts</span>`}
+              ${isWrong&&html`<span style=${{fontSize:10,background:'rgba(239,68,68,.07)',color:'#f87171',padding:'1px 8px',borderRadius:12}}>✗ 0 pts</span>`}
+              ${pending&&html`<span style=${{fontSize:10,color:'var(--dm)',padding:'1px 8px'}}>Pending</span>`}
+            </div>
+
+            <div style=${{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:6}}>
+              <!-- Home team -->
+              <div style=${{display:'flex',alignItems:'center',gap:6}}>
+                <${FlagImg} team=${m.h||m.h_slot||''} w=${20} />
+                <span style=${{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h||m.h_slot||'TBD'}</span>
+              </div>
+
+              <!-- Scores -->
+              <div style=${{textAlign:'center',minWidth:90}}>
+                <div style=${{display:'flex',alignItems:'center',gap:4,justifyContent:'center'}}>
+                  <!-- Predicted -->
+                  <span style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:isExact?'#fbbf24':isWinner?'#60a5fa':isWrong?'#f87171':'var(--tx)'}}>${p.h}–${p.a}</span>
+                </div>
+                ${r&&html`<div style=${{fontSize:10,color:'var(--dm)',marginTop:2}}>
+                  Result: <strong style=${{color:'var(--tx)'}}>${r.h}–${r.a}</strong>
+                </div>`}
+              </div>
+
+              <!-- Away team -->
+              <div style=${{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end'}}>
+                <span style=${{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'right'}}>${m.a||m.a_slot||'TBD'}</span>
+                <${FlagImg} team=${m.a||m.a_slot||''} w=${20} />
+              </div>
+            </div>
+          </div>`;
+        })}
+      </div>
     </div>
   </div>`;
 }
@@ -4409,11 +4547,13 @@ function getAchievements(uid, predsMap, resultsMap) {
 
     ${toast&&html`<div class=${'toast '+(toast.t==='err'?'ter':'tok')}>${toast.msg}</div>`}
 
-    ${h2hUser&&room&&html`<${H2HModal}
-      userA=${user} userB=${h2hUser}
-      preds=${preds} results=${results}
-      ptsA=${(function(){var e=lboard.find(function(e){return e.user&&e.user.id===user.id;});return e?e.pts:0;})()} 
-      ptsB=${(function(){var e=lboard.find(function(e){return e.user&&e.user.id===h2hUser.id;});return e?e.pts:0;})()}
+    ${h2hUser&&html`<${UserPredictionsModal}
+      user=${h2hUser}
+      currentUser=${user}
+      preds=${preds}
+      results=${results}
+      MS=${(function(){try{return MS;}catch(e){return [];}})()}
+      KO_MS=${(function(){try{return KO_MS;}catch(e){return [];}})()}
       onClose=${function(){setH2hUser(null);}} />`}
 
     ${annModal&&html`<${AnnouncementModal}
@@ -4449,7 +4589,7 @@ function getAchievements(uid, predsMap, resultsMap) {
           roomMsgs=${room&&chatMsgs[room.id]||[]}
           onSendChat=${sendChatMessage}
           announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
-          onLeaveRoom=${leaveRoom} onH2H=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          onLeaveRoom=${leaveRoom} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
@@ -4465,4 +4605,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-      All Rights Reserved By: Mohamed Waheed
+      All Rights Reserved By: Mohamed Waheed (7987999)
