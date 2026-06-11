@@ -1453,6 +1453,9 @@ function SuperAdminApp() {
   var erS = useState(null);  var expandedRoom = erS[0]; var setExpandedRoom = erS[1];
   var rcS = useState(null); var recResult = rcS[0]; var setRecResult = rcS[1];
   var rcL = useState(false); var recLoading = rcL[0]; var setRecLoading = rcL[1];
+  var maU = useState(''); var manualUid = maU[0]; var setManualUid = maU[1];
+  var maR = useState(''); var manualRid = maR[0]; var setManualRid = maR[1];
+  var maMsg = useState(''); var manualMsg = maMsg[0]; var setManualMsg = maMsg[1];
   var gaS = useState([]);    var globalAnns = gaS[0]; var setGlobalAnns = gaS[1];
   var gaMod = useState(null); var gAnnModal = gaMod[0]; var setGAnnModal = gaMod[1];
   var apiKeyS = useState(localStorage.getItem('wc26_apikey')||''); var saApiKey=apiKeyS[0]; var setSaApiKey=apiKeyS[1];
@@ -1925,8 +1928,84 @@ function SuperAdminApp() {
 
       <!-- ── Recovery tab ──────────────────────────────────────────── -->
       ${saTab==='recovery'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14,maxWidth:560}}>
+        <!-- ── Manual Assignment (always visible, simple and reliable) ── -->
+        <div class="card" style=${{border:'2px solid #1a56db'}}>
+          <h3 style=${{marginBottom:4,color:'#60a5fa'}}>👤 Manually Add User to Room</h3>
+          <p style=${{fontSize:12,color:'var(--mu)',marginBottom:14}}>Select any user and any room, then click Add. Works instantly — no scanning needed.</p>
+
+          <div style=${{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+            <!-- User selector -->
+            <div>
+              <label style=${{fontSize:11,fontWeight:600,color:'var(--dm)',letterSpacing:.5,display:'block',marginBottom:4}}>USER</label>
+              <select value=${manualUid} onChange=${function(e){setManualUid(e.target.value); setManualMsg('');}}
+                style=${{width:'100%',padding:'9px 10px',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',fontSize:13}}>
+                <option value="">— Select user —</option>
+                ${uList.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(u){
+                  var inRooms = Object.values(saRooms).filter(function(r){return (r.members||[]).includes(u.id);}).map(function(r){return r.name||r.code;});
+                  return html`<option key=${u.id} value=${u.id}>${u.name}${inRooms.length?' (in: '+inRooms.join(', ')+')':' ⚠️ no room'}</option>`;
+                })}
+              </select>
+            </div>
+
+            <!-- Room selector -->
+            <div>
+              <label style=${{fontSize:11,fontWeight:600,color:'var(--dm)',letterSpacing:.5,display:'block',marginBottom:4}}>ROOM</label>
+              <select value=${manualRid} onChange=${function(e){setManualRid(e.target.value); setManualMsg('');}}
+                style=${{width:'100%',padding:'9px 10px',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',fontSize:13}}>
+                <option value="">— Select room —</option>
+                ${rList.map(function(r){
+                  return html`<option key=${r.id} value=${r.id}>${r.name} (${(r.members||[]).length} members)</option>`;
+                })}
+              </select>
+            </div>
+          </div>
+
+          <!-- Preview -->
+          ${manualUid&&manualRid&&html`<div style=${{
+            padding:'8px 12px',background:'var(--bg3)',borderRadius:'var(--rs)',fontSize:12,
+            color:'var(--mu)',marginBottom:10,border:'1px solid var(--bdr)'
+          }}>
+            Adding <strong style=${{color:'var(--tx)'}}>${saUsers[manualUid]&&saUsers[manualUid].name}</strong> →
+            <strong style=${{color:'var(--tx)'}}>"${saRooms[manualRid]&&saRooms[manualRid].name}"</strong>
+            ${(saRooms[manualRid]&&(saRooms[manualRid].members||[]).includes(manualUid))
+              ? html`<span style=${{color:'#f59e0b',marginLeft:6}}>⚠️ Already a member</span>`
+              : html`<span style=${{color:'#22c55e',marginLeft:6}}>✓ Ready</span>`}
+          </div>`}
+
+          <div style=${{display:'flex',gap:8,alignItems:'center'}}>
+            <button class="btn-p" style=${{padding:'10px 20px',fontSize:14,opacity:(!manualUid||!manualRid)?0.4:1}}
+              disabled=${!manualUid||!manualRid}
+              onClick=${function(){
+                if (!manualUid || !manualRid) return;
+                var r = saRooms[manualRid];
+                var u = saUsers[manualUid];
+                if (!r || !u) return setManualMsg('❌ User or room not found');
+                if ((r.members||[]).includes(manualUid)) return setManualMsg('⚠️ '+u.name+' is already in "'+r.name+'"');
+
+                var nr = Object.assign({}, saRooms);
+                nr[manualRid] = Object.assign({}, r, {members: (r.members||[]).concat([manualUid])});
+                setManualMsg('Saving…');
+                fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+                  body: JSON.stringify({action:'set', key:'wc26_rooms', value:nr})})
+                  .then(function(res){ return res.json(); })
+                  .then(function(d){
+                    if (d.ok !== false) {
+                      setSaRooms(nr);
+                      setManualMsg('✅ '+u.name+' added to "'+r.name+'" successfully!');
+                      setManualUid(''); setManualRid('');
+                    } else {
+                      setManualMsg('❌ Save error: '+(d.error||'unknown'));
+                    }
+                  })
+                  .catch(function(e){ setManualMsg('❌ Network error: '+e.message); });
+              }}>+ Add to Room</button>
+            ${manualMsg&&html`<span style=${{fontSize:13,color:manualMsg[0]==='✅'?'#22c55e':manualMsg[0]==='⚠'?'#f59e0b':'#ef4444',fontWeight:500}}>${manualMsg}</span>`}
+          </div>
+        </div>
+
+        <!-- ── Auto-scan section ─────────────────────────────────── -->
         <div class="card">
-          <h3 style=${{marginBottom:4}}>🔧 Member Recovery</h3>
+          <h3 style=${{marginBottom:4}}>🔧 Auto-Scan & Recover</h3>
           <p style=${{fontSize:12,color:'var(--mu)',marginBottom:12,lineHeight:1.5}}>
             Finds users who were in rooms but lost their membership due to a sync race condition (now fixed).
             Scans chat history, prediction activity, and room creation records to recover lost members.
