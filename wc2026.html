@@ -527,6 +527,48 @@ var QQ=[
 ];
 var FACTS=['The 2026 World Cup is the first with 48 teams!','104 matches across 16 venues in USA, Canada and Mexico.','Argentina are the defending champions from Qatar 2022.','Opens June 11 with Mexico vs South Africa.','Final: July 19 at MetLife Stadium, New York/NJ.','The Round of 32 is a brand-new knockout round for 2026!','Three co-hosts: USA, Canada and Mexico.','2 pts correct result · 2 pts exact score · +5 pts tournament winner!'];
 var PLY=[{n:'Cristiano Ronaldo',t:'Portugal',p:'Forward',i:'All-time top scorer',sid:874},{n:'Lionel Messi',t:'Argentina',p:'Forward',i:'2022 WC winner',sid:41959},{n:'Kylian Mbappé',t:'France',p:'Forward',i:'Top scorer contender',sid:342658},{n:'Erling Haaland',t:'Norway',p:'Forward',i:'Premier League top scorer',sid:839956},{n:'Vinicius Jr.',t:'Brazil',p:'Forward',i:'Champions League star',sid:700026},{n:'Pedri',t:'Spain',p:'Midfielder',i:'Barcelona midfield maestro',sid:888013},{n:'Jude Bellingham',t:'England',p:'Midfielder',i:'Real Madrid star',sid:816250},{n:'Kevin De Bruyne',t:'Belgium',p:'Midfielder',i:'World-class playmaker',sid:70996}];
+// ── WC 2026 Knockout Stage Matches ────────────────────────────────────────
+var KO_MS = [
+  // ── Round of 32 (16 matches) ─────────────────────────────────────────
+  {id:'r32_01',rd:'R32',h_slot:'W-A', a_slot:'3rd-3',utc:'2026-06-28T23:00:00Z'},
+  {id:'r32_02',rd:'R32',h_slot:'W-B', a_slot:'R-A',  utc:'2026-06-29T02:00:00Z'},
+  {id:'r32_03',rd:'R32',h_slot:'W-C', a_slot:'3rd-1',utc:'2026-06-29T19:00:00Z'},
+  {id:'r32_04',rd:'R32',h_slot:'W-D', a_slot:'R-C',  utc:'2026-06-29T22:00:00Z'},
+  {id:'r32_05',rd:'R32',h_slot:'W-E', a_slot:'3rd-2',utc:'2026-06-30T19:00:00Z'},
+  {id:'r32_06',rd:'R32',h_slot:'W-F', a_slot:'R-E',  utc:'2026-06-30T22:00:00Z'},
+  {id:'r32_07',rd:'R32',h_slot:'W-G', a_slot:'3rd-4',utc:'2026-07-01T19:00:00Z'},
+  {id:'r32_08',rd:'R32',h_slot:'W-H', a_slot:'R-G',  utc:'2026-07-01T22:00:00Z'},
+  {id:'r32_09',rd:'R32',h_slot:'W-I', a_slot:'3rd-5',utc:'2026-07-02T00:00:00Z'},
+  {id:'r32_10',rd:'R32',h_slot:'W-J', a_slot:'R-I',  utc:'2026-07-02T03:00:00Z'},
+  {id:'r32_11',rd:'R32',h_slot:'W-K', a_slot:'3rd-7',utc:'2026-07-02T19:00:00Z'},
+  {id:'r32_12',rd:'R32',h_slot:'W-L', a_slot:'R-K',  utc:'2026-07-02T22:00:00Z'},
+  {id:'r32_13',rd:'R32',h_slot:'R-B', a_slot:'3rd-6',utc:'2026-07-03T00:00:00Z'},
+  {id:'r32_14',rd:'R32',h_slot:'R-D', a_slot:'3rd-8',utc:'2026-07-03T03:00:00Z'},
+  {id:'r32_15',rd:'R32',h_slot:'R-F', a_slot:'R-J',  utc:'2026-07-03T19:00:00Z'},
+  {id:'r32_16',rd:'R32',h_slot:'R-H', a_slot:'R-L',  utc:'2026-07-03T22:00:00Z'},
+  // ── Round of 16 (8 matches) ──────────────────────────────────────────
+  {id:'r16_01',rd:'R16',h_slot:'W-r32_01',a_slot:'W-r32_02',utc:'2026-07-05T23:00:00Z'},
+  {id:'r16_02',rd:'R16',h_slot:'W-r32_03',a_slot:'W-r32_04',utc:'2026-07-06T02:00:00Z'},
+  {id:'r16_03',rd:'R16',h_slot:'W-r32_05',a_slot:'W-r32_06',utc:'2026-07-06T22:00:00Z'},
+  {id:'r16_04',rd:'R16',h_slot:'W-r32_07',a_slot:'W-r32_08',utc:'2026-07-06T19:00:00Z'},
+  {id:'r16_05',rd:'R16',h_slot:'W-r32_09',a_slot:'W-r32_10',utc:'2026-07-07T23:00:00Z'},
+  {id:'r16_06',rd:'R16',h_slot:'W-r32_11',a_slot:'W-r32_12',utc:'2026-07-07T02:00:00Z'},
+  {id:'r16_07',rd:'R16',h_slot:'W-r32_13',a_slot:'W-r32_14',utc:'2026-07-08T22:00:00Z'},
+  {id:'r16_08',rd:'R16',h_slot:'W-r32_15',a_slot:'W-r32_16',utc:'2026-07-08T19:00:00Z'},
+  // ── Quarter-finals (4 matches) ────────────────────────────────────────
+  {id:'qf_01',rd:'QF',h_slot:'W-r16_01',a_slot:'W-r16_02',utc:'2026-07-11T22:00:00Z'},
+  {id:'qf_02',rd:'QF',h_slot:'W-r16_03',a_slot:'W-r16_04',utc:'2026-07-12T02:00:00Z'},
+  {id:'qf_03',rd:'QF',h_slot:'W-r16_05',a_slot:'W-r16_06',utc:'2026-07-11T19:00:00Z'},
+  {id:'qf_04',rd:'QF',h_slot:'W-r16_07',a_slot:'W-r16_08',utc:'2026-07-12T19:00:00Z'},
+  // ── Semi-finals (2 matches) ───────────────────────────────────────────
+  {id:'sf_01',rd:'SF',h_slot:'W-qf_01',a_slot:'W-qf_02',utc:'2026-07-15T23:00:00Z'},
+  {id:'sf_02',rd:'SF',h_slot:'W-qf_03',a_slot:'W-qf_04',utc:'2026-07-16T23:00:00Z'},
+  // ── Third place play-off ───────────────────────────────────────────────
+  {id:'3pl',   rd:'3PL',h_slot:'L-sf_01',a_slot:'L-sf_02',utc:'2026-07-19T23:00:00Z'},
+  // ── Final ──────────────────────────────────────────────────────────────
+  {id:'fin',   rd:'FIN',h_slot:'W-sf_01',a_slot:'W-sf_02',utc:'2026-07-22T23:00:00Z'}
+];
+
 var KO_ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-finals',SF:'Semi-finals','3PL':'3rd Place',FIN:'Final'};
 
 // football-data.org → our team names
@@ -1761,6 +1803,18 @@ function SuperAdminApp() {
                       }}>
                         <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
                           <span style=${{fontSize:11,fontWeight:700,letterSpacing:1,color:'var(--mu)',fontFamily:'Barlow Condensed'}}>MEMBERS (${(r.members||[]).length})</span>
+                          <button class="btn" style=${{fontSize:11,padding:'3px 10px',
+                              color:r.locked?'#22c55e':'#f59e0b',
+                              borderColor:r.locked?'rgba(34,197,94,.3)':'rgba(245,158,11,.3)'}}
+                            onClick=${function(e){
+                              e.stopPropagation();
+                              var nr=Object.assign({},saRooms);
+                              nr[r.id]=Object.assign({},r,{locked:!r.locked});
+                              fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                                body:JSON.stringify({action:'set',key:'wc26_rooms',value:nr})})
+                                .then(function(res){return res.json();})
+                                .then(function(d){if(d.ok!==false)setSaRooms(nr);});
+                            }}>${r.locked?'🔓 Unlock':'🔒 Lock'}</button>
                           <button class="btn" style=${{fontSize:11,padding:'3px 10px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
                             onClick=${function(e){e.stopPropagation();deleteRoom(r.id);}}>Delete Room</button>
                         </div>
@@ -2737,7 +2791,7 @@ function DashPage(props) {
                   <div style=${{fontWeight:600,fontSize:15}}>${r.name}</div>
                   <div style=${{fontSize:12,color:'var(--mu)',marginTop:2}}>
                     Code: <strong style=${{fontFamily:'monospace',letterSpacing:1,color:'var(--gold)'}}>${r.code}</strong>
-                    · ${(r.members||[]).length} member${(r.members||[]).length===1?'':'s'}
+                    · ${(r.members||[]).length} member${(r.members||[]).length===1?'':'s'}${r.locked?html` · <span style=${{color:'#f59e0b',fontSize:11}}>🔒</span>`:''}
                   </div>
                 </div>
                 <span style=${{color:'var(--dm)',fontSize:20}}>›</span>
@@ -3217,7 +3271,8 @@ function RoomPage(props) {
       <button class="btn" style=${{padding:'8px 10px'}} onClick=${props.onBack}><i class="ti ti-arrow-left"></i></button>
       <div style=${{flex:1,minWidth:0}}>
         <h1 style=${{fontSize:18,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2}}>${props.room.name}</h1>
-        <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).filter(function(id){return true;}).length} members</p>
+        <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).length} members${props.room.locked?html` · <span style=${{color:'#f59e0b',fontSize:11,fontWeight:600}}>🔒 Locked</span>`:''}
+      </p>
       </div>
 
       ${!props.isAdmin&&html`<button class="btn" style=${{fontSize:12,color:'var(--rd)',borderColor:'rgba(239,68,68,.25)',padding:'7px 12px'}} onClick=${props.onLeaveRoom}>↩ Leave</button>`}
@@ -3548,6 +3603,19 @@ function RoomPage(props) {
       <div class="card">
         <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
           <h3 style=${{margin:0}}>👥 Members (${(props.room.members||[]).filter(function(id){return !!props.users[id];}).length})</h3>
+          <!-- Lock/Unlock room -->
+          <div style=${{display:'flex',alignItems:'center',gap:8}}>
+            <span style=${{fontSize:12,color:'var(--mu)'}}>
+              ${props.room.locked?'🔒 Locked':'🔓 Open'}
+            </span>
+            <button class="btn" style=${{
+              fontSize:11,padding:'3px 10px',
+              color:props.room.locked?'#22c55e':'#f59e0b',
+              borderColor:props.room.locked?'rgba(34,197,94,.3)':'rgba(245,158,11,.3)'
+            }} onClick=${function(){props.onLockRoom&&props.onLockRoom(!props.room.locked);}}>
+              ${props.room.locked?'🔓 Unlock Room':'🔒 Lock Room'}
+            </button>
+          </div>
         </div>
         <!-- Add by phone -->
         <div style=${{display:'flex',gap:8,marginBottom:12}}>
@@ -4014,7 +4082,7 @@ function App() {
       });
     });
     Store.listen('preds', function(v) { setPreds(v||{}); });
-    Store.listen('tpicks', function(v) { setTpicks(v||{}); });
+    // tpicks listener removed — champion team now stored in user.champTeam
     Store.listen('results', function(v) { setResults(v||{}); });
     Store.listen('koresults', function(v) {
       var kr = v||{};
@@ -4231,6 +4299,7 @@ function App() {
   function doJoin(code) {
     var f = Object.values(rooms).find(function(r){return r.code===code.toUpperCase().trim();});
     if (!f) return notify('Room not found','err');
+    if (f.locked && !(f.members||[]).includes(user.id)) return notify('🔒 This room is locked — the admin has disabled new members','err');
     var upd = f;
     if (!f.members.includes(user.id)) {
       upd = Object.assign({}, f, {members: (f.members||[]).concat([user.id])});
@@ -4383,6 +4452,15 @@ function getAchievements(uid, predsMap, resultsMap) {
     if (!room) return;
     var count = (chatMsgs[room.id]||[]).length;
     setLastReadChat(function(prev){ var n=Object.assign({},prev); n[room.id]=count; return n; });
+  }
+
+  function doLockRoom(locked) {
+    if (!room) return;
+    var upd = Object.assign({}, room, {locked: locked});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr);
+    setRoom(upd);
+    notify(locked ? '🔒 Room locked — no new members can join' : '🔓 Room unlocked');
   }
 
   function leaveRoom() {
@@ -4589,7 +4667,7 @@ function getAchievements(uid, predsMap, resultsMap) {
           roomMsgs=${room&&chatMsgs[room.id]||[]}
           onSendChat=${sendChatMessage}
           announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
-          onLeaveRoom=${leaveRoom} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
