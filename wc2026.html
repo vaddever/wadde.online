@@ -1661,7 +1661,7 @@ function SuperAdminApp() {
           <table style=${{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <thead>
               <tr style=${{background:'var(--bg3)'}}>
-                ${['Name','Phone','Fav Team','Fav Player','Joined','Actions'].map(function(h){
+                ${['Name','Phone','Fav Team','Fav Player','Rooms','Joined','Actions'].map(function(h){
                   return html`<th key=${h} style=${{padding:'8px 12px',textAlign:'left',
                     fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)',whiteSpace:'nowrap'}}>${h}</th>`;
                 })}
@@ -1679,6 +1679,16 @@ function SuperAdminApp() {
                     <td style=${{padding:'9px 12px',fontFamily:'monospace',fontSize:12,color:'var(--mu)'}}>${u.phone||''}</td>
                     <td style=${{padding:'9px 12px',color:'var(--mu)',fontSize:12}}>${(u.favT||[]).join(', ')||'—'}</td>
                     <td style=${{padding:'9px 12px',color:'var(--mu)',fontSize:12}}>${(u.favP||[]).join(', ')||'—'}</td>
+                    <td style=${{padding:'9px 12px',fontSize:11}}>
+                      ${(function(){
+                        var ur=Object.values(saRooms).filter(function(r){return (r.members||[]).includes(u.id);});
+                        if(!ur.length) return html`<span style=${{color:'var(--dm)'}}>—</span>`;
+                        return html`<div style=${{display:'flex',flexDirection:'column',gap:3}}>
+                          ${ur.map(function(r){return html`<span key=${r.id}
+                            style=${{background:'rgba(26,86,219,.12)',color:'#60a5fa',padding:'1px 8px',borderRadius:8,fontSize:10,whiteSpace:'nowrap',display:'inline-block'}}>${r.name||r.code}</span>`;})}
+                        </div>`;
+                      })()}
+                    </td>
                     <td style=${{padding:'9px 12px',color:'var(--dm)',fontSize:11,whiteSpace:'nowrap'}}>${u.joined?new Date(u.joined).toLocaleDateString():''}</td>
                     <td style=${{padding:'9px 12px'}}>
                       <button class="btn" style=${{fontSize:11,padding:'3px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
@@ -3498,8 +3508,15 @@ function App() {
     Store.listen('rooms', function(v) {
       var rv = v||{};
       setRooms(rv);
-      // Keep current room fresh when rooms data changes (new members, etc.)
-      setRoom(function(cur){ return cur&&rv[cur.id]?rv[cur.id]:cur; });
+      setRoom(function(cur) {
+        if (!cur || !rv[cur.id]) return cur;
+        var gasRoom = rv[cur.id];
+        var curLen = (cur.members||[]).length;
+        var gasLen = (gasRoom.members||[]).length;
+        // Never regress members via stale GAS poll — only update when GAS is ahead
+        if (gasLen >= curLen) return gasRoom;
+        return Object.assign({}, gasRoom, {members: cur.members});
+      });
     });
     Store.listen('preds', function(v) { setPreds(v||{}); });
     Store.listen('tpicks', function(v) { setTpicks(v||{}); });
@@ -3711,6 +3728,7 @@ function App() {
     Store.set('rooms', nr);
     var na = Object.assign({}, adminAuth); na[id] = true;
     setAdminAuth(na); // Admin auth in memory only — enter passphrase each session for security
+    try { localStorage.setItem('wc26_room_cache_'+id, JSON.stringify(nr[id])); } catch(e) {}
     setRoom(nr[id]); setModal(null); setTab('leaderboard'); setScr('room');
     subscribeChatRoom(id);
     notify('Room created! Share code: ' + code);
@@ -3724,6 +3742,7 @@ function App() {
       var nr = Object.assign({}, rooms); nr[f.id] = upd;
       Store.set('rooms', nr);
     }
+    try { localStorage.setItem('wc26_room_cache_'+upd.id, JSON.stringify(upd)); } catch(e) {}
     setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); subscribeChatRoom(upd.id);
     notify('Joined "' + f.name + '"! 🎉');
   }
@@ -4060,7 +4079,13 @@ function getAchievements(uid, predsMap, resultsMap) {
     <div class="page">
       ${scr==='welcome'&&html`<${WelcomePage} globalAnns=${globalAnns.filter(function(a){return a.scope==="welcome"||a.scope==="all";})} factI=${factI} plyrI=${plyrI} dl=${dl} onLogin=${function(){setAuthMode('login');setScr('auth');}} onReg=${function(){setAuthMode('reg');setScr('auth');}} />`}
       ${scr==='auth'&&html`<${AuthPage} mode=${authMode} setMode=${setAuthMode} onLogin=${doLogin} onReg=${doReg} onBack=${function(){setScr('welcome');}} />`}
-      ${scr==='dash'&&user&&html`<${DashPage} globalAnns=${globalAnns.filter(function(a){return a.scope==="dash"||a.scope==="all";})} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){setRoom(r);setTab('leaderboard');setScr('room');subscribeChatRoom(r.id);}} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+      ${scr==='dash'&&user&&html`<${DashPage} globalAnns=${globalAnns.filter(function(a){return a.scope==="dash"||a.scope==="all";})} user=${user} rooms=${myRooms} factI=${factI} plyrI=${plyrI} dl=${dl} onEnter=${function(r){
+      // Restore cached room if local rooms haven't loaded yet (faster display)
+      var cached = null;
+      try { cached = JSON.parse(localStorage.getItem('wc26_room_cache_'+r.id)||'null'); } catch(e) {}
+      var useRoom = (cached&&cached.members&&cached.members.length>=(r.members||[]).length)?cached:r;
+      setRoom(useRoom); setTab('leaderboard'); setScr('room'); subscribeChatRoom(r.id);
+    }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
