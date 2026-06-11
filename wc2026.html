@@ -928,18 +928,21 @@ function _applyMatches(matches, onUpdate, onLive) {
 
 function fetchLiveScores(apiKey, onUpdate, onLive) {
   if (!apiKey) return;
-  fetch(GS_URL + '?action=livescores')
+  fetch(GS_URL + '?action=livescores&key=' + encodeURIComponent(apiKey))
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d.ok) {
         _applyMatches(d.matches, onUpdate, onLive);
       } else if (d.error && d.error.indexOf('Unknown action') !== -1) {
-        console.warn('Live scores: GAS needs to be redeployed with the updated script.');
+        console.warn('Live scores: GAS needs redeployment with updated script.');
+        setSyncStatus('needs-redeploy');
       } else {
         console.warn('Live scores GAS error:', d.error || 'unknown');
+        setSyncStatus('error');
       }
     })
-    .catch(function(e){ console.warn('Live scores fetch error:', e.message); });
+    .catch(function(e){ console.warn('Live scores fetch error:', e.message);
+  setSyncStatus('error'); });
 }
 
 function computeGroupStandings(grpKey, results) {
@@ -1139,7 +1142,7 @@ function APIKeyInput(props) {
       .then(function(d){
         if (!d.ok) throw new Error(d.error || 'GAS save failed');
         setStatus('Testing connection…');
-        return fetch(GS_URL + '?action=livescores');
+        return fetch(GS_URL + '?action=livescores&key=' + encodeURIComponent(apiKey));
       })
       .then(function(r){ return r.json(); })
       .then(function(d){
@@ -3318,7 +3321,14 @@ function RoomPage(props) {
       </p>
       </div>
 
-      ${!props.isAdmin&&html`<button class="btn" style=${{fontSize:12,color:'var(--rd)',borderColor:'rgba(239,68,68,.25)',padding:'7px 12px'}} onClick=${props.onLeaveRoom}>↩ Leave</button>`}
+      <div style=${{display:'flex',alignItems:'center',gap:6}}>
+        <button class="btn" style=${{fontSize:11,padding:'5px 10px',color:props.syncStatus==='live'?'#ef4444':props.syncStatus==='syncing'?'#f59e0b':'var(--mu)',borderColor:props.syncStatus==='live'?'rgba(239,68,68,.3)':props.syncStatus==='syncing'?'rgba(245,158,11,.3)':'var(--bdr)'}}
+          onClick=${props.onSync}
+          title="Sync live scores">
+          ${props.syncStatus==='syncing'?'⏳ Syncing…':props.syncStatus==='live'?'🔴 Live':props.syncStatus==='error'?'⚠️ Sync':'⟳ Sync'}
+        </button>
+        ${!props.isAdmin&&html`<button class="btn" style=${{fontSize:12,color:'var(--rd)',borderColor:'rgba(239,68,68,.25)',padding:'7px 12px'}} onClick=${props.onLeaveRoom}>↩ Leave</button>`}
+      </div>
     </div>
 
     <!-- 📖 How to Play — only visible on Standings tab -->
@@ -3545,6 +3555,20 @@ function RoomPage(props) {
           <div style=${{fontSize:12,color:'var(--mu)'}}>${props.lboard[0].pts} pts · ${props.lboard[0].np} predictions</div>
         </div>
       </div>`}
+<!-- Score status info banner when all pts = 0 -->
+      ${props.lboard.length>0&&props.lboard.every(function(e){return (e.pts||0)===0&&(e.livePts||0)===0;})&&html`<div style=${{
+        background:'rgba(245,158,11,.08)',border:'1px solid rgba(245,158,11,.2)',
+        borderRadius:'var(--rs)',padding:'10px 14px',marginBottom:10,fontSize:12,
+        color:'var(--mu)',display:'flex',alignItems:'flex-start',gap:8
+      }}>
+        <span style=${{fontSize:16,flexShrink:0}}>ℹ️</span>
+        <div>
+          <div style=${{fontWeight:600,color:'#f59e0b',marginBottom:2}}>Points update when matches finish</div>
+          <div>Tap <strong style=${{color:'var(--tx)'}}>⟳ Sync</strong> in the header to fetch live scores. 
+               Live projected pts show as <span style=${{color:'#ef4444',fontWeight:600}}>🔴 live</span> — confirmed once the match ends.</div>
+        </div>
+      </div>`}
+
       ${props.lboard.length===0
         ?html`<div class="card" style=${{textAlign:'center',padding:32}}><div style=${{fontSize:32,marginBottom:10}}>📊</div><p style=${{color:'var(--mu)'}}>No members yet</p></div>`
         :html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
@@ -3584,7 +3608,10 @@ function RoomPage(props) {
             })()}
             <div>
               <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
-              ${e.livePts>0&&html`<div style=${{fontSize:10,color:'#ef4444',fontWeight:600,marginTop:1}}>+${e.livePts} 🔴</div>`}
+              ${e.livePts>0&&html`<div style=${{fontSize:10,color:'#ef4444',fontWeight:700,display:'flex',alignItems:'center',gap:3,justifyContent:'flex-end',marginTop:1}}>
+              <span style=${{width:6,height:6,borderRadius:3,background:'#ef4444',display:'inline-block',animation:'pulse 1s infinite'}}></span>
+              <span>+${e.livePts} live</span>
+            </div>`}
             </div>
           </div>
           </div>`; })}
@@ -4120,6 +4147,8 @@ function App() {
   var apiKey=s11g[0]; var setApiKey=s11g[1];
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
   var s_ls=useState({}); var liveScores=s_ls[0]; var setLiveScores=s_ls[1];
+  var s_sy=useState(0); var lastSync=s_sy[0]; var setLastSync=s_sy[1];
+  var s_ss=useState('idle'); var syncStatus=s_ss[0]; var setSyncStatus=s_ss[1];
   var s_ga=useState([]); var globalAnns=s_ga[0]; var setGlobalAnns=s_ga[1];
   var s11i=useState({}); var annsByRoom=s11i[0]; var setAnnsByRoom=s11i[1];
   var s11j=useState(null); var annModal=s11j[0]; var setAnnModal=s11j[1];
@@ -4249,6 +4278,7 @@ function App() {
     var _syncTimer = null;
     function runSync(key) {
       if (!key) return;
+      setSyncStatus('syncing');
       fetchLiveScores(key, function(updates) {
         var grpU={}, koU={};
         var koIds = KO_MS.map(function(m){return m.id;});
@@ -4258,7 +4288,10 @@ function App() {
         if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
         if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));Store.set('koresults',n);return n;});
       }, function(live) {
-        setLiveScores(live);  // store live match data for display
+        setLiveScores(live);
+        setLastSync(Date.now());
+        setSyncStatus(Object.keys(live).length > 0 ? 'live' : 'ok');
+        setTimeout(function(){ setSyncStatus('ok'); }, 5000);
       });
     }
     var _initKey = localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2';
@@ -4513,7 +4546,11 @@ function getAchievements(uid, predsMap, resultsMap) {
           np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length,
           acc:uAcc(uid), pick:(users[uid]||{}).champTeam||null,
           badges:getAchievements(uid, preds, results)};
-      }).sort(function(a,b){return (b.pts||0)-(a.pts||0)||(b.np||0)-(a.np||0);});
+      }).sort(function(a,b){
+      var aTotal=(a.pts||0)+(a.livePts||0)*0.1; // live pts break ties
+      var bTotal=(b.pts||0)+(b.livePts||0)*0.1;
+      return bTotal-aTotal||(b.np||0)-(a.np||0);
+    });
   }
   function newQuiz() { setQSet(shuffle(QQ).slice(0,5)); setQIdx(0); setQScore(0); setQDone(false); setQSel(null); }
   function ansQ(i) {
@@ -4779,7 +4816,7 @@ function getAchievements(uid, predsMap, resultsMap) {
           roomMsgs=${room&&chatMsgs[room.id]||[]}
           onSendChat=${sendChatMessage}
           announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
-          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
@@ -4795,4 +4832,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-    All Rights Reserved By: Mohamed Waheed (7987999)
+      All Rights Reserved By: Mohamed Waheed (7987999)
