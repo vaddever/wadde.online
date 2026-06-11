@@ -1451,6 +1451,8 @@ function SuperAdminApp() {
   var reS = useState({}); var saResults = reS[0]; var setSaResults = reS[1];
   var lS  = useState(false); var loading = lS[0]; var setLoading = lS[1];
   var erS = useState(null);  var expandedRoom = erS[0]; var setExpandedRoom = erS[1];
+  var rcS = useState(null); var recResult = rcS[0]; var setRecResult = rcS[1];
+  var rcL = useState(false); var recLoading = rcL[0]; var setRecLoading = rcL[1];
   var gaS = useState([]);    var globalAnns = gaS[0]; var setGlobalAnns = gaS[1];
   var gaMod = useState(null); var gAnnModal = gaMod[0]; var setGAnnModal = gaMod[1];
   var apiKeyS = useState(localStorage.getItem('wc26_apikey')||''); var saApiKey=apiKeyS[0]; var setSaApiKey=apiKeyS[1];
@@ -1607,6 +1609,7 @@ function SuperAdminApp() {
     {id:'preds',     label:'⚽ Predictions ('+prList.length+')'},
     {id:'results',   label:'📊 Results ('+reList.length+')'},
     {id:'anns',     label:'📢 Announcements'},
+    {id:'recovery',  label:'🔧 Recovery'},
     {id:'settings',  label:'⚙️ Settings'},
   ];
 
@@ -1917,6 +1920,152 @@ function SuperAdminApp() {
               </div>`;
             })
         }
+      </div>`}
+
+
+      <!-- ── Recovery tab ──────────────────────────────────────────── -->
+      ${saTab==='recovery'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14,maxWidth:560}}>
+        <div class="card">
+          <h3 style=${{marginBottom:4}}>🔧 Member Recovery</h3>
+          <p style=${{fontSize:12,color:'var(--mu)',marginBottom:12,lineHeight:1.5}}>
+            Finds users who were in rooms but lost their membership due to a sync race condition (now fixed).
+            Scans chat history, prediction activity, and room creation records to recover lost members.
+          </p>
+          <div style=${{display:'flex',gap:8}}>
+            <button class="btn-p" style=${{flex:1}} disabled=${recLoading}
+              onClick=${function(){
+                setRecLoading(true); setRecResult(null);
+                var result = {fixed:[], orphaned:[], chatScan:[]};
+
+                // STEP 1: Auto-fix room creators not in their own room
+                var roomsToFix = Object.values(saRooms).filter(function(r){
+                  return r.by && !(r.members||[]).includes(r.by) && saUsers[r.by];
+                });
+                result.fixed = roomsToFix.map(function(r){
+                  return {room:r, user:saUsers[r.by], reason:'Room creator'};
+                });
+
+                // STEP 2: Find truly orphaned users (not in any room at all)
+                var allMemberIds = [];
+                Object.values(saRooms).forEach(function(r){ (r.members||[]).forEach(function(id){allMemberIds.push(id);}); });
+                var uniqueMembers = allMemberIds.filter(function(v,i,a){return a.indexOf(v)===i;});
+                result.orphaned = Object.values(saUsers).filter(function(u){
+                  return !uniqueMembers.includes(u.id);
+                });
+
+                // STEP 3: Scan chat logs for each room to find ghost members
+                var rooms = Object.values(saRooms);
+                var chatFetches = rooms.map(function(r){
+                  return fetch(GS_URL+'?action=get&key=wc26_chat_'+r.id)
+                    .then(function(res){return res.json();})
+                    .then(function(d){
+                      var msgs = Array.isArray(d.value)?d.value:[];
+                      var chatUids = msgs.map(function(m){return m.uid;}).filter(Boolean)
+                        .filter(function(v,i,a){return a.indexOf(v)===i;});
+                      var lost = chatUids.filter(function(uid){
+                        return !(r.members||[]).includes(uid) && saUsers[uid];
+                      });
+                      if(lost.length) {
+                        lost.forEach(function(uid){
+                          result.chatScan.push({room:r, user:saUsers[uid], reason:'Found in chat history'});
+                        });
+                      }
+                    }).catch(function(){});
+                });
+
+                Promise.all(chatFetches).then(function(){
+                  setRecResult(result);
+                  setRecLoading(false);
+                });
+              }}>
+              ${recLoading?'Scanning...':'🔍 Scan & Find Lost Members'}
+            </button>
+            ${recResult&&(recResult.fixed.length+recResult.chatScan.length)>0&&html`
+              <button class="btn-p" style=${{background:'#22c55e',flex:1}}
+                onClick=${function(){
+                  // Apply all fixes
+                  var allToFix = recResult.fixed.concat(recResult.chatScan);
+                  var nr = Object.assign({}, saRooms);
+                  allToFix.forEach(function(item){
+                    var r = nr[item.room.id];
+                    if(!r) return;
+                    var mems = (r.members||[]);
+                    if(!mems.includes(item.user.id)) {
+                      nr[item.room.id] = Object.assign({},r,{members:mems.concat([item.user.id])});
+                    }
+                  });
+                  fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                    body:JSON.stringify({action:'set',key:'wc26_rooms',value:nr})})
+                    .then(function(r){return r.json();})
+                    .then(function(d){
+                      if(d.ok!==false){
+                        setSaRooms(nr);
+                        setRecResult(Object.assign({},recResult,{applied:true}));
+                      } else alert('Save error: '+(d.error||'?'));
+                    });
+                }}>✓ Restore All (${recResult.fixed.length+recResult.chatScan.length})</button>`}
+          </div>
+        </div>
+
+        ${recResult&&html`<div style=${{display:'flex',flexDirection:'column',gap:10}}>
+
+          <!-- Auto-fixes (room creators) -->
+          ${recResult.fixed.length>0&&html`<div class="card" style=${{borderColor:'rgba(34,197,94,.3)'}}>
+            <h3 style=${{marginBottom:8,color:'#22c55e'}}>✓ Auto-fix: Room creators not in their own room (${recResult.fixed.length})</h3>
+            ${recResult.fixed.map(function(item,i){
+              return html`<div key=${i} style=${{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid var(--bdr)'}}>
+                <div>
+                  <div style=${{fontSize:13,fontWeight:500}}>${item.user.name}</div>
+                  <div style=${{fontSize:11,color:'var(--mu)'}}>Creator of "${item.room.name}" • ${item.reason}</div>
+                </div>
+                <span style=${{fontSize:10,background:'rgba(34,197,94,.12)',color:'#22c55e',padding:'2px 8px',borderRadius:8}}>Will restore</span>
+              </div>`;
+            })}
+          </div>`}
+
+          <!-- Chat scan results (lost members) -->
+          ${recResult.chatScan.length>0&&html`<div class="card" style=${{borderColor:'rgba(251,191,36,.3)'}}>
+            <h3 style=${{marginBottom:8,color:'#f59e0b'}}>⚡ Found in chat history — lost members (${recResult.chatScan.length})</h3>
+            ${recResult.chatScan.map(function(item,i){
+              return html`<div key=${i} style=${{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid var(--bdr)'}}>
+                <div>
+                  <div style=${{fontSize:13,fontWeight:500}}>${item.user.name}</div>
+                  <div style=${{fontSize:11,color:'var(--mu)'}}>Room: "${item.room.name}" • ${item.reason}</div>
+                </div>
+                <span style=${{fontSize:10,background:'rgba(251,191,36,.12)',color:'#f59e0b',padding:'2px 8px',borderRadius:8}}>Will restore</span>
+              </div>`;
+            })}
+          </div>`}
+
+          ${recResult.chatScan.length===0&&recResult.fixed.length===0&&!recResult.applied&&html`
+            <div class="card" style=${{textAlign:'center',padding:24,color:'var(--mu)'}}>
+              ✓ No lost members found in creator records or chat history.
+            </div>`}
+
+          ${recResult.applied&&html`
+            <div class="card" style=${{textAlign:'center',padding:20,background:'rgba(34,197,94,.07)',borderColor:'rgba(34,197,94,.3)'}}>
+              <div style=${{fontSize:24,marginBottom:8}}>✅</div>
+              <div style=${{fontWeight:600}}>All lost members restored!</div>
+              <div style=${{fontSize:12,color:'var(--mu)',marginTop:4}}>Rooms have been updated in GAS. Refresh to verify.</div>
+            </div>`}
+
+          <!-- Orphaned users (not in any room) -->
+          ${recResult.orphaned.length>0&&html`<div class="card">
+            <h3 style=${{marginBottom:8}}>👻 Users not in any room (${recResult.orphaned.length})</h3>
+            <p style=${{fontSize:12,color:'var(--mu)',marginBottom:10}}>These users exist but have never joined or were removed from all rooms. Add them to a room manually from the Rooms tab.</p>
+            ${recResult.orphaned.map(function(u,i){
+              return html`<div key=${u.id} style=${{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:'1px solid var(--bdr)'}}>
+                <div style=${{width:28,height:28,borderRadius:14,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#fff',flexShrink:0}}>${(u.name||'?')[0].toUpperCase()}</div>
+                <div style=${{flex:1}}>
+                  <div style=${{fontSize:13,fontWeight:500}}>${u.name}</div>
+                  <div style=${{fontSize:11,color:'var(--mu)'}}>${u.phone||u.id}</div>
+                </div>
+                <span style=${{fontSize:10,color:'var(--dm)'}}>No rooms</span>
+              </div>`;
+            })}
+          </div>`}
+
+        </div>`}
       </div>`}
 
       <!-- ── Improved Settings tab ─────────────────────────────────── -->
