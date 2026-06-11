@@ -2798,7 +2798,7 @@ function HowToPlay(props) {
         <div style=${{display:'flex',flexDirection:'column',gap:6,fontSize:12,color:'var(--mu)'}}>
           <div style=${{display:'flex',gap:8,alignItems:'flex-start'}}>
             <span style=${{flexShrink:0}}>🔒</span>
-            <span>Predictions <strong style=${{color:'var(--tx)'}}>lock the moment a match kicks off</strong>. You must predict before kick-off.</span>
+            <span>Predictions <strong style=${{color:'var(--tx)'}}>lock the moment a match kicks off</strong>. Scores update automatically — you must predict before kick-off.</span>
           </div>
           <div style=${{display:'flex',gap:8,alignItems:'flex-start'}}>
             <span style=${{flexShrink:0}}>✏️</span>
@@ -2832,7 +2832,7 @@ function HowToPlay(props) {
       </div>
 
       <p style=${{fontSize:11,color:'var(--dm)',marginTop:10,marginBottom:0,lineHeight:1.5}}>
-        💡 Standings update live as results are entered by your room admin.
+        💡 Match scores sync automatically every 60 seconds. Standings and knockout qualifications update live.
       </p>
     </div>`}
   </div>`;
@@ -2850,7 +2850,7 @@ function RoomPage(props) {
       <button class="btn" style=${{padding:'8px 10px'}} onClick=${props.onBack}><i class="ti ti-arrow-left"></i></button>
       <div style=${{flex:1,minWidth:0}}>
         <h1 style=${{fontSize:18,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2}}>${props.room.name}</h1>
-        <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).filter(function(id){return !!props.users[id];}).length} members</p>
+        <p style=${{fontSize:12,color:'var(--mu)',margin:0}}>Code: <strong style=${{color:'var(--tx)'}}>${props.room.code}</strong> · ${(props.room.members||[]).filter(function(id){return true;}).length} members</p>
       </div>
 
       ${!props.isAdmin&&html`<button class="btn" style=${{fontSize:12,color:'var(--rd)',borderColor:'rgba(239,68,68,.25)',padding:'7px 12px'}} onClick=${props.onLeaveRoom}>↩ Leave</button>`}
@@ -3036,7 +3036,7 @@ function RoomPage(props) {
             <div style=${{flex:1,minWidth:0}}>
               <div style=${{fontWeight:500,fontSize:14,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                 ${e.user&&e.user.favT&&typeof e.user.favT[0]==='string'&&e.user.favT[0]&&html`<${FlagImg} team=${e.user.favT[0]} w=${18} />`}
-                <span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${e.user&&e.user.name}</span>
+                <span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:e.user&&e.user._loading?'var(--dm)':'inherit'}}>${e.user&&e.user.name}</span>
                 ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8,flexShrink:0}}>you</span>`}
               </div>
               <div style=${{fontSize:11,color:'var(--mu)',marginTop:3,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
@@ -3046,7 +3046,7 @@ function RoomPage(props) {
                 ${!e.pick&&html`<span style=${{color:'var(--dm)'}}>No champion pick</span>`}
               </div>
               ${e.badges&&e.badges.length>0&&html`<div style=${{display:'flex',gap:4,flexWrap:'wrap',marginTop:4}}>
-                ${e.badges.map(function(b){ return html`<span key=${b.id} title=${b.desc} style=${{
+                ${e.badges.filter(Boolean).map(function(b){ return html`<span key=${b.id} title=${b.desc} style=${{
                   background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.12)',
                   borderRadius:20,padding:'1px 7px',fontSize:10,cursor:'default',
                   color:b.col,fontWeight:600,display:'flex',alignItems:'center',gap:3
@@ -3192,8 +3192,8 @@ function RoomPage(props) {
             }}>+ Add</button>
         </div>
         <div style=${{display:'flex',flexDirection:'column',gap:6}}>
-          ${(props.room.members||[]).filter(function(uid){return !!props.users[uid];}).map(function(uid){
-            var u=props.users[uid]||{name:'?'};
+          ${(props.room.members||[]).map(function(uid){
+            var u=props.users[uid]||{name:'Member (loading...)',id:uid};
             var isMe=uid===props.user.id;
             var isOwner=uid===props.room.by;
             var canRemove=!isMe&&!isOwner;
@@ -3495,10 +3495,20 @@ function App() {
         } else { if(sess) { Sess.del('wc26s'); Sess.del('wc26_u'); } setScr('welcome'); }
       }
     });
-    Store.listen('rooms', function(v) { setRooms(v||{}); });
+    Store.listen('rooms', function(v) {
+      var rv = v||{};
+      setRooms(rv);
+      // Keep current room fresh when rooms data changes (new members, etc.)
+      setRoom(function(cur){ return cur&&rv[cur.id]?rv[cur.id]:cur; });
+    });
     Store.listen('preds', function(v) { setPreds(v||{}); });
     Store.listen('tpicks', function(v) { setTpicks(v||{}); });
     Store.listen('results', function(v) { setResults(v||{}); });
+    Store.listen('koresults', function(v) {
+      var kr = v||{};
+      setKoResults(kr);
+      localStorage.setItem('wc26_kores', JSON.stringify(kr));
+    });
     // Chat messages — per room, keyed as wc26_chat_{roomId}
     var chatUnsub = null;
     var annUnsub  = null;
@@ -3565,7 +3575,7 @@ function App() {
           if(koIds.indexOf(id)>=0) koU[id]=updates[id]; else grpU[id]=updates[id];
         });
         if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
-        if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));return n;});
+        if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));Store.set('koresults',n);return n;});
       });
     }
     var _initKey = localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2';
@@ -3714,7 +3724,7 @@ function App() {
       var nr = Object.assign({}, rooms); nr[f.id] = upd;
       Store.set('rooms', nr);
     }
-    setRoom(upd); setModal(null); setTab('matches'); setScr('room'); subscribeChatRoom(upd.id);
+    setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); subscribeChatRoom(upd.id);
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
@@ -3802,9 +3812,9 @@ function getAchievements(uid, predsMap, resultsMap) {
   function getLb() {
     if (!room) return [];
     return (room.members||[])
-      .filter(function(uid){ return !!users[uid]; })
       .map(function(uid){
-        return {user:users[uid]||{name:'?',id:uid}, pts:uPts(uid),
+        var u = users[uid] || {name:'Member #'+(room.members.indexOf(uid)+1), id:uid, _loading:!Object.keys(users).length};
+        return {user:u, pts:uPts(uid),
           np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length,
           acc:uAcc(uid), pick:(users[uid]||{}).champTeam||null,
           badges:getAchievements(uid, preds, results)};
@@ -3919,7 +3929,7 @@ function getAchievements(uid, predsMap, resultsMap) {
         else grpU[id]=updates[id];
       });
       if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
-      if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));return n;});
+      if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));Store.set('koresults',n);return n;});
     });
     notify('API key saved — scores syncing!');
   }
@@ -3929,6 +3939,7 @@ function getAchievements(uid, predsMap, resultsMap) {
     upd[km.id] = {h: parseInt(hs)||0, a: parseInt(as)||0};
     setKoResults(upd);
     localStorage.setItem('wc26_kores', JSON.stringify(upd));
+    Store.set('koresults', upd);  // persist to GAS so all users see it
     notify('KO result saved!');
   }
   function verifyAdmin(pass) {
@@ -4025,8 +4036,8 @@ function getAchievements(uid, predsMap, resultsMap) {
     ${h2hUser&&room&&html`<${H2HModal}
       userA=${user} userB=${h2hUser}
       preds=${preds} results=${results}
-      ptsA=${lboard.find(function(e){return e.user&&e.user.id===user.id;})?lboard.find(function(e){return e.user&&e.user.id===user.id;}).pts:0}
-      ptsB=${lboard.find(function(e){return e.user&&e.user.id===h2hUser.id;})?lboard.find(function(e){return e.user&&e.user.id===h2hUser.id;}).pts:0}
+      ptsA=${(function(){var e=lboard.find(function(e){return e.user&&e.user.id===user.id;});return e?e.pts:0;})()} 
+      ptsB=${(function(){var e=lboard.find(function(e){return e.user&&e.user.id===h2hUser.id;});return e?e.pts:0;})()}
       onClose=${function(){setH2hUser(null);}} />`}
 
     ${annModal&&html`<${AnnouncementModal}
