@@ -1664,13 +1664,23 @@ function SuperAdminApp() {
       <!-- Users tab -->
       ${saTab==='users'&&html`<div>
         <div style=${{overflowX:'auto'}}>
-          <table style=${{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+          <table style=${{width:'100%',borderCollapse:'collapse',fontSize:13,tableLayout:'fixed'}}>
             <thead>
               <tr style=${{background:'var(--bg3)'}}>
-                ${['Name','Phone','Fav Team','Fav Player','Rooms','Joined','Actions'].map(function(h){
-                  return html`<th key=${h} style=${{padding:'8px 12px',textAlign:'left',
-                    fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)',whiteSpace:'nowrap'}}>${h}</th>`;
-                })}
+                ${(function(){
+                  var cols = [
+                    {l:'Name',       w:'16%'},
+                    {l:'Phone',      w:'11%'},
+                    {l:'Fav Team',   w:'11%'},
+                    {l:'Fav Player', w:'13%'},
+                    {l:'Rooms',      w:'30%'},
+                    {l:'Joined',     w:'10%'},
+                    {l:'Action',     w:'9%'}
+                  ];
+                  return cols.map(function(c){
+                    return html`<th key=${c.l} style=${{padding:'8px 10px',textAlign:'left',fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)',width:c.w,overflow:'hidden'}}>${c.l}</th>`;
+                  });
+                })()}
               </tr>
             </thead>
             <tbody>
@@ -1678,25 +1688,25 @@ function SuperAdminApp() {
                 ? html`<tr><td colspan="6" style=${{padding:20,textAlign:'center',color:'var(--dm)'}}>No users yet</td></tr>`
                 : uList.map(function(u){
                   return html`<tr key=${u.id} style=${{borderBottom:'1px solid var(--bdr)'}}>
-                    <td style=${{padding:'9px 12px',fontWeight:500}}>
+                    <td style=${{padding:'7px 10px',fontWeight:500}}>
                       <${FlagImg} team=${(u.favT||[])[0]||''} w=${16} />
                       ${' '+u.name}
                     </td>
-                    <td style=${{padding:'9px 12px',fontFamily:'monospace',fontSize:12,color:'var(--mu)'}}>${u.phone||''}</td>
-                    <td style=${{padding:'9px 12px',color:'var(--mu)',fontSize:12}}>${(u.favT||[]).join(', ')||'—'}</td>
-                    <td style=${{padding:'9px 12px',color:'var(--mu)',fontSize:12}}>${(u.favP||[]).join(', ')||'—'}</td>
-                    <td style=${{padding:'9px 12px',fontSize:11}}>
+                    <td style=${{padding:'7px 10px',fontFamily:'monospace',fontSize:12,color:'var(--mu)'}}>${u.phone||''}</td>
+                    <td style=${{padding:'7px 10px',color:'var(--mu)',fontSize:12}}>${(u.favT||[]).join(', ')||'—'}</td>
+                    <td style=${{padding:'7px 10px',color:'var(--mu)',fontSize:12}}>${(u.favP||[]).join(', ')||'—'}</td>
+                    <td style=${{padding:'8px 10px',fontSize:11,maxWidth:0,overflow:'hidden'}}>
                       ${(function(){
                         var ur=Object.values(saRooms).filter(function(r){return (r.members||[]).includes(u.id);});
                         if(!ur.length) return html`<span style=${{color:'var(--dm)'}}>—</span>`;
                         return html`<div style=${{display:'flex',flexDirection:'column',gap:3}}>
                           ${ur.map(function(r){return html`<span key=${r.id}
-                            style=${{background:'rgba(26,86,219,.12)',color:'#60a5fa',padding:'1px 8px',borderRadius:8,fontSize:10,whiteSpace:'nowrap',display:'inline-block'}}>${r.name||r.code}</span>`;})}
+                            style=${{background:'rgba(26,86,219,.12)',color:'#60a5fa',padding:'1px 6px',borderRadius:8,fontSize:10,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'100%',display:'block'}}>${r.name||r.code}</span>`;})}
                         </div>`;
                       })()}
                     </td>
-                    <td style=${{padding:'9px 12px',color:'var(--dm)',fontSize:11,whiteSpace:'nowrap'}}>${u.joined?new Date(u.joined).toLocaleDateString():''}</td>
-                    <td style=${{padding:'9px 12px'}}>
+                    <td style=${{padding:'7px 10px',color:'var(--dm)',fontSize:11,whiteSpace:'nowrap'}}>${u.joined?new Date(u.joined).toLocaleDateString():''}</td>
+                    <td style=${{padding:'9px 8px',whiteSpace:'nowrap'}}>
                       <button class="btn" style=${{fontSize:11,padding:'3px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
                         onClick=${function(){deleteUser(u.id);}}>Delete</button>
                     </td>
@@ -1753,6 +1763,35 @@ function SuperAdminApp() {
                           <span style=${{fontSize:11,fontWeight:700,letterSpacing:1,color:'var(--mu)',fontFamily:'Barlow Condensed'}}>MEMBERS (${(r.members||[]).length})</span>
                           <button class="btn" style=${{fontSize:11,padding:'3px 10px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
                             onClick=${function(e){e.stopPropagation();deleteRoom(r.id);}}>Delete Room</button>
+                        </div>
+
+                        <!-- Quick add user by selecting from dropdown -->
+                        <div style=${{marginBottom:12,padding:'10px 12px',background:'var(--bg2)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)'}}>
+                          <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:6,letterSpacing:.5}}>ADD USER TO THIS ROOM</div>
+                          <div style=${{display:'flex',gap:8,alignItems:'center'}}>
+                            <select id=${'sa_add_uid_'+r.id} style=${{flex:1,padding:'7px 10px',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',fontSize:12}}>
+                              <option value="">— Select user —</option>
+                              ${uList.filter(function(u){return !(r.members||[]).includes(u.id);}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(u){
+                                return html`<option key=${u.id} value=${u.id}>${u.name} (${u.phone||''})</option>`;
+                              })}
+                            </select>
+                            <button class="btn-p" style=${{fontSize:12,padding:'7px 14px',flexShrink:0}}
+                              onClick=${function(e){
+                                e.stopPropagation();
+                                var sel = document.getElementById('sa_add_uid_'+r.id);
+                                var uid = sel && sel.value;
+                                if (!uid) return;
+                                var nr = Object.assign({}, saRooms);
+                                nr[r.id] = Object.assign({}, r, {members:(r.members||[]).concat([uid])});
+                                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                                  body:JSON.stringify({action:'set',key:'wc26_rooms',value:nr})})
+                                  .then(function(res){return res.json();})
+                                  .then(function(d){
+                                    if(d.ok!==false){ setSaRooms(nr); sel.value=''; }
+                                    else alert('Error: '+(d.error||'?'));
+                                  });
+                              }}>+ Add</button>
+                          </div>
                         </div>
                         ${(r.members||[]).length===0
                           ? html`<p style=${{fontSize:12,color:'var(--dm)',margin:0}}>No members</p>`
@@ -4426,4 +4465,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-      All Rights Reserved By: Mohamed Waheed 
+      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
