@@ -926,23 +926,23 @@ function _applyMatches(matches, onUpdate, onLive) {
   if (onLive) onLive(live);
 }
 
-function fetchLiveScores(apiKey, onUpdate, onLive) {
-  if (!apiKey) return;
+function fetchLiveScores(apiKey, onUpdate, onLive, onError) {
+  if (!apiKey) { if (onError) onError('No API key'); return; }
   fetch(GS_URL + '?action=livescores&key=' + encodeURIComponent(apiKey))
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d.ok) {
         _applyMatches(d.matches, onUpdate, onLive);
-      } else if (d.error && d.error.indexOf('Unknown action') !== -1) {
-        console.warn('Live scores: GAS needs redeployment with updated script.');
-        setSyncStatus('needs-redeploy');
       } else {
-        console.warn('Live scores GAS error:', d.error || 'unknown');
-        setSyncStatus('error');
+        var msg = d.error || 'GAS error';
+        console.warn('Live scores error:', msg);
+        if (onError) onError(msg);
       }
     })
-    .catch(function(e){ console.warn('Live scores fetch error:', e.message);
-  setSyncStatus('error'); });
+    .catch(function(e){
+      console.warn('Live scores fetch error:', e.message);
+      if (onError) onError(e.message);
+    });
 }
 
 function computeGroupStandings(grpKey, results) {
@@ -1932,7 +1932,8 @@ function SuperAdminApp() {
         </div>
 
         ${Object.keys(GRP).map(function(grpKey){
-          var matches = MS.filter(function(m){ return m.gr===grpKey; });
+          var matches = MS.filter(function(m){ return m.gr===grpKey; })
+            .slice().sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); });
           return html`<div key=${grpKey} style=${{marginBottom:20}}>
             <h3 style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:16,fontWeight:700,margin:'0 0 8px',color:'var(--gold)',letterSpacing:.5}}>GROUP ${grpKey}</h3>
             <div style=${{display:'flex',flexDirection:'column',gap:6}}>
@@ -2808,8 +2809,9 @@ function CountdownBanner() {
               </div>`;
             })}
           </div>`
-        : html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:20,fontWeight:700,color:'white',letterSpacing:1,display:'flex',alignItems:'center',gap:6}}>
-            <span style=${{animation:'blink 1s step-end infinite'}}>🔴</span> LIVE NOW!
+        : html`<div style=${{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}}>
+            <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'#fbbf24',letterSpacing:.5}}>⚽ GROUP STAGE</div>
+            <div style=${{fontSize:11,color:'rgba(255,255,255,.7)'}}>In progress</div>
           </div>`
       }
     </div>
@@ -4347,7 +4349,12 @@ function App() {
         setLiveScores(live);
         setLastSync(Date.now());
         setSyncStatus(Object.keys(live).length > 0 ? 'live' : 'ok');
-        setTimeout(function(){ setSyncStatus('ok'); }, 5000);
+        setTimeout(function(){ setSyncStatus('ok'); }, 4000);
+      }, function(err) {
+        // Always reset sync status on error so button doesn't stay stuck
+        console.warn('Sync error:', err);
+        setSyncStatus('error');
+        setTimeout(function(){ setSyncStatus('ok'); }, 3000);
       });
     }
     var _initKey = localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2';
@@ -4900,4 +4907,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-    
+    All Rights Reserved By: Mohamed Waheed (7987999)
