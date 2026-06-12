@@ -1092,11 +1092,12 @@ var Sess = {
 // Helpers
 function calcPts(p, r) {
   if (!p || !r) return null;
-  var exact = (p.h === r.h && p.a === r.a);
-  if (exact) return 2; // exact score = 2 pts
-  var pw = p.h > p.a ? 1 : p.h < p.a ? -1 : 0;
-  var rw = r.h > r.a ? 1 : r.h < r.a ? -1 : 0;
-  return pw === rw ? 2 : 0; // 2pts correct winner only
+  if (p.h===undefined||p.a===undefined||r.h===undefined||r.a===undefined) return null;
+  var ph=Number(p.h), pa=Number(p.a), rh=Number(r.h), ra=Number(r.a);
+  if (ph===rh && pa===ra) return 4;          // exact score = 4 pts
+  var pw = ph>pa?1:ph<pa?-1:0;
+  var rw = rh>ra?1:rh<ra?-1:0;
+  return pw===rw ? 2 : 0;                    // correct winner/draw = 2 pts
 }
 function fmtTime(iso) {
   var d   = new Date(iso);
@@ -2547,7 +2548,7 @@ function WelcomePage(props) {
         <div style=${{display:'flex',flexDirection:'column',gap:9}}>
           <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
             <span style=${{color:'var(--mu)',fontSize:13}}>🎯 Exact score</span>
-            <strong style=${{color:'#22c55e',fontSize:14,flexShrink:0}}>+2 pts</strong>
+            <strong style=${{color:'#fbbf24',fontSize:14,flexShrink:0}}>+4 pts</strong>
           </div>
           <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
             <span style=${{color:'var(--mu)',fontSize:13}}>✅ Correct winner</span>
@@ -2837,7 +2838,7 @@ function DashPage(props) {
       <div class="card" style=${{padding:'12px 14px',background:'var(--bg2)'}}>
         <h3 style=${{fontSize:13,margin:'0 0 8px',color:'var(--tx)'}}>🏅 Points Details</h3>
         <div style=${{display:'flex',flexDirection:'column',gap:5,fontSize:12,color:'var(--mu)'}}>
-          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#22c55e'}}> +2 pts</strong></div>
+          <div style=${{display:'flex',justifyContent:'space-between'}}>🎯 Exact score<strong style=${{color:'#fbbf24'}}> +4 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>✅ Correct winner<strong style=${{color:'#60a5fa'}}> +2 pts</strong></div>
           <div style=${{display:'flex',justifyContent:'space-between'}}>🏆 Champion Team<strong style=${{color:'var(--gold)'}}> +5 pts</strong></div>
         </div>
@@ -3337,7 +3338,7 @@ function HowToPlay(props) {
           fontFamily:'Barlow Condensed,sans-serif',marginBottom:8}}>🏅 POINTS</div>
         <div style=${{display:'flex',flexDirection:'column',gap:6}}>
           ${[
-            ['🎯','Exact score (e.g. 2–1)', '+2 pts', '#22c55e'],
+            ['🎯','Exact score (e.g. 2–1)', '+4 pts', '#fbbf24'],
             ['✅','Correct winner or draw', '+2 pts', '#60a5fa'],
             ['🏆','Champion Team correct', '+5 pts', 'var(--gold)']
           ].map(function(r){
@@ -3509,7 +3510,7 @@ function RoomPage(props) {
                       ${res.h}<span style=${{color:'var(--dm)',margin:'0 3px'}}>–</span>${res.a}
                     </div>
                     <div style=${{fontSize:10,color:'var(--dm)',marginTop:2,textAlign:'right'}}>Full Time</div>
-                    ${ep!==null&&html`<div style=${{fontSize:11,marginTop:4,color:ep===2?'#4ade80':'#f87171',fontWeight:500}}>${ep===2?(pred&&res&&Number(pred.h)===Number(res.h)&&Number(pred.a)===Number(res.a)?'🎯 +2pts':'✓ +2pts'):'✗ 0pts'}</div>`}`
+                    ${ep!==null&&html`<div style=${{fontSize:11,marginTop:4,color:ep===4?'#fbbf24':ep===2?'#4ade80':'#f87171',fontWeight:500}}>${ep===4?'🎯 +4pts':ep===2?'✓ +2pts':'✗ 0pts'}</div>`}`
                   : live
                   ? html`<div style=${{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}>
                       <div style=${{display:'flex',alignItems:'center',gap:5,marginBottom:1}}>
@@ -3520,7 +3521,7 @@ function RoomPage(props) {
                         ${live.h}<span style=${{color:'rgba(255,255,255,.3)',margin:'0 3px'}}>–</span>${live.a}
                       </div>
                       ${live.htH!==undefined&&live.htH!==null&&html`<div style=${{fontSize:10,color:'var(--dm)',marginTop:1}}>(HT: ${live.htH}–${live.htA})</div>`}
-                      ${ep!==null&&pred&&html`<div style=${{fontSize:10,marginTop:2,color:ep===2?'#fbbf24':'rgba(255,255,255,.3)',fontWeight:600}}>${ep===2?'📍 On track':'📍 Off track'}</div>`}
+                      ${ep!==null&&pred&&html`<div style=${{fontSize:10,marginTop:2,color:ep===4?'#fbbf24':ep===2?'rgba(100,200,100,.8)':'rgba(255,255,255,.3)',fontWeight:600}}>${ep===4?'🎯 On track! (+4)':ep===2?'📍 On track (+2)':'📍 Off track'}</div>`}
                     </div>`
                   : html`<div style=${{fontSize:11,color:'var(--dm)',fontWeight:500,letterSpacing:.3}}>${tv.day}</div>
                     <div style=${{fontSize:14,fontWeight:700,color:'var(--tx)',lineHeight:1.15}}>${tv.date}</div>
@@ -3951,8 +3952,8 @@ function H2HModal(props) {
         ${done.map(function(m){
           var pa=predsA[ua.id+'_'+m.id], pb=predsB[ub.id+'_'+m.id], r=results[m.id];
           var ptA=calcPts(pa,r)||0, ptB=calcPts(pb,r)||0;
-          var isExA=pa&&r&&Number(pa.h)===Number(r.h)&&Number(pa.a)===Number(r.a);
-          var isExB=pb&&r&&Number(pb.h)===Number(r.h)&&Number(pb.a)===Number(r.a);
+          var isExA=ptA===4;
+          var isExB=ptB===4;
           var colA=ptA===0?'var(--dm)':isExA?'#22c55e':'#60a5fa';
           var colB=ptB===0?'var(--dm)':isExB?'#22c55e':'#60a5fa';
           return html`<div key=${m.id} style=${{
@@ -4083,8 +4084,8 @@ function UserPredictionsModal(props) {
           var p = predsMap[u.id+'_'+m.id];
           var r = resultsMap[m.id];
           var pts = r ? (calcPts(p,r)||0) : null;
-          var isExact = pts===2 && r && Number(p.h)===Number(r.h) && Number(p.a)===Number(r.a);
-          var isWinner = pts===2 && !isExact;
+          var isExact = pts===4;
+          var isWinner = pts===2;
           var isWrong  = pts===0 && r;
           var pending  = !r;
           return html`<div key=${m.id} style=${{
