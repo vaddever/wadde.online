@@ -1926,94 +1926,119 @@ function SuperAdminApp() {
 
       <!-- Results tab -->
       ${saTab==='results'&&html`<div>
+        <!-- Info banner -->
         <div style=${{marginBottom:14,padding:'10px 14px',background:'rgba(34,197,94,.07)',border:'1px solid rgba(34,197,94,.2)',borderRadius:'var(--rs)',fontSize:12,color:'var(--mu)'}}>
           <strong style=${{color:'#22c55e'}}>⚽ Results entered here update all rooms instantly.</strong>
           Scores sync to every user within 5 seconds. Once entered, room standings and points update automatically.
         </div>
 
-        ${Object.keys(GRP).map(function(grpKey){
-          var matches = MS.filter(function(m){ return m.gr===grpKey; })
-            .slice().sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); });
-          return html`<div key=${grpKey} style=${{marginBottom:20}}>
-            <h3 style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:16,fontWeight:700,margin:'0 0 8px',color:'var(--gold)',letterSpacing:.5}}>GROUP ${grpKey}</h3>
-            <div style=${{display:'flex',flexDirection:'column',gap:6}}>
-              ${matches.map(function(m){
-                var existing = saResults[m.id];
-                var tvStr = new Date(m.utc).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
-                return html`<div key=${m.id} style=${{
-                  display:'grid',gridTemplateColumns:'1fr auto 1fr auto',
-                  alignItems:'center',gap:8,padding:'8px 12px',
-                  background:existing?'rgba(34,197,94,.05)':'var(--bg3)',
-                  border:'1px solid '+(existing?'rgba(34,197,94,.2)':'var(--bdr)'),
-                  borderRadius:'var(--rs)'
-                }}>
-                  <!-- Home team -->
-                  <div style=${{display:'flex',alignItems:'center',gap:6,minWidth:0}}>
-                    <${FlagImg} team=${m.h} w=${18} />
-                    <span style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
-                  </div>
+        <!-- All matches sorted by date, group shown as badge on each row -->
+        ${(function(){
+          var allM = MS.slice().sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); });
 
-                  <!-- Score entry -->
-                  <div style=${{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
-                    <input type="number" min="0" max="20"
-                      id=${'sa_r_h_'+m.id}
-                      defaultValue=${existing!==undefined?existing.h:''}
-                      placeholder="–"
-                      style=${{width:40,textAlign:'center',padding:'4px',fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:700,background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:6,color:'var(--tx)'}} />
-                    <span style=${{fontFamily:'Barlow Condensed',fontSize:18,color:'var(--dm)',fontWeight:700}}>–</span>
-                    <input type="number" min="0" max="20"
-                      id=${'sa_r_a_'+m.id}
-                      defaultValue=${existing!==undefined?existing.a:''}
-                      placeholder="–"
-                      style=${{width:40,textAlign:'center',padding:'4px',fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:700,background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:6,color:'var(--tx)'}} />
-                    <button class="btn-p" style=${{fontSize:11,padding:'4px 10px',flexShrink:0}}
-                      onClick=${function(){
-                        var hIn = document.getElementById('sa_r_h_'+m.id);
-                        var aIn = document.getElementById('sa_r_a_'+m.id);
-                        var hv = parseInt(hIn.value);
-                        var av = parseInt(aIn.value);
-                        if (isNaN(hv)||isNaN(av)||hv<0||av<0) return alert('Enter valid scores (0 or more)');
-                        var nr = Object.assign({}, saResults);
-                        nr[m.id] = {h:hv, a:av, ts:new Date().toISOString()};
-                        fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                          body:JSON.stringify({action:'set',key:'wc26_results',value:nr})})
-                          .then(function(r){return r.json();})
-                          .then(function(d){
-                            if(d.ok!==false){ setSaResults(nr); }
-                            else alert('Save error: '+(d.error||'?'));
-                          }).catch(function(e){alert('Error: '+e.message);});
-                      }}>Save</button>
-                    ${existing!==undefined&&html`<button class="btn" style=${{fontSize:10,padding:'4px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)',flexShrink:0}}
-                      onClick=${function(){
-                        if(!confirm('Clear result for '+m.h+' vs '+m.a+'?')) return;
-                        var nr=Object.assign({},saResults); delete nr[m.id];
-                        fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                          body:JSON.stringify({action:'set',key:'wc26_results',value:nr})})
-                          .then(function(r){return r.json();})
-                          .then(function(d){if(d.ok!==false)setSaResults(nr);});
-                      }}>✕</button>`}
-                  </div>
+          // Group by calendar date (MVT = UTC+5)
+          var days = [];
+          var dayMap = {};
+          allM.forEach(function(m){
+            var d = new Date(new Date(m.utc).getTime() + 5*3600000);
+            var key = d.toISOString().slice(0,10);
+            var label = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+            if (!dayMap[key]) { dayMap[key] = {label:label, matches:[]}; days.push(key); }
+            dayMap[key].matches.push(m);
+          });
 
-                  <!-- Away team -->
-                  <div style=${{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end',minWidth:0}}>
-                    <span style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'right'}}>${m.a}</span>
-                    <${FlagImg} team=${m.a} w=${18} />
-                  </div>
+          return days.map(function(dk){
+            var day = dayMap[dk];
+            return html`<div key=${dk} style=${{marginBottom:20}}>
+              <!-- Date header -->
+              <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                <span style=${{fontSize:13,fontWeight:700,color:'var(--tx)'}}>${day.label}</span>
+                <div style=${{flex:1,height:1,background:'var(--bdr)'}}></div>
+                <span style=${{fontSize:11,color:'var(--dm)'}}>${day.matches.filter(function(m){return saResults[m.id];}).length}/${day.matches.length} done</span>
+              </div>
 
-                  <!-- Date / status -->
-                  <div style=${{fontSize:10,color:existing?'#22c55e':'var(--dm)',textAlign:'right',flexShrink:0,minWidth:60}}>
-                    ${existing?html`<span style=${{fontWeight:700}}>✓ Saved</span>`:tvStr}
-                  </div>
-                </div>`;
-              })}
-            </div>
-          </div>`;
-        })}
+              <!-- Match rows for this date -->
+              <div style=${{display:'flex',flexDirection:'column',gap:6}}>
+                ${day.matches.map(function(m){
+                  var existing = saResults[m.id];
+                  var kickoff = new Date(new Date(m.utc).getTime()+5*3600000)
+                    .toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+                  return html`<div key=${m.id} style=${{
+                    display:'grid',gridTemplateColumns:'auto 1fr auto 1fr auto',
+                    alignItems:'center',gap:6,padding:'9px 12px',
+                    background:existing?'rgba(34,197,94,.05)':'var(--bg3)',
+                    border:'1px solid '+(existing?'rgba(34,197,94,.2)':'var(--bdr)'),
+                    borderRadius:'var(--rs)'
+                  }}>
+                    <!-- Group badge + time -->
+                    <div style=${{display:'flex',flexDirection:'column',alignItems:'center',gap:2,flexShrink:0,minWidth:38}}>
+                      <span style=${{fontSize:9,fontWeight:700,background:'rgba(240,180,41,.15)',color:'var(--gold)',padding:'1px 5px',borderRadius:4,letterSpacing:.5}}>GRP ${m.gr}</span>
+                      <span style=${{fontSize:10,color:'var(--dm)'}}>${kickoff}</span>
+                    </div>
+
+                    <!-- Home team -->
+                    <div style=${{display:'flex',alignItems:'center',gap:5,minWidth:0}}>
+                      <${FlagImg} team=${m.h} w=${18} />
+                      <span style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
+                    </div>
+
+                    <!-- Score inputs -->
+                    <div style=${{display:'flex',alignItems:'center',gap:3,flexShrink:0}}>
+                      <input type="number" min="0" max="20"
+                        id=${'sa_r_h_'+m.id}
+                        defaultValue=${existing!==undefined?existing.h:''}
+                        placeholder="–"
+                        style=${{width:38,textAlign:'center',padding:'5px 2px',fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:700,background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:6,color:'var(--tx)'}} />
+                      <span style=${{fontFamily:'Barlow Condensed',fontSize:16,color:'var(--dm)',fontWeight:700,padding:'0 1px'}}>–</span>
+                      <input type="number" min="0" max="20"
+                        id=${'sa_r_a_'+m.id}
+                        defaultValue=${existing!==undefined?existing.a:''}
+                        placeholder="–"
+                        style=${{width:38,textAlign:'center',padding:'5px 2px',fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:700,background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:6,color:'var(--tx)'}} />
+                      <button class="btn-p" style=${{fontSize:11,padding:'5px 10px',flexShrink:0}}
+                        onClick=${function(){
+                          var hIn=document.getElementById('sa_r_h_'+m.id);
+                          var aIn=document.getElementById('sa_r_a_'+m.id);
+                          var hv=parseInt(hIn.value), av=parseInt(aIn.value);
+                          if(isNaN(hv)||isNaN(av)||hv<0||av<0) return alert('Enter valid scores (0 or more)');
+                          var nr=Object.assign({},saResults);
+                          nr[m.id]={h:hv,a:av,ts:new Date().toISOString()};
+                          fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                            body:JSON.stringify({action:'set',key:'wc26_results',value:nr})})
+                            .then(function(r){return r.json();})
+                            .then(function(d){if(d.ok!==false)setSaResults(nr);else alert('Save error: '+(d.error||'?'));})
+                            .catch(function(e){alert('Error: '+e.message);});
+                        }}>Save</button>
+                      ${existing!==undefined&&html`<button class="btn" style=${{fontSize:10,padding:'5px 7px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)',flexShrink:0}}
+                        onClick=${function(){
+                          if(!confirm('Clear result for '+m.h+' vs '+m.a+'?')) return;
+                          var nr=Object.assign({},saResults); delete nr[m.id];
+                          fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                            body:JSON.stringify({action:'set',key:'wc26_results',value:nr})})
+                            .then(function(r){return r.json();})
+                            .then(function(d){if(d.ok!==false)setSaResults(nr);});
+                        }}>✕</button>`}
+                    </div>
+
+                    <!-- Away team -->
+                    <div style=${{display:'flex',alignItems:'center',gap:5,justifyContent:'flex-end',minWidth:0}}>
+                      <span style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'right'}}>${m.a}</span>
+                      <${FlagImg} team=${m.a} w=${18} />
+                    </div>
+
+                    <!-- Status -->
+                    <div style=${{fontSize:10,textAlign:'right',flexShrink:0,minWidth:52}}>
+                      ${existing
+                        ? html`<span style=${{color:'#22c55e',fontWeight:700}}>✓ ${existing.h}–${existing.a}</span>`
+                        : html`<span style=${{color:'var(--dm)'}}>pending</span>`}
+                    </div>
+                  </div>`;
+                })}
+              </div>
+            </div>`;
+          });
+        })()}
       </div>`}
-
-      <!-- Settings tab -->
-
-      <!-- ── Global Announcements tab ────────────────────────────── -->
       ${saTab==='anns'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14,maxWidth:540}}>
 
         <!-- Create/Edit modal inline -->
@@ -4907,4 +4932,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-    All Rights Reserved By: Mohamed Waheed (7987999)
+  All Rights Reserved By: Mohamed Waheed (7987999)
