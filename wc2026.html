@@ -1925,34 +1925,88 @@ function SuperAdminApp() {
 
       <!-- Results tab -->
       ${saTab==='results'&&html`<div>
-        <div style=${{overflowX:'auto'}}>
-          <table style=${{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-            <thead><tr style=${{background:'var(--bg3)'}}>
-              ${['Match ID','Score','Source'].map(function(h){
-                return html`<th key=${h} style=${{padding:'8px 12px',textAlign:'left',
-                  fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)'}}>${h}</th>`;
-              })}
-            </tr></thead>
-            <tbody>
-              ${reList.length===0
-                ? html`<tr><td colspan="3" style=${{padding:20,textAlign:'center',color:'var(--dm)'}}>No results yet</td></tr>`
-                : reList.map(function(r,i){
-                  return html`<tr key=${i} style=${{borderBottom:'1px solid rgba(255,255,255,.03)'}}>
-                    <td style=${{padding:'8px 12px',fontFamily:'monospace',color:'var(--mu)'}}>${r.id}</td>
-                    <td style=${{padding:'8px 12px',fontFamily:'Barlow Condensed,sans-serif',fontSize:20,fontWeight:700}}>${r.h} – ${r.a}</td>
-                    <td style=${{padding:'8px 12px'}}>
-                      <span style=${{fontSize:10,padding:'2px 7px',borderRadius:10,
-                        background:r.auto?'rgba(74,222,128,.1)':'rgba(91,139,184,.1)',
-                        color:r.auto?'#4ade80':'var(--mu)',fontWeight:600}}>
-                        ${r.auto?'🤖 API':'✍ Manual'}
-                      </span>
-                    </td>
-                  </tr>`;
-                })
-              }
-            </tbody>
-          </table>
+        <div style=${{marginBottom:14,padding:'10px 14px',background:'rgba(34,197,94,.07)',border:'1px solid rgba(34,197,94,.2)',borderRadius:'var(--rs)',fontSize:12,color:'var(--mu)'}}>
+          <strong style=${{color:'#22c55e'}}>⚽ Results entered here update all rooms instantly.</strong>
+          Scores sync to every user within 5 seconds. Once entered, room standings and points update automatically.
         </div>
+
+        ${Object.keys(GRP).map(function(grpKey){
+          var matches = MS.filter(function(m){ return m.gr===grpKey; });
+          return html`<div key=${grpKey} style=${{marginBottom:20}}>
+            <h3 style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:16,fontWeight:700,margin:'0 0 8px',color:'var(--gold)',letterSpacing:.5}}>GROUP ${grpKey}</h3>
+            <div style=${{display:'flex',flexDirection:'column',gap:6}}>
+              ${matches.map(function(m){
+                var existing = saResults[m.id];
+                var tvStr = new Date(m.utc).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+                return html`<div key=${m.id} style=${{
+                  display:'grid',gridTemplateColumns:'1fr auto 1fr auto',
+                  alignItems:'center',gap:8,padding:'8px 12px',
+                  background:existing?'rgba(34,197,94,.05)':'var(--bg3)',
+                  border:'1px solid '+(existing?'rgba(34,197,94,.2)':'var(--bdr)'),
+                  borderRadius:'var(--rs)'
+                }}>
+                  <!-- Home team -->
+                  <div style=${{display:'flex',alignItems:'center',gap:6,minWidth:0}}>
+                    <${FlagImg} team=${m.h} w=${18} />
+                    <span style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
+                  </div>
+
+                  <!-- Score entry -->
+                  <div style=${{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                    <input type="number" min="0" max="20"
+                      id=${'sa_r_h_'+m.id}
+                      defaultValue=${existing!==undefined?existing.h:''}
+                      placeholder="–"
+                      style=${{width:40,textAlign:'center',padding:'4px',fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:700,background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:6,color:'var(--tx)'}} />
+                    <span style=${{fontFamily:'Barlow Condensed',fontSize:18,color:'var(--dm)',fontWeight:700}}>–</span>
+                    <input type="number" min="0" max="20"
+                      id=${'sa_r_a_'+m.id}
+                      defaultValue=${existing!==undefined?existing.a:''}
+                      placeholder="–"
+                      style=${{width:40,textAlign:'center',padding:'4px',fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:700,background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:6,color:'var(--tx)'}} />
+                    <button class="btn-p" style=${{fontSize:11,padding:'4px 10px',flexShrink:0}}
+                      onClick=${function(){
+                        var hIn = document.getElementById('sa_r_h_'+m.id);
+                        var aIn = document.getElementById('sa_r_a_'+m.id);
+                        var hv = parseInt(hIn.value);
+                        var av = parseInt(aIn.value);
+                        if (isNaN(hv)||isNaN(av)||hv<0||av<0) return alert('Enter valid scores (0 or more)');
+                        var nr = Object.assign({}, saResults);
+                        nr[m.id] = {h:hv, a:av, ts:new Date().toISOString()};
+                        fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                          body:JSON.stringify({action:'set',key:'wc26_results',value:nr})})
+                          .then(function(r){return r.json();})
+                          .then(function(d){
+                            if(d.ok!==false){ setSaResults(nr); }
+                            else alert('Save error: '+(d.error||'?'));
+                          }).catch(function(e){alert('Error: '+e.message);});
+                      }}>Save</button>
+                    ${existing!==undefined&&html`<button class="btn" style=${{fontSize:10,padding:'4px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)',flexShrink:0}}
+                      onClick=${function(){
+                        if(!confirm('Clear result for '+m.h+' vs '+m.a+'?')) return;
+                        var nr=Object.assign({},saResults); delete nr[m.id];
+                        fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                          body:JSON.stringify({action:'set',key:'wc26_results',value:nr})})
+                          .then(function(r){return r.json();})
+                          .then(function(d){if(d.ok!==false)setSaResults(nr);});
+                      }}>✕</button>`}
+                  </div>
+
+                  <!-- Away team -->
+                  <div style=${{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end',minWidth:0}}>
+                    <span style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'right'}}>${m.a}</span>
+                    <${FlagImg} team=${m.a} w=${18} />
+                  </div>
+
+                  <!-- Date / status -->
+                  <div style=${{fontSize:10,color:existing?'#22c55e':'var(--dm)',textAlign:'right',flexShrink:0,minWidth:60}}>
+                    ${existing?html`<span style=${{fontWeight:700}}>✓ Saved</span>`:tvStr}
+                  </div>
+                </div>`;
+              })}
+            </div>
+          </div>`;
+        })}
       </div>`}
 
       <!-- Settings tab -->
@@ -3377,6 +3431,7 @@ function RoomPage(props) {
                 onClick=${function(e){e.stopPropagation();props.onPredict(m);}}>
                 ${pred?'✎ Edit: '+pred.h+'–'+pred.a:'Predict ⚽'}
               </button>
+
             </div>`;
           })}
         </div>
@@ -4464,12 +4519,24 @@ function App() {
     notify('Champion Team: ' + (F[team]||'') + ' ' + team + '! 🏆');
   }
   function doResult(mId, h, a) {
-    Store.set('results/' + mId, {h:h, a:a, ts:new Date().toISOString()});
-    setModal(null); notify('Result saved! Points updated ✅');
+    // Update local state IMMEDIATELY so points refresh right away
+    var upd = Object.assign({}, results);
+    upd[mId] = {h: Number(h), a: Number(a), ts: new Date().toISOString()};
+    setResults(upd);
+    // Also persist the full object to GAS so all users get it
+    Store.set('results', upd);
+    setModal(null);
+    notify('Result saved! ✅ Points updated for all users');
   }
 
   function uPts(uid) {
-    return MS.reduce(function(t,m){ return t+(calcPts(preds[uid+'_'+m.id], results[m.id])||0); }, 0);
+    var grpPts = MS.reduce(function(total,m){
+      return total + (calcPts(preds[uid+'_'+m.id], results[m.id])||0);
+    }, 0);
+    var koPts = KO_MS.reduce(function(total,m){
+      return total + (calcPts(preds[uid+'_'+m.id], koResults[m.id])||0);
+    }, 0);
+    return grpPts + koPts;
   }
 
 // ── Achievement Badges ────────────────────────────────────────────────────
@@ -4832,4 +4899,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-      All Rights Reserved By: Mohamed Waheed (7987999)
+    
