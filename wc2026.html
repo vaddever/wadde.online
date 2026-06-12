@@ -2413,19 +2413,19 @@ function SuperAdminApp() {
               placeholder="football-data.org API key" style=${{flex:1,fontFamily:'monospace',fontSize:12}} />
             <button class="btn-p" style=${{fontSize:12,padding:'8px 14px',flexShrink:0}} onClick=${function(){
               if(!saApiKey) return;
+              // Save to localStorage immediately — this is all that's needed
+              // (key is passed directly in URL to GAS, Script Properties optional)
               localStorage.setItem('wc26_apikey', saApiKey);
-              // Save to GAS
+              setSyncSt('saved');
+              setTimeout(function(){setSyncSt('idle');},3000);
+              // Also try to save to GAS Script Properties (silently ignore if fails)
               fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
                 body:JSON.stringify({action:'savekey',key:saApiKey})})
-                .then(function(r){return r.json();})
-                .then(function(d){
-                  setSyncSt(d.ok!==false?'saved':'error');
-                  setTimeout(function(){setSyncSt('idle');},3000);
-                }).catch(function(){setSyncSt('error');setTimeout(function(){setSyncSt('idle');},3000);});
+                .catch(function(){});  // ignore GAS failures — localStorage is enough
             }}>Save Key</button>
           </div>
           <div style=${{fontSize:11,color:syncSt==='saved'?'#22c55e':syncSt==='error'?'#ef4444':'var(--dm)'}}>
-            ${syncSt==='saved'?'✓ API key saved — live scores will sync every 60s':syncSt==='error'?'✗ Save failed':saApiKey?'Key set. Click Save to apply changes.':'No key set. Get a free key at football-data.org'}
+            ${syncSt==='saved'?'✓ API key saved — live scores will sync every 60s':saApiKey?'Key saved ✓ — live scores will sync every 60s. Tap ⟳ Sync in any room to test.':'No key set. Get a free key at football-data.org'}
           </div>
           <div style=${{marginTop:12,padding:'10px 12px',background:'var(--bg3)',borderRadius:'var(--rs)',fontSize:11,color:'var(--mu)'}}>
             <div style=${{fontWeight:600,marginBottom:4,color:'var(--tx)'}}>📋 How it works</div>
