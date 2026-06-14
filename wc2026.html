@@ -1978,7 +1978,7 @@ function SuperAdminApp() {
           border:'1px solid '+(violations.length?'rgba(239,68,68,.25)':'rgba(34,197,94,.2)'),
           borderRadius:'var(--rs)',padding:'12px 14px'}}>
           <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:violations.length?10:0}}>
-            <span style=${{fontSize:16}}}>${violations.length?'🚨':'✅'}</span>
+            <span style=${{fontSize:16}}>${violations.length?'🚨':'✅'}</span>
             <div>
               <div style=${{fontWeight:700,fontSize:13,color:violations.length?'#f87171':'#22c55e'}}>
                 ${violations.length
@@ -4601,18 +4601,23 @@ function App() {
       } catch(e) {}
 
       chatUnsub = Store.listen('chat_' + roomId, function(v) {
-        var msgs = Array.isArray(v) && v.length > 0 ? v : null;
-        if (msgs) {
-          // GAS returned data — sync to localStorage
-          try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(msgs)); } catch(e) {}
-        } else {
-          // GAS empty/failed — restore from localStorage
-          try {
-            var local = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]');
-            msgs = Array.isArray(local) ? local : [];
-          } catch(e) { msgs = []; }
-        }
-        setChatMsgs(function(prev) { var n = Object.assign({}, prev); n[roomId] = msgs; return n; });
+        // Merge GAS data with local state — never let stale GAS data erase local messages
+        setChatMsgs(function(prev) {
+          var local = prev[roomId] || [];
+          var remote = Array.isArray(v) && v.length > 0 ? v : [];
+          // Merge: union by ts key, prefer remote value (has all users' messages)
+          var byTs = {};
+          local.forEach(function(m){ if(m&&m.ts) byTs[m.ts+'_'+(m.uid||'')] = m; });
+          remote.forEach(function(m){ if(m&&m.ts) byTs[m.ts+'_'+(m.uid||'')] = m; });
+          var merged = Object.values(byTs)
+            .sort(function(a,b){ return new Date(a.ts)-new Date(b.ts); })
+            .slice(-200);
+          // Persist best known state to localStorage
+          try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(merged)); } catch(e) {}
+          var n = Object.assign({}, prev);
+          n[roomId] = merged;
+          return n;
+        });
       });
       // Also listen for announcements
       annUnsub = Store.listen('ann_' + roomId, function(v) {
@@ -4947,7 +4952,10 @@ function getAchievements(uid, predsMap, resultsMap) {
   var myPick = room ? (tpicks[user&&user.id+'_'+room.id]||{}).team : null;
   var isAdmin = room && adminAuth[room.id] === true;
   var qualifiers = getKOQualifiers(results);
-  var unreadChat = room ? Math.max(0, (chatMsgs[room.id]||[]).length - (lastReadChat[room.id]||0)) : 0;
+  var unreadChat = room ? Math.max(0,
+    (chatMsgs[room.id]||[]).filter(function(m){ return m && m.uid !== (user&&user.id); }).length
+    - (lastReadChat[room.id]||0)
+  ) : 0;
 
   function saveAnnouncement(ann) {
     if (!room) return;
@@ -4977,7 +4985,8 @@ function getAchievements(uid, predsMap, resultsMap) {
 
   function markChatRead() {
     if (!room) return;
-    var count = (chatMsgs[room.id]||[]).length;
+    // Count only messages from others (matches unread calculation)
+    var count = (chatMsgs[room.id]||[]).filter(function(m){ return m&&m.uid!==user.id; }).length;
     setLastReadChat(function(prev){ var n=Object.assign({},prev); n[room.id]=count; return n; });
   }
 
@@ -5197,6 +5206,7 @@ function getAchievements(uid, predsMap, resultsMap) {
           onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onSendChat=${function(txt){
             sendChatMessage({uid:user.id,name:user.name,text:txt,ts:new Date().toISOString()},
               function(){
+                markChatRead(); // own msg → not unread
                 setTimeout(function(){
                   var el=document.getElementById('chat-scroll');
                   if(el) el.scrollTop=el.scrollHeight;
