@@ -5220,19 +5220,18 @@ function getAchievements(uid, predsMap, resultsMap) {
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
-          roomMsgs=${room&&chatMsgs[room.id]||[]}
-          onSendChat=${sendChatMessage}
-          announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
-          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onSendChat=${function(txt){
+          chatMsgs=${room&&chatMsgs[room.id]||[]}
+          onSendChat=${function(txt){
             sendChatMessage({uid:user.id,name:user.name,text:txt,ts:new Date().toISOString()},
               function(){
-                markChatRead(); // own msg → not unread
+                markChatRead();
                 setTimeout(function(){
                   var el=document.getElementById('chat-scroll');
                   if(el) el.scrollTop=el.scrollHeight;
                 },50);
               });
-          }} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          }}announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
+          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
