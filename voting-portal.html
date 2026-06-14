@@ -1507,18 +1507,22 @@ function resetSetup(){
 // PIN DOTS
 // ═══════════════════════════════════════════════════════════
 function buildPinDots(){
-  // Pin dots now shown for voter-pin-inp only
   const c=document.getElementById('pin-dots');
-  if(!c)return;
+  if(!c) return;
   c.innerHTML='';
   for(let i=0;i<6;i++){const d=document.createElement('div');d.className='pin-dot';d.id='pd'+i;c.appendChild(d);}
-  const pinInp=document.getElementById('voter-pin-inp');
-  if(pinInp){
-    pinInp.addEventListener('input',function(){
-      for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.toggle('on',i<this.value.length);
-      document.getElementById('login-err').textContent='';
-    });
-  }
+  // Attach listener once DOM is ready
+  const attachDots=()=>{
+    const pinInp=document.getElementById('voter-pin-inp');
+    if(pinInp){
+      pinInp.addEventListener('input',function(){
+        for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.toggle('on',i<this.value.length);
+        const errEl=document.getElementById('login-err');
+        if(errEl) errEl.textContent='';
+      });
+    }
+  };
+  attachDots();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1546,9 +1550,13 @@ function doLogin(){
   const pin   = (document.getElementById('voter-pin-inp')?.value||'').trim();
   if(!empId||!pin){ setLoginErr('Please enter your Employee ID and PIN'); return; }
   // Sync pin-dots visual (kept for compatibility but not primary UI now)
-  const voter = DATA.voters.find(v=>
-    v.empId && v.empId.toUpperCase()===empId && v.pin===pin
-  );
+  const voter = DATA.voters.find(v=>{
+    // If voter has an empId set, require both empId + PIN
+    if(v.empId) return v.empId.toUpperCase()===empId && v.pin===pin;
+    // Fallback: voter has no empId yet — match by PIN only
+    // (allows login before empId is added to sheet)
+    return v.pin===pin;
+  });
   if(!voter){ setLoginErr('Employee ID or PIN is incorrect.'); return; }
   if(voter.hasVoted){ setLoginErr('You have already submitted your vote.'); return; }
   if(!CFG.votingOpen){ setLoginErr('Voting is currently closed.'); return; }
@@ -1565,10 +1573,12 @@ function doAdminLogin(){
   const pw    = (document.getElementById('admin-pw-inp')?.value||'').trim();
   const errEl = document.getElementById('admin-login-err');
   if(!empId||!pw){ errEl.textContent='Please enter your Employee ID and password'; return; }
-  // Match admin by empId
-  const admin = DATA.admins.find(a=>
-    a.empId && a.empId.toUpperCase()===empId
-  );
+  // Match admin by empId (or PIN as fallback for existing accounts without empId)
+  const admin = DATA.admins.find(a=>{
+    if(a.empId) return a.empId.toUpperCase()===empId;
+    // Fallback: no empId set yet — treat empId field as PIN
+    return a.pin===empId;
+  });
   if(!admin){ errEl.textContent='Employee ID not recognised.'; return; }
   // Password check
   if(!admin.password){
@@ -1645,17 +1655,19 @@ function setLoginErr(m){
 function doLogout(){
   currentUser=null;selections={};
   clearSession();
-  const p=document.getElementById('pin-inp');
-  if(p){p.value='';for(let i=0;i<6;i++)document.getElementById('pd'+i)?.classList.remove('on');}
+  // Clear voter login fields
+  const empInp=document.getElementById('voter-empid-inp');
+  const pinInp=document.getElementById('voter-pin-inp');
+  if(empInp) empInp.value='';
+  if(pinInp) pinInp.value='';
+  for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.remove('on');
   setLoginErr('');
+  showVoterLogin(); // reset to voter panel
   showScreen('screen-login');
 }
 function goToSettings(){
-  const pin=prompt('Enter SuperAdmin PIN to access settings:');
-  if(!pin)return;
-  const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
-  if(!sa){showToast('Invalid SuperAdmin PIN','err');return;}
-  currentUser={...sa};showScreen('screen-superadmin');initSA();
+  // Show admin login panel — SuperAdmin logs in via Employee ID + Password
+  showAdminLogin();
 }
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
