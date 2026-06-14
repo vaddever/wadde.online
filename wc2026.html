@@ -475,43 +475,90 @@ var F={Mexico:'🇲🇽','South Africa':'🇿🇦','South Korea':'🇰🇷',Czec
 var GRP={A:['Mexico','South Africa','South Korea','Czechia'],B:['Canada','Bosnia & Herzegovina','Qatar','Switzerland'],C:['Brazil','Morocco','Haiti','Scotland'],D:['United States','Paraguay','Australia','Türkiye'],E:['Germany','Curaçao','Ivory Coast','Ecuador'],F:['Netherlands','Japan','Sweden','Tunisia'],G:['Belgium','Egypt','Iran','New Zealand'],H:['Spain','Cape Verde','Saudi Arabia','Uruguay'],I:['France','Senegal','Iraq','Norway'],J:['Argentina','Algeria','Austria','Jordan'],K:['Portugal','DR Congo','Uzbekistan','Colombia'],L:['England','Croatia','Ghana','Panama']};
 var TEAMS=Object.values(GRP).flat();
 var MS=[
+  // ── GROUP A ──────────────────────────────────────────────────────────────
   {id:'m01',gr:'A',h:'Mexico',a:'South Africa',utc:'2026-06-11T19:00:00Z',v:'Estadio Azteca, Mexico City'},
   {id:'m02',gr:'A',h:'South Korea',a:'Czechia',utc:'2026-06-12T02:00:00Z',v:'Estadio Akron, Guadalajara'},
+  {id:'m25',gr:'A',h:'Czechia',a:'South Africa',utc:'2026-06-18T16:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  {id:'m28',gr:'A',h:'Mexico',a:'South Korea',utc:'2026-06-19T01:00:00Z',v:'Estadio Akron, Guadalajara'},
+  {id:'m53',gr:'A',h:'Czechia',a:'Mexico',utc:'2026-06-25T01:00:00Z',v:'Estadio Azteca, Mexico City'},
+  {id:'m54',gr:'A',h:'South Africa',a:'South Korea',utc:'2026-06-25T01:00:00Z',v:'Estadio BBVA, Monterrey'},
+  // ── GROUP B ──────────────────────────────────────────────────────────────
   {id:'m03',gr:'B',h:'Canada',a:'Bosnia & Herzegovina',utc:'2026-06-12T19:00:00Z',v:'BMO Field, Toronto'},
-  {id:'m04',gr:'D',h:'United States',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Los Angeles'},
-  {id:'m05',gr:'B',h:'Qatar',a:'Switzerland',utc:'2026-06-13T19:00:00Z',v:"Levi's Stadium, San Francisco"},
-  {id:'m06',gr:'C',h:'Brazil',a:'Morocco',utc:'2026-06-13T22:00:00Z',v:'MetLife Stadium, New York/NJ'},
-  {id:'m07',gr:'C',h:'Haiti',a:'Scotland',utc:'2026-06-14T01:00:00Z',v:'Gillette Stadium, Boston'},
-  {id:'m08',gr:'D',h:'Australia',a:'Türkiye',utc:'2026-06-14T22:00:00Z',v:'BC Place, Vancouver'},
-  {id:'m09',gr:'E',h:'Germany',a:'Curaçao',utc:'2026-06-14T17:00:00Z',v:'Lincoln Financial, Philadelphia'},
-  {id:'m10',gr:'F',h:'Netherlands',a:'Japan',utc:'2026-06-15T01:00:00Z',v:'Arrowhead Stadium, Kansas City'},
-  {id:'m11',gr:'H',h:'Spain',a:'Cape Verde',utc:'2026-06-15T17:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
-  {id:'m12',gr:'G',h:'Belgium',a:'Egypt',utc:'2026-06-15T22:00:00Z',v:'Lumen Field, Seattle'},
-  {id:'m13',gr:'H',h:'Saudi Arabia',a:'Uruguay',utc:'2026-06-16T01:00:00Z',v:'Hard Rock Stadium, Miami'},
-  {id:'m14',gr:'I',h:'France',a:'Senegal',utc:'2026-06-16T19:00:00Z',v:"Levi's Stadium, San Francisco"},
-  {id:'m15',gr:'J',h:'Argentina',a:'Algeria',utc:'2026-06-16T22:00:00Z',v:'AT&T Stadium, Dallas'},
-  {id:'m16',gr:'K',h:'Portugal',a:'DR Congo',utc:'2026-06-17T01:00:00Z',v:'NRG Stadium, Houston'},
-  {id:'m17',gr:'L',h:'England',a:'Panama',utc:'2026-06-17T17:00:00Z',v:'Gillette Stadium, Boston'},
-  {id:'m18',gr:'E',h:'Ivory Coast',a:'Ecuador',utc:'2026-06-17T22:00:00Z',v:'SoFi Stadium, Los Angeles'},
-  {id:'m19',gr:'F',h:'Sweden',a:'Tunisia',utc:'2026-06-18T01:00:00Z',v:'Arrowhead Stadium, Kansas City'},
-  {id:'m20',gr:'G',h:'Iran',a:'New Zealand',utc:'2026-06-18T19:00:00Z',v:'SoFi Stadium, Los Angeles'},
-  {id:'m21',gr:'I',h:'Iraq',a:'Norway',utc:'2026-06-18T22:00:00Z',v:'MetLife Stadium, New York/NJ'},
-  {id:'m22',gr:'J',h:'Austria',a:'Jordan',utc:'2026-06-19T01:00:00Z',v:'Lumen Field, Seattle'},
-  {id:'m23',gr:'K',h:'Uzbekistan',a:'Colombia',utc:'2026-06-19T19:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
-  {id:'m24',gr:'L',h:'Croatia',a:'Ghana',utc:'2026-06-19T22:00:00Z',v:'BMO Field, Toronto'},
-  {id:'m25',gr:'A',h:'Mexico',a:'South Korea',utc:'2026-06-20T19:00:00Z',v:'Estadio Azteca, Mexico City'},
-  {id:'m26',gr:'A',h:'Czechia',a:'South Africa',utc:'2026-06-21T01:00:00Z',v:'Estadio Akron, Guadalajara'},
-  {id:'m27',gr:'C',h:'Brazil',a:'Haiti',utc:'2026-06-21T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
-  {id:'m28',gr:'C',h:'Morocco',a:'Scotland',utc:'2026-06-22T01:00:00Z',v:'Gillette Stadium, Boston'},
-  {id:'m29',gr:'B',h:'Canada',a:'Qatar',utc:'2026-06-22T19:00:00Z',v:'BC Place, Vancouver'},
-  {id:'m30',gr:'D',h:'United States',a:'Australia',utc:'2026-06-23T01:00:00Z',v:'AT&T Stadium, Dallas'},
-  {id:'m31',gr:'E',h:'Germany',a:'Ivory Coast',utc:'2026-06-23T19:00:00Z',v:'Lincoln Financial, Philadelphia'},
-  {id:'m32',gr:'F',h:'Japan',a:'Sweden',utc:'2026-06-24T01:00:00Z',v:'SoFi Stadium, Los Angeles'},
-  {id:'m33',gr:'H',h:'Spain',a:'Saudi Arabia',utc:'2026-06-24T17:00:00Z',v:'NRG Stadium, Houston'},
-  {id:'m34',gr:'I',h:'France',a:'Iraq',utc:'2026-06-25T01:00:00Z',v:'AT&T Stadium, Dallas'},
-  {id:'m35',gr:'J',h:'Argentina',a:'Austria',utc:'2026-06-25T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
-  {id:'m36',gr:'K',h:'Portugal',a:'Colombia',utc:'2026-06-26T01:00:00Z',v:'NRG Stadium, Houston'},
-  {id:'m37',gr:'L',h:'England',a:'Croatia',utc:'2026-06-26T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
+  {id:'m05',gr:'B',h:'Qatar',a:'Switzerland',utc:'2026-06-13T19:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  {id:'m26',gr:'B',h:'Switzerland',a:'Bosnia & Herzegovina',utc:'2026-06-18T19:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m27',gr:'B',h:'Canada',a:'Qatar',utc:'2026-06-18T22:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m49',gr:'B',h:'Switzerland',a:'Canada',utc:'2026-06-24T19:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m50',gr:'B',h:'Bosnia & Herzegovina',a:'Qatar',utc:'2026-06-24T19:00:00Z',v:'Lumen Field, Seattle'},
+  // ── GROUP C ──────────────────────────────────────────────────────────────
+  {id:'m06',gr:'C',h:'Brazil',a:'Morocco',utc:'2026-06-13T22:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  {id:'m07',gr:'C',h:'Haiti',a:'Scotland',utc:'2026-06-14T01:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m30',gr:'C',h:'Scotland',a:'Morocco',utc:'2026-06-19T22:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m31',gr:'C',h:'Brazil',a:'Haiti',utc:'2026-06-20T00:30:00Z',v:'Lincoln Financial Field, Philadelphia'},
+  {id:'m51',gr:'C',h:'Scotland',a:'Brazil',utc:'2026-06-24T22:00:00Z',v:'Hard Rock Stadium, Miami Gardens'},
+  {id:'m52',gr:'C',h:'Morocco',a:'Haiti',utc:'2026-06-24T22:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  // ── GROUP D ──────────────────────────────────────────────────────────────
+  {id:'m04',gr:'D',h:'United States',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m08',gr:'D',h:'Australia',a:'Türkiye',utc:'2026-06-14T16:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m29',gr:'D',h:'United States',a:'Australia',utc:'2026-06-19T19:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m32',gr:'D',h:'Türkiye',a:'Paraguay',utc:'2026-06-20T03:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  {id:'m59',gr:'D',h:'Türkiye',a:'United States',utc:'2026-06-26T02:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m60',gr:'D',h:'Paraguay',a:'Australia',utc:'2026-06-26T02:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  // ── GROUP E ──────────────────────────────────────────────────────────────
+  {id:'m09',gr:'E',h:'Germany',a:'Curaçao',utc:'2026-06-14T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m11',gr:'E',h:'Ivory Coast',a:'Ecuador',utc:'2026-06-14T23:00:00Z',v:'Lincoln Financial Field, Philadelphia'},
+  {id:'m34',gr:'E',h:'Germany',a:'Ivory Coast',utc:'2026-06-20T20:00:00Z',v:'BMO Field, Toronto'},
+  {id:'m35',gr:'E',h:'Ecuador',a:'Curaçao',utc:'2026-06-21T00:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  {id:'m55',gr:'E',h:'Curaçao',a:'Ivory Coast',utc:'2026-06-25T20:00:00Z',v:'Lincoln Financial Field, Philadelphia'},
+  {id:'m56',gr:'E',h:'Ecuador',a:'Germany',utc:'2026-06-25T20:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  // ── GROUP F ──────────────────────────────────────────────────────────────
+  {id:'m10',gr:'F',h:'Netherlands',a:'Japan',utc:'2026-06-14T20:00:00Z',v:'AT&T Stadium, Arlington'},
+  {id:'m12',gr:'F',h:'Sweden',a:'Tunisia',utc:'2026-06-15T02:00:00Z',v:'Estadio BBVA, Monterrey'},
+  {id:'m33',gr:'F',h:'Netherlands',a:'Sweden',utc:'2026-06-20T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m36',gr:'F',h:'Tunisia',a:'Japan',utc:'2026-06-21T04:00:00Z',v:'Estadio BBVA, Monterrey'},
+  {id:'m57',gr:'F',h:'Japan',a:'Sweden',utc:'2026-06-25T23:00:00Z',v:'AT&T Stadium, Arlington'},
+  {id:'m58',gr:'F',h:'Tunisia',a:'Netherlands',utc:'2026-06-25T23:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  // ── GROUP G ──────────────────────────────────────────────────────────────
+  {id:'m14',gr:'G',h:'Belgium',a:'Egypt',utc:'2026-06-15T19:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m16',gr:'G',h:'Iran',a:'New Zealand',utc:'2026-06-16T01:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m38',gr:'G',h:'Belgium',a:'Iran',utc:'2026-06-21T19:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m40',gr:'G',h:'New Zealand',a:'Egypt',utc:'2026-06-22T01:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m65',gr:'G',h:'Egypt',a:'Iran',utc:'2026-06-27T03:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m66',gr:'G',h:'New Zealand',a:'Belgium',utc:'2026-06-27T03:00:00Z',v:'BC Place, Vancouver'},
+  // ── GROUP H ──────────────────────────────────────────────────────────────
+  {id:'m13',gr:'H',h:'Spain',a:'Cape Verde',utc:'2026-06-15T16:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  {id:'m15',gr:'H',h:'Saudi Arabia',a:'Uruguay',utc:'2026-06-15T22:00:00Z',v:'Hard Rock Stadium, Miami Gardens'},
+  {id:'m37',gr:'H',h:'Spain',a:'Saudi Arabia',utc:'2026-06-21T16:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  {id:'m39',gr:'H',h:'Uruguay',a:'Cape Verde',utc:'2026-06-21T22:00:00Z',v:'Hard Rock Stadium, Miami Gardens'},
+  {id:'m63',gr:'H',h:'Cape Verde',a:'Saudi Arabia',utc:'2026-06-27T00:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m64',gr:'H',h:'Uruguay',a:'Spain',utc:'2026-06-27T00:00:00Z',v:'Estadio Akron, Guadalajara'},
+  // ── GROUP I ──────────────────────────────────────────────────────────────
+  {id:'m17',gr:'I',h:'France',a:'Senegal',utc:'2026-06-16T19:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  {id:'m18',gr:'I',h:'Iraq',a:'Norway',utc:'2026-06-16T22:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m42',gr:'I',h:'France',a:'Iraq',utc:'2026-06-22T21:00:00Z',v:'Lincoln Financial Field, Philadelphia'},
+  {id:'m43',gr:'I',h:'Norway',a:'Senegal',utc:'2026-06-23T00:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  {id:'m61',gr:'I',h:'Norway',a:'France',utc:'2026-06-26T19:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m62',gr:'I',h:'Senegal',a:'Iraq',utc:'2026-06-26T19:00:00Z',v:'BMO Field, Toronto'},
+  // ── GROUP J ──────────────────────────────────────────────────────────────
+  {id:'m19',gr:'J',h:'Argentina',a:'Algeria',utc:'2026-06-17T01:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  {id:'m20',gr:'J',h:'Austria',a:'Jordan',utc:'2026-06-17T04:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  {id:'m41',gr:'J',h:'Argentina',a:'Austria',utc:'2026-06-22T17:00:00Z',v:'AT&T Stadium, Arlington'},
+  {id:'m44',gr:'J',h:'Jordan',a:'Algeria',utc:'2026-06-23T03:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  {id:'m71',gr:'J',h:'Algeria',a:'Austria',utc:'2026-06-28T02:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  {id:'m72',gr:'J',h:'Jordan',a:'Argentina',utc:'2026-06-28T02:00:00Z',v:'AT&T Stadium, Arlington'},
+  // ── GROUP K ──────────────────────────────────────────────────────────────
+  {id:'m21',gr:'K',h:'Portugal',a:'DR Congo',utc:'2026-06-17T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m24',gr:'K',h:'Uzbekistan',a:'Colombia',utc:'2026-06-18T02:00:00Z',v:'Estadio Azteca, Mexico City'},
+  {id:'m45',gr:'K',h:'Portugal',a:'Uzbekistan',utc:'2026-06-23T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m48',gr:'K',h:'Colombia',a:'DR Congo',utc:'2026-06-24T02:00:00Z',v:'Estadio Akron, Guadalajara'},
+  {id:'m69',gr:'K',h:'Colombia',a:'Portugal',utc:'2026-06-27T23:30:00Z',v:'Hard Rock Stadium, Miami Gardens'},
+  {id:'m70',gr:'K',h:'DR Congo',a:'Uzbekistan',utc:'2026-06-27T23:30:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  // ── GROUP L ──────────────────────────────────────────────────────────────
+  {id:'m22',gr:'L',h:'England',a:'Croatia',utc:'2026-06-17T20:00:00Z',v:'AT&T Stadium, Arlington'},
+  {id:'m23',gr:'L',h:'Ghana',a:'Panama',utc:'2026-06-17T23:00:00Z',v:'BMO Field, Toronto'},
+  {id:'m46',gr:'L',h:'England',a:'Ghana',utc:'2026-06-23T20:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m47',gr:'L',h:'Panama',a:'Croatia',utc:'2026-06-23T23:00:00Z',v:'BMO Field, Toronto'},
+  {id:'m67',gr:'L',h:'Panama',a:'England',utc:'2026-06-27T21:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  {id:'m68',gr:'L',h:'Croatia',a:'Ghana',utc:'2026-06-27T21:00:00Z',v:'Lincoln Financial Field, Philadelphia'},
 ];
 var QQ=[
   {q:'Which country hosts the 2026 World Cup opening match?',o:['Brazil','Mexico','United States','Canada'],a:1},
@@ -1121,6 +1168,17 @@ function genCode() { return Math.random().toString(36).substring(2,8).toUpperCas
 function genId() { return Date.now().toString(36) + Math.random().toString(36).substring(2,6); }
 function shuffle(arr) { return arr.slice().sort(function() { return Math.random() - 0.5; }); }
 var WCS = new Date('2026-06-11T19:00:00Z');
+// Apply any schedule overrides saved by SuperAdmin
+(function(){
+  try {
+    var ov=JSON.parse(localStorage.getItem('wc26_sched_overrides')||'{}');
+    Object.keys(ov).forEach(function(mid){
+      var idx=MS.findIndex(function(m){return m.id===mid;});
+      if(idx>=0) MS[idx]=Object.assign({},MS[idx],{utc:ov[mid]});
+    });
+  } catch(e){}
+})();
+
 var KOS = new Date('2026-06-28T00:00:00Z');
 function daysTill(d) { return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 864e5)); }
 
@@ -2499,6 +2557,43 @@ function SuperAdminApp() {
 
       <!-- ── Improved Settings tab ─────────────────────────────────── -->
       ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16,maxWidth:480}}>
+
+        <!-- Match Kickoff Time Editor -->
+        <div class="card" style=${{padding:'14px 16px'}}>
+          <h3 style=${{margin:'0 0 8px',fontSize:15}}>🕐 Match Kickoff Editor</h3>
+          <p style=${{fontSize:12,color:'var(--mu)',marginBottom:10}}>Edit kickoff times if FIFA changes a match. Enter time in UTC (MVT − 5h). Saves locally and persists across sessions.</p>
+          <div style=${{maxHeight:320,overflowY:'auto',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+            ${MS.slice().sort(function(a,b){return new Date(a.utc)-new Date(b.utc);}).map(function(m){
+              var mvt=new Date(m.utc).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+              return html`<div key=${m.id} style=${{display:'grid',gridTemplateColumns:'50px 1fr auto auto',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid rgba(255,255,255,.04)'}}>
+                <span style=${{fontSize:10,color:'var(--gold)',fontWeight:700}}>${m.gr} ${m.id}</span>
+                <div style=${{fontSize:11,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--tx)'}}>
+                  ${m.h} – ${m.a}
+                  <span style=${{fontSize:10,color:'var(--dm)',marginLeft:4}}>${mvt} MVT</span>
+                </div>
+                <input type="datetime-local" id=${'sch_'+m.id}
+                  defaultValue=${m.utc.slice(0,16)}
+                  style=${{fontSize:10,padding:'3px 5px',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:5,width:155}} />
+                <button class="btn-p" style=${{fontSize:10,padding:'4px 8px',flexShrink:0}}
+                  onClick=${function(){
+                    var inp=document.getElementById('sch_'+m.id);
+                    if(!inp||!inp.value) return;
+                    var nu=inp.value.length===16?inp.value+':00Z':inp.value+'Z';
+                    var idx=MS.findIndex(function(x){return x.id===m.id;});
+                    if(idx>=0) MS[idx]=Object.assign({},MS[idx],{utc:nu});
+                    var ov=JSON.parse(localStorage.getItem('wc26_sched_overrides')||'{}');
+                    ov[m.id]=nu;
+                    localStorage.setItem('wc26_sched_overrides',JSON.stringify(ov));
+                    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                      body:JSON.stringify({action:'set',key:'wc26_sched',value:ov})})
+                      .catch(function(){});
+                    var mvtNew=new Date(nu).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+                    alert('✓ Updated '+m.h+' vs '+m.a+'\n→ '+mvtNew+' MVT');
+                  }}>Save</button>
+              </div>`;
+            })}
+          </div>
+        </div>
 
         <!-- Live Score API -->
         <div class="card" style=${{padding:'14px 16px'}}>
