@@ -4584,11 +4584,12 @@ function App() {
     var chatUnsub = null;
     var annUnsub  = null;
     function subscribeChatRoom(roomId) {
+      // Clean up previous subscription
       if (chatUnsub) { chatUnsub(); chatUnsub = null; }
       if (annUnsub)  { annUnsub();  annUnsub  = null; }
       if (!roomId) return;
 
-      // ── Instantly show from localStorage (no GAS round-trip wait) ──
+      // Step 1: Show from localStorage instantly (no GAS wait)
       try {
         var lc = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]');
         if (Array.isArray(lc) && lc.length > 0)
@@ -4600,33 +4601,44 @@ function App() {
           setAnnsByRoom(function(p){ var n=Object.assign({},p); n[roomId]=la; return n; });
       } catch(e) {}
 
-      chatUnsub = Store.listen('chat_' + roomId, function(v) {
-        // Merge GAS data with local state — never let stale GAS data erase local messages
-        setChatMsgs(function(prev) {
-          var local = prev[roomId] || [];
-          var remote = Array.isArray(v) && v.length > 0 ? v : [];
-          // Merge: union by ts key, prefer remote value (has all users' messages)
-          var byTs = {};
-          local.forEach(function(m){ if(m&&m.ts) byTs[m.ts+'_'+(m.uid||'')] = m; });
-          remote.forEach(function(m){ if(m&&m.ts) byTs[m.ts+'_'+(m.uid||'')] = m; });
-          var merged = Object.values(byTs)
-            .sort(function(a,b){ return new Date(a.ts)-new Date(b.ts); })
-            .slice(-200);
-          // Persist best known state to localStorage
-          try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(merged)); } catch(e) {}
-          var n = Object.assign({}, prev);
-          n[roomId] = merged;
-          return n;
-        });
-      });
-      // Also listen for announcements
+      // Step 2: Poll GAS directly — merge with localStorage, never overwrite local messages
+      function fetchChatFromGAS() {
+        fetch(GS_URL + '?action=get&key=' + encodeURIComponent('wc26_chat_' + roomId) + '&_=' + Date.now(), {redirect:'follow'})
+          .then(function(r){ return r.json(); })
+          .then(function(d){
+            if (!d.ok || !Array.isArray(d.value) || !d.value.length) return;
+            // Merge GAS data with local — union by uid+ts key, never shrink
+            var local = [];
+            try { local = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]'); } catch(e){}
+            var byKey = {};
+            local.forEach(function(m){ if(m&&m.ts&&m.uid) byKey[m.uid+'|'+m.ts]=m; });
+            d.value.forEach(function(m){ if(m&&m.ts&&m.uid) byKey[m.uid+'|'+m.ts]=m; });
+            var merged = Object.values(byKey)
+              .sort(function(a,b){ return new Date(a.ts)-new Date(b.ts); })
+              .slice(-200);
+            if (merged.length <= local.length && !d.value.some(function(m){
+              return !local.some(function(l){ return l.uid===m.uid&&l.ts===m.ts; });
+            })) return; // nothing new from GAS
+            try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(merged)); } catch(e){}
+            setChatMsgs(function(prev){
+              var cur = prev[roomId] || [];
+              // Only update if GAS has messages we don't have yet
+              if (merged.length <= cur.length) return prev;
+              var n = Object.assign({}, prev); n[roomId] = merged; return n;
+            });
+          })
+          .catch(function(){});
+      }
+
+      fetchChatFromGAS();
+      var chatTimer = setInterval(fetchChatFromGAS, 8000);
+
+      // Announcements — keep using Store.listen (it works fine for anns)
       annUnsub = Store.listen('ann_' + roomId, function(v) {
         var anns = Array.isArray(v) && v.length > 0 ? v : null;
         if (anns) {
-          // GAS returned data — sync to localStorage
           try { localStorage.setItem('wc26_ann_' + roomId, JSON.stringify(anns)); } catch(e) {}
         } else {
-          // GAS empty/failed — restore from localStorage
           try {
             var local = JSON.parse(localStorage.getItem('wc26_ann_' + roomId) || '[]');
             anns = Array.isArray(local) ? local : [];
@@ -4638,10 +4650,11 @@ function App() {
           return upd;
         });
       });
+
+      chatUnsub = function() { clearInterval(chatTimer); if(annUnsub){annUnsub();annUnsub=null;} };
     }
 
-    // ── Live score auto-sync every 60 s ────────────────────────────────
-    var _syncTimer = null;
+
     function runSync(key) {
       if (!key) return;
       setSyncStatus('syncing');
@@ -5036,13 +5049,20 @@ function getAchievements(uid, predsMap, resultsMap) {
 
   function sendChatMessage(newMsg, onDone) {
     if (!room) return;
-    var roomId = room.id;
-    var existing = (chatMsgs[roomId] || []).slice(-200);
-    var updated = existing.concat([newMsg]);
-    // Primary: localStorage (persists even if GAS fails)
-    try { localStorage.setItem('wc26_chat_'+roomId, JSON.stringify(updated)); } catch(e){}
-    Store.set('chat_' + roomId, updated);
-    setChatMsgs(function(prev) { var n = Object.assign({}, prev); n[roomId] = updated; return n; });
+    var rid = room.id;
+    // 1. Read current messages from localStorage (source of truth)
+    var existing = [];
+    try { existing = JSON.parse(localStorage.getItem('wc26_chat_'+rid) || '[]'); } catch(e){}
+    if (!Array.isArray(existing)) existing = [];
+    var updated = existing.concat([newMsg]).slice(-200);
+    // 2. Save to localStorage immediately
+    try { localStorage.setItem('wc26_chat_'+rid, JSON.stringify(updated)); } catch(e){}
+    // 3. Update React state directly — no Store dependency
+    setChatMsgs(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
+    // 4. Save to GAS in background (for other users)
+    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'set',key:'wc26_chat_'+rid,value:updated})})
+      .catch(function(){});
     if (onDone) onDone();
   }
 
