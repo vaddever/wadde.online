@@ -444,15 +444,53 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div class="login-emblem">🗳️</div>
     <div class="login-org" id="login-org-name"></div>
     <h1 class="login-title">Staff Voting Portal</h1>
-    <p class="login-sub">Enter your voter PIN to participate</p>
-    <div class="login-form">
-      <label class="form-lbl">Voter PIN</label>
-      <input class="form-inp" id="pin-inp" type="password" maxlength="10" placeholder="Enter your PIN" autocomplete="off">
-      <div class="pin-dots" id="pin-dots"></div>
-      <button class="btn-login" onclick="doLogin()">Sign In →</button>
-      <div class="login-err" id="login-err"></div>
+
+    <!-- Voter login (default) -->
+    <div id="login-voter-panel">
+      <p class="login-sub">Enter your Employee ID and Voter PIN</p>
+      <div class="login-form">
+        <label class="form-lbl">Employee ID</label>
+        <input class="form-inp" id="voter-empid-inp" type="text" placeholder="e.g. EMP001" autocomplete="off" style="text-transform:uppercase;letter-spacing:.05em;" onkeydown="if(event.key==='Enter')document.getElementById('voter-pin-inp').focus()">
+        <label class="form-lbl" style="margin-top:12px;">Voter PIN</label>
+        <input class="form-inp" id="voter-pin-inp" type="password" maxlength="10" placeholder="Enter your PIN" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="pin-dots" id="pin-dots"></div>
+        <button class="btn-login" onclick="doLogin()">Sign In →</button>
+        <div class="login-err" id="login-err"></div>
+      </div>
+      <div class="login-configure"><a onclick="showAdminLogin()">🔐 Admin Login</a> &nbsp;·&nbsp; <a onclick="goToSettings()">⚙ Settings</a></div>
     </div>
-    <div class="login-configure"><a onclick="goToSettings()">⚙ Admin / Settings</a></div>
+
+    <!-- Admin / SuperAdmin login -->
+    <div id="login-admin-panel" style="display:none;">
+      <p class="login-sub">Administrator sign in</p>
+      <div class="login-form">
+        <label class="form-lbl">Employee ID</label>
+        <input class="form-inp" id="admin-empid-inp" type="text" placeholder="e.g. EMP001" autocomplete="off" style="text-transform:uppercase;letter-spacing:.05em;" onkeydown="if(event.key==='Enter')document.getElementById('admin-pw-inp').focus()">
+        <label class="form-lbl" style="margin-top:12px;">Password</label>
+        <input class="form-inp" id="admin-pw-inp" type="password" placeholder="Enter your password" autocomplete="off" onkeydown="if(event.key==='Enter')doAdminLogin()">
+        <button class="btn-login" onclick="doAdminLogin()">Sign In →</button>
+        <div class="login-err" id="admin-login-err"></div>
+      </div>
+      <div class="login-configure"><a onclick="showVoterLogin()">← Back to Voter Login</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SET PASSWORD (first admin login) ══ -->
+<div id="screen-setpw" class="screen">
+  <div class="login-glow-c1" style="position:absolute;pointer-events:none;"></div>
+  <div class="login-box">
+    <div class="login-emblem">🔐</div>
+    <h1 class="login-title" style="font-size:22px;">Set Your Password</h1>
+    <p class="login-sub" style="margin-bottom:20px;">This is your first login. Please set a password to secure your account.</p>
+    <div class="login-form">
+      <label class="form-lbl">New Password</label>
+      <input class="form-inp" id="setpw-new" type="password" placeholder="Choose a strong password" autocomplete="new-password">
+      <label class="form-lbl" style="margin-top:12px;">Confirm Password</label>
+      <input class="form-inp" id="setpw-confirm" type="password" placeholder="Repeat password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSetPassword()">
+      <button class="btn-login" onclick="doSetPassword()">Set Password & Continue →</button>
+      <div class="login-err" id="setpw-err"></div>
+    </div>
   </div>
 </div>
 
@@ -864,6 +902,17 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       </div>
 
       <div class="ss-section">
+        <div class="ss-title">Admin Account Management</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;">
+          <p style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6;">
+            Reset an admin's password. On their next login they will be prompted to set a new one.
+          </p>
+          <div id="admin-pw-reset-list"></div>
+          <button class="btn-sm" onclick="renderAdminPwList()" style="margin-top:8px;">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div class="ss-section">
         <div class="ss-title">Voting Control</div>
         <div class="cfg-grid">
           <div class="cfg-card">
@@ -1047,7 +1096,7 @@ async function fetchFromSheets() {
     'Voters!A2:H',
     'Nominees!A2:F',
     'Votes!A2:D',
-    'Admins!A2:C',
+    'Admins!A2:E',
     'Categories!A2:F',
     'Departments!A2:D',
     'Config!A1:B20',
@@ -1107,9 +1156,11 @@ async function fetchFromSheets() {
 
   // ── ADMINS: PIN | Role | Name ──
   if (adD.length) DATA.admins = adD.map(r=>({
-    pin:  (r[0]||'').trim(),
-    role: (r[1]||'').trim().toLowerCase() || 'admin',
-    name: (r[2]||'').trim()
+    pin:      (r[0]||'').trim(),
+    role:     (r[1]||'').trim().toLowerCase() || 'admin',
+    name:     (r[2]||'').trim(),
+    empId:    (r[3]||'').trim().toUpperCase(),  // column D — Employee ID
+    password: (r[4]||'').trim()                 // column E — Password (empty = first login)
   })).filter(a=>a.pin);
 
   // ── CATEGORIES: Flexible — accepts either:
@@ -1345,41 +1396,23 @@ function showSyncBadge(type, msg) {
 // BOOT
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async ()=>{
-  setLD('Loading…');
-  await new Promise(r=>setTimeout(r,400));
-
   if (!CFG.isConfigured) {
     hideLoader();
     showScreen('screen-setup');
     return;
   }
 
-  // Load cached data first so UI works immediately
+  // Load cached data silently — no status messages shown to user
   const hadCache = loadCachedData();
-  if (hadCache) {
-    setLD('Loading from cache…');
-    await new Promise(r=>setTimeout(r,300));
-  }
-
-  setLD('Syncing with Google Sheets…');
   try {
     await fetchFromSheets();
-    cacheData(); // Save fresh data to cache
-    setLD('✓ Synced successfully');
-    await new Promise(r=>setTimeout(r,500));
+    cacheData();
   } catch(e) {
     console.error('[Boot] Sync failed:', e);
-    if (hadCache) {
-      setLD('⚠ Sheets unreachable — using cached data');
-      await new Promise(r=>setTimeout(r,1500));
-    } else {
-      setLD('⚠ ' + (e.message || 'Could not reach Google Sheets'));
-      await new Promise(r=>setTimeout(r,2000));
-    }
+    // Continue with cached data if available
   }
   hideLoader();
   applyOrgName();
-  buildPinDots();
   // Try to restore previous session before showing login
   if(!restoreSession()){
     showScreen('screen-login');
@@ -1474,36 +1507,104 @@ function resetSetup(){
 // PIN DOTS
 // ═══════════════════════════════════════════════════════════
 function buildPinDots(){
+  // Pin dots now shown for voter-pin-inp only
   const c=document.getElementById('pin-dots');
   if(!c)return;
   c.innerHTML='';
   for(let i=0;i<6;i++){const d=document.createElement('div');d.className='pin-dot';d.id='pd'+i;c.appendChild(d);}
-  document.getElementById('pin-inp').addEventListener('input',function(){
-    for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.toggle('on',i<this.value.length);
-    document.getElementById('login-err').textContent='';
-  });
-  document.getElementById('pin-inp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  const pinInp=document.getElementById('voter-pin-inp');
+  if(pinInp){
+    pinInp.addEventListener('input',function(){
+      for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.toggle('on',i<this.value.length);
+      document.getElementById('login-err').textContent='';
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════════════════
+// ── UI toggle between voter/admin login panels ──
+function showVoterLogin(){
+  document.getElementById('login-voter-panel').style.display='';
+  document.getElementById('login-admin-panel').style.display='none';
+  setLoginErr('');
+  document.getElementById('voter-empid-inp').focus();
+}
+function showAdminLogin(){
+  document.getElementById('login-voter-panel').style.display='none';
+  document.getElementById('login-admin-panel').style.display='';
+  document.getElementById('admin-login-err').textContent='';
+  document.getElementById('admin-empid-inp').value='';
+  document.getElementById('admin-pw-inp').value='';
+  document.getElementById('admin-empid-inp').focus();
+}
+
+// ── Voter login: Employee ID + PIN ──
 function doLogin(){
-  const pin=document.getElementById('pin-inp').value.trim();
-  if(!pin){setLoginErr('Please enter your PIN');return;}
-  const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
-  if(sa){currentUser={...sa};saveSession(sa.pin);showScreen('screen-superadmin');initSA();return;}
-  const admin=DATA.admins.find(a=>a.pin===pin&&a.role==='admin');
-  if(admin){currentUser={...admin};saveSession(admin.pin);showScreen('screen-admin');initAdmin();return;}
-  const voter=DATA.voters.find(v=>v.pin===pin);
-  if(!voter){setLoginErr('Invalid PIN. Please try again.');return;}
-  if(voter.hasVoted){setLoginErr('This PIN has already been used to vote.');return;}
-  if(!CFG.votingOpen){setLoginErr('Voting is currently closed.');return;}
+  const empId = (document.getElementById('voter-empid-inp')?.value||'').trim().toUpperCase();
+  const pin   = (document.getElementById('voter-pin-inp')?.value||'').trim();
+  if(!empId||!pin){ setLoginErr('Please enter your Employee ID and PIN'); return; }
+  // Sync pin-dots visual (kept for compatibility but not primary UI now)
+  const voter = DATA.voters.find(v=>
+    v.empId && v.empId.toUpperCase()===empId && v.pin===pin
+  );
+  if(!voter){ setLoginErr('Employee ID or PIN is incorrect.'); return; }
+  if(voter.hasVoted){ setLoginErr('You have already submitted your vote.'); return; }
+  if(!CFG.votingOpen){ setLoginErr('Voting is currently closed.'); return; }
   currentUser={...voter,type:'voter'};
   selections={};
   saveSession(voter.pin);
   showScreen('screen-voter');
   initVoter();
+}
+
+// ── Admin / SuperAdmin login: Employee ID + Password ──
+function doAdminLogin(){
+  const empId = (document.getElementById('admin-empid-inp')?.value||'').trim().toUpperCase();
+  const pw    = (document.getElementById('admin-pw-inp')?.value||'').trim();
+  const errEl = document.getElementById('admin-login-err');
+  if(!empId||!pw){ errEl.textContent='Please enter your Employee ID and password'; return; }
+  // Match admin by empId
+  const admin = DATA.admins.find(a=>
+    a.empId && a.empId.toUpperCase()===empId
+  );
+  if(!admin){ errEl.textContent='Employee ID not recognised.'; return; }
+  // Password check
+  if(!admin.password){
+    // First login — no password set yet → force set-password screen
+    currentUser={...admin};
+    showScreen('screen-setpw');
+    document.getElementById('setpw-new').focus();
+    return;
+  }
+  if(admin.password !== pw){ errEl.textContent='Incorrect password.'; return; }
+  currentUser={...admin};
+  saveSession(admin.pin);
+  if(admin.role==='superadmin'){ showScreen('screen-superadmin'); initSA(); }
+  else { showScreen('screen-admin'); initAdmin(); }
+}
+
+// ── First-login: set password ──
+async function doSetPassword(){
+  const pw1 = document.getElementById('setpw-new').value.trim();
+  const pw2 = document.getElementById('setpw-confirm').value.trim();
+  const errEl = document.getElementById('setpw-err');
+  if(!pw1){ errEl.textContent='Enter a password.'; return; }
+  if(pw1.length < 6){ errEl.textContent='Password must be at least 6 characters.'; return; }
+  if(pw1 !== pw2){ errEl.textContent='Passwords do not match.'; return; }
+  errEl.textContent='Saving…';
+  // Update in DATA
+  const admin = DATA.admins.find(a=>a.pin===currentUser.pin);
+  if(admin) admin.password = pw1;
+  currentUser.password = pw1;
+  // Write to sheet
+  await writeToSheets('setAdminPassword',{pin:currentUser.pin, password:pw1});
+  saveSession(currentUser.pin);
+  errEl.textContent='';
+  if(currentUser.role==='superadmin'){ showScreen('screen-superadmin'); initSA(); }
+  else { showScreen('screen-admin'); initAdmin(); }
+  showToast('Password set — welcome!','ok');
 }
 function saveSession(pin){
   sessionStorage.setItem('session_pin', pin);
@@ -1525,17 +1626,22 @@ function restoreSession(){
   const sa=DATA.admins.find(a=>a.pin===pin&&a.role==='superadmin');
   if(sa){currentUser={...sa};showScreen('screen-superadmin');initSA();return true;}
   const admin=DATA.admins.find(a=>a.pin===pin&&a.role==='admin');
-  if(admin){currentUser={...admin};showScreen('screen-admin');initAdmin();return true;}
+  if(admin){
+    if(!admin.password){clearSession();return false;} // force re-login to set password
+    currentUser={...admin};showScreen('screen-admin');initAdmin();return true;
+  }
   const voter=DATA.voters.find(v=>v.pin===pin);
   if(voter && !voter.hasVoted && CFG.votingOpen){
     currentUser={...voter,type:'voter'};selections={};
     showScreen('screen-voter');initVoter();return true;
   }
-  // voter already voted or voting closed — just go to login
   clearSession();
   return false;
 }
-function setLoginErr(m){document.getElementById('login-err').textContent=m;}
+function setLoginErr(m){
+  const el=document.getElementById('login-err');
+  if(el) el.textContent=m;
+}
 function doLogout(){
   currentUser=null;selections={};
   clearSession();
@@ -2848,6 +2954,7 @@ function renderCategoryDetail(containerId){
 // SUPERADMIN
 // ═══════════════════════════════════════════════════════════
 function initSA(){
+  renderAdminPwList();
   renderStats('sa');
   renderDeptBars('sa-dept-bars');
   renderUnitBars('sa-unit-bars');
@@ -3323,6 +3430,36 @@ async function removeDept(deptId){
 }
 
 // ── SETTINGS ──
+function renderAdminPwList(){
+  const el=document.getElementById('admin-pw-reset-list');
+  if(!el) return;
+  const admins=DATA.admins.filter(a=>a.role==='admin');
+  if(!admins.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--text3);">No admin accounts found.</div>';
+    return;
+  }
+  el.innerHTML=admins.map(a=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;">${a.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${a.empId||a.pin} · ${a.password?'Password set':'⚠ No password set'}</div>
+      </div>
+      <button class="btn-sm ${a.password?'red':'gold'}" onclick="resetAdminPassword('${a.pin}')">
+        ${a.password?'Reset password':'Set password prompt'}
+      </button>
+    </div>`).join('');
+}
+
+async function resetAdminPassword(pin){
+  const admin=DATA.admins.find(a=>a.pin===pin);
+  if(!admin)return;
+  if(!confirm(`Reset password for ${admin.name}? They will be asked to set a new password on next login.`))return;
+  admin.password='';
+  renderAdminPwList();
+  await writeToSheets('setAdminPassword',{pin, password:''});
+  showToast(`${admin.name}'s password has been reset`,'ok');
+}
+
 function saveGS(type){
   if(type==='id')     { CFG.sheetId=document.getElementById('gs-id-inp').value.trim(); showToast('Sheet ID saved','ok'); }
   if(type==='key')    { CFG.apiKey=document.getElementById('gs-key-inp').value.trim(); showToast('API key saved','ok'); }
@@ -3857,7 +3994,10 @@ function handleRequest(raw) {
     else if (action === 'setAdmins') {
       var s = getOrCreate(ss, 'Admins');
       if (s.getLastRow() > 1) s.deleteRows(2, s.getLastRow() - 1);
-      data.admins.forEach(function(a) { s.appendRow([a.pin, a.role, a.name]); });
+      // Columns: PIN | Role | Name | EmpID | Password
+      data.admins.forEach(function(a) {
+        s.appendRow([a.pin, a.role, a.name, a.empId||'', a.password||'']);
+      });
     }
 
     // ── CONFIG ──
@@ -3866,6 +4006,20 @@ function handleRequest(raw) {
     }
     else if (action === 'setConfig') {
       setConfigValue(ss, data.key, data.value);
+    }
+
+    // ── ADMIN PASSWORD ──
+    else if (action === 'setAdminPassword') {
+      var s = ss.getSheetByName('Admins');
+      if (s && s.getLastRow() > 1) {
+        var rows = s.getDataRange().getValues();
+        for (var i = 1; i < rows.length; i++) {
+          if (String(rows[i][0]).trim() === String(data.pin).trim()) {
+            s.getRange(i + 1, 5).setValue(data.password || ''); // column E
+            break;
+          }
+        }
+      }
     }
 
     else if (action === 'addStaff') {
