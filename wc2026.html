@@ -3644,23 +3644,8 @@ function RoomPage(props) {
                .sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); })
                .slice(0,2);
 
-  // Auto-scroll & mark-read when switching to chat tab
-  useEffect(function(){
-    if(props.tab==='chat'){
-      if(props.onChatRead) props.onChatRead();
-      setTimeout(function(){
-        var el=document.getElementById('chat-scroll');
-        if(el) el.scrollTop=el.scrollHeight;
-      },80);
-    }
-  },[props.tab]);
-  // Scroll to bottom when new messages arrive while chat is open
-  useEffect(function(){
-    if(props.tab==='chat'){
-      var el=document.getElementById('chat-scroll');
-      if(el) el.scrollTop=el.scrollHeight;
-    }
-  },[props.chatMsgs]);
+
+
 
   return html`<div>
     <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
@@ -4779,6 +4764,23 @@ function App() {
     var chatUnsub = null;
     var annUnsub  = null;
 
+    function enterRoom(roomId) {
+      if (annUnsub) { annUnsub(); annUnsub = null; }
+      // Restore anns from localStorage instantly
+      try {
+        var la=JSON.parse(localStorage.getItem('wc26_ann_'+roomId)||'[]');
+        if(Array.isArray(la)&&la.length>0)
+          setAnnsByRoom(function(p){var n=Object.assign({},p);n[roomId]=la;return n;});
+      } catch(e){}
+      // Poll GAS for announcements
+      annUnsub = Store.listen('ann_'+roomId, function(v){
+        var anns=Array.isArray(v)&&v.length>0?v:[];
+        if(!anns.length){try{anns=JSON.parse(localStorage.getItem('wc26_ann_'+roomId)||'[]');}catch(e){anns=[];}}
+        else{try{localStorage.setItem('wc26_ann_'+roomId,JSON.stringify(anns));}catch(e){}}
+        setAnnsByRoom(function(p){var n=Object.assign({},p);n[roomId]=anns;return n;});
+      });
+    }
+
     function runSync(key) {
       if (!key) return;
       setSyncStatus('syncing');
@@ -4951,7 +4953,7 @@ function App() {
       Store.set('rooms', nr);
     }
     try { localStorage.setItem('wc26_room_cache_'+upd.id, JSON.stringify(upd)); } catch(e) {}
-    setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); 
+    setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); enterRoom(id);
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
@@ -5241,23 +5243,12 @@ function getAchievements(uid, predsMap, resultsMap) {
       var cached = null;
       try { cached = JSON.parse(localStorage.getItem('wc26_room_cache_'+r.id)||'null'); } catch(e) {}
       var useRoom = (cached&&cached.members&&cached.members.length>=(r.members||[]).length)?cached:r;
-      setRoom(useRoom); setTab('leaderboard'); setScr('room'); 
+      setRoom(useRoom); setTab('leaderboard'); setScr('room'); enterRoom(useRoom.id); 
     }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
-          apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
-          chatMsgs=${room&&chatMsgs[room.id]||[]}
-          onSendChat=${function(txt){
-            sendChatMessage({uid:user.id,name:user.name,text:txt,ts:new Date().toISOString()},
-              function(){
-                markChatRead();
-                setTimeout(function(){
-                  var el=document.getElementById('chat-scroll');
-                  if(el) el.scrollTop=el.scrollHeight;
-                },50);
-              });
-          }}announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
-          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
+          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
