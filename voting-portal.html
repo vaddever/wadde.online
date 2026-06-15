@@ -623,7 +623,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div class="tab-panel" id="admin-voters">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:500;">Voters</div>
-        <div style="display:flex;gap:7px;">
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          <button class="btn-sm green" onclick="openAddVoterModal()">+ Add voter</button>
+          <button class="btn-sm gold" onclick="syncStaffToVoters()">⟳ Sync staff</button>
           <button class="btn-sm gold" onclick="openBulkUploadModal('voters')">⬆ Bulk upload</button>
         </div>
       </div>
@@ -1973,6 +1975,7 @@ function renderAdminVoterList(){
         <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
       </div>
       <button class="btn-sm gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
+      <button class="btn-sm red" onclick="adminRemoveVoter('${v.pin}')">✕</button>
     </div>`).join('');
 }
 
@@ -2008,6 +2011,7 @@ function renderAdminStaff(){
         <div class="staff-dept">${getDeptName(s.dept)} · ${getUnitName(s.unit)}</div>
       </div>
       <span style="font-size:11px;color:var(--gold);font-family:monospace;font-weight:600;padding:2px 8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:5px;flex-shrink:0;">${s.empId||s.id}</span>
+      <button class="btn-sm red" onclick="adminRemoveStaff('${s.id}')">✕</button>
     </div>`).join('')+`</div>`;
 }
 
@@ -3028,6 +3032,28 @@ function renderVoterList(){
     </div>`).join('');
 }
 
+// Admin-scoped remove functions (also refresh admin panels)
+async function adminRemoveVoter(pin){
+  const v=DATA.voters.find(x=>x.pin===pin);
+  if(!v||!confirm(`Remove voter "${v.name}"?`))return;
+  DATA.voters=DATA.voters.filter(x=>x.pin!==pin);
+  DATA.votes=DATA.votes.filter(x=>x.pin!==pin);
+  cacheData();
+  renderAdminVoterList(); renderVoterList(); renderStats('sa'); renderStats('admin');
+  await writeToSheets('removeVoter',{pin});
+  showToast(`${v.name} removed`,'ok');
+}
+
+async function adminRemoveStaff(id){
+  const s=DATA.staff.find(x=>x.id===id);
+  if(!s||!confirm(`Remove ${s.name} from staff list?`))return;
+  DATA.staff=DATA.staff.filter(x=>x.id!==id);
+  cacheData();
+  renderAdminStaff(); renderStaff();
+  await writeToSheets('removeStaff',{id});
+  showToast(`${s.name} removed`,'ok');
+}
+
 function openEditVoterModal(pin){
   const v=DATA.voters.find(x=>x.pin===pin);
   if(!v){showToast('Voter not found','err');return;}
@@ -3125,6 +3151,7 @@ async function syncStaffToVoters(){
     if(!ok) allOk=false;
   }
   showSyncBadge(allOk?'ok':'err', allOk?`Synced ✓`:'Some failed — check Script URL');
+  renderAdminVoterList();
   showToast(`${added} staff synced as voters${skipped?' ('+skipped+' already existed)':''}`, 'ok');
 }
 
@@ -3805,7 +3832,7 @@ async function addVoter(){
   const voter={pin, empId, name, dept, unit, hasVoted:false, excl2024, excl2025};
   DATA.voters.push(voter);
   cacheData();
-  closeModal();renderVoterList();renderStats('sa');
+  closeModal();renderVoterList();renderAdminVoterList();renderStats('sa');renderStats('admin');
   await writeToSheets('addVoter',{voter});
   showToast(`${name} added as voter (PIN: ${pin})`,'ok');
 }
