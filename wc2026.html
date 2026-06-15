@@ -2036,15 +2036,16 @@ function SuperAdminApp() {
         <div style=${{overflowX:'auto'}}>
           <table style=${{width:'100%',borderCollapse:'collapse',fontSize:12}}>
             <thead><tr style=${{background:'var(--bg3)'}}>
-              ${['Key','User','Match','Prediction'].map(function(h){
+              ${['#','User','Match','Teams','Pred','Edited','Action'].map(function(h){
                 return html`<th key=${h} style=${{padding:'7px 10px',textAlign:'left',
                   fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)'}}>${h}</th>`;
               })}
             </tr></thead>
             <tbody>
-              ${prList.slice(0,200).map(function(p,i){
+              ${prList.map(function(p,i){var match=MS.find(function(m){return m.id===p.mid;})||KO_MS.find(function(m){return m.id===p.mid;});
                 var u = saUsers[p.uid];
-                return html`<tr key=${i} style=${{borderBottom:'1px solid rgba(255,255,255,.03)'}}>
+                return html`<tr key=${i} style=${{borderBottom:'1px solid rgba(255,255,255,.04)',background:p.ts&&match&&new Date(p.ts)>new Date(match.utc)?'rgba(239,68,68,.05)':'transparent'}}>
+                  <td style=${{padding:'6px 10px',color:'var(--dm)',fontSize:11}}>${i+1}</td>
                   <td style=${{padding:'6px 10px',fontFamily:'monospace',fontSize:10,color:'var(--dm)'}}>${p.key}</td>
                   <td style=${{padding:'6px 10px',color:'var(--tx)'}}>${u?u.name:p.uid.slice(0,8)+'…'}</td>
                   <td style=${{padding:'6px 10px',color:'var(--mu)'}}>${p.mid}</td>
@@ -3881,95 +3882,6 @@ function RoomPage(props) {
         </div>`;
       })}
     </div>`}
-    ${props.tab==='chat'&&html`<div style=${{display:'flex',flexDirection:'column',height:'calc(100vh - 260px)',minHeight:400}}>
-
-      <!-- Messages area -->
-      <div id="chat-scroll" style=${{
-        flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8,
-        padding:'12px 0',marginBottom:8
-      }}>
-        ${!(props.chatMsgs&&props.chatMsgs.length)&&html`
-          <div style=${{textAlign:'center',padding:'40px 20px',color:'var(--dm)'}}>
-            <div style=${{fontSize:32,marginBottom:8}}>💬</div>
-            <div style=${{fontSize:14,fontWeight:600,marginBottom:4}}>No messages yet</div>
-            <div style=${{fontSize:12}}>Be the first to say something!</div>
-          </div>`}
-
-        ${(props.chatMsgs||[]).map(function(msg,i){
-          var isMe = msg.uid === props.user.id;
-          var showName = i===0 || (props.chatMsgs[i-1]&&props.chatMsgs[i-1].uid!==msg.uid);
-          var ts = new Date(msg.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
-          var tsDate = new Date(msg.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'Indian/Maldives'});
-          var prevDate = i>0?new Date(props.chatMsgs[i-1].ts).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'Indian/Maldives'}):'';
-          return html`<div key=${i}>
-            ${(i===0||tsDate!==prevDate)&&html`<div style=${{textAlign:'center',margin:'8px 0 4px'}}>
-              <span style=${{fontSize:10,color:'var(--dm)',background:'var(--bg3)',padding:'2px 10px',borderRadius:10}}>${tsDate}</span>
-            </div>`}
-            <div style=${{
-              display:'flex',flexDirection:isMe?'row-reverse':'row',
-              alignItems:'flex-end',gap:6,padding:'0 4px'
-            }}>
-              ${!isMe&&showName&&html`<div style=${{
-                width:28,height:28,borderRadius:14,flexShrink:0,
-                background:'linear-gradient(135deg,#1a56db,#6d28d9)',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:12,fontWeight:700,color:'#fff'
-              }}>${(msg.name||'?')[0].toUpperCase()}</div>`}
-              ${!isMe&&!showName&&html`<div style=${{width:28,flexShrink:0}}></div>`}
-              <div style=${{
-                maxWidth:'72%',
-                background:isMe?'#1a56db':'var(--bg3)',
-                color:isMe?'#fff':'var(--tx)',
-                borderRadius:isMe?'16px 16px 4px 16px':'16px 16px 16px 4px',
-                padding:'8px 12px',
-                boxShadow:'0 1px 3px rgba(0,0,0,.2)'
-              }}>
-                ${!isMe&&showName&&html`<div style=${{fontSize:10,fontWeight:700,color:'#60a5fa',marginBottom:3}}>${msg.name||'Unknown'}</div>`}
-                <div style=${{fontSize:13,lineHeight:1.4,wordBreak:'break-word'}}>${msg.text}</div>
-                <div style=${{fontSize:9,opacity:.6,marginTop:3,textAlign:isMe?'right':'left'}}>${ts}</div>
-              </div>
-            </div>
-          </div>`;
-        })}
-      </div>
-
-      <!-- Input bar -->
-      <div style=${{
-        display:'flex',gap:8,alignItems:'flex-end',
-        padding:'8px 0 4px',borderTop:'1px solid var(--bdr)',flexShrink:0
-      }}>
-        <textarea id="chat-input" rows="1" placeholder="Type a message…"
-          style=${{
-            flex:1,resize:'none',border:'1px solid var(--bdr)',borderRadius:20,
-            padding:'8px 14px',fontSize:13,background:'var(--bg3)',color:'var(--tx)',
-            lineHeight:1.4,maxHeight:100,overflow:'auto',outline:'none'
-          }}
-          onKeyDown=${function(e){
-            if(e.key==='Enter'&&!e.shiftKey){
-              e.preventDefault();
-              var inp=document.getElementById('chat-input');
-              var txt=(inp.value||'').trim();
-              if(!txt) return;
-              props.onSendChat&&props.onSendChat(txt);
-              inp.value='';
-              inp.style.height='auto';
-            }
-          }}
-          onInput=${function(e){
-            e.target.style.height='auto';
-            e.target.style.height=Math.min(e.target.scrollHeight,100)+'px';
-          }} />
-        <button class="btn-p" style=${{borderRadius:20,padding:'8px 14px',fontSize:13,flexShrink:0}}
-          onClick=${function(){
-            var inp=document.getElementById('chat-input');
-            var txt=(inp.value||'').trim();
-            if(!txt) return;
-            props.onSendChat&&props.onSendChat(txt);
-            inp.value=''; inp.style.height='auto';
-          }}>Send ↑</button>
-      </div>
-    </div>`}
-
 
     ${props.tab==='knockout'&&html`<div>
       ${!props.qualifiers
@@ -4066,6 +3978,11 @@ function RoomPage(props) {
         </div>
       </div>
     </div>`}
+
+    ${props.tab==='chat'&&html`<${RoomChat}
+      roomId=${props.room&&props.room.id}
+      user=${props.user} />`}
+
 
     ${props.tab==='admin'&&html`<div>
       ${!props.isAdmin
@@ -4519,6 +4436,203 @@ function UserPredictionsModal(props) {
 }
 
 
+
+// ── Simple Room Chat ─────────────────────────────────────────────────────
+// Stores to localStorage + GAS. Polls GAS every 10s.
+// Guards: won't poll for 12s after sending (avoids race condition with GAS write).
+
+// ── Live Match Detail Modal ───────────────────────────────────────────────
+function LiveMatchModal(props) {
+  var m   = props.match;
+  var lv  = props.live;  // {h, a, status, min, htH, htA}
+  var res = props.result;
+  if (!m) return null;
+  var isLive = !!lv && !res;
+  var score  = res || lv || {};
+  var statusLabel = isLive
+    ? (lv.min==='HT'?'Half Time':lv.status==='PAUSED'?'HT':lv.min?lv.min+"'":lv.status)
+    : (res ? 'Full Time' : 'Upcoming');
+  var statusColor = isLive?'#ef4444':res?'#22c55e':'var(--dm)';
+  var mvtKick = new Date(m.utc).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+
+  return html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}}>
+    <div class="modal" style=${{padding:0,overflow:'hidden',maxWidth:400}}>
+      <!-- Header -->
+      <div style=${{background:'linear-gradient(135deg,#1e1b4b,#0f172a)',padding:'20px 16px 16px'}}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <div style=${{fontSize:11,fontWeight:600,color:'rgba(255,255,255,.5)',letterSpacing:.5}}>
+            WC 2026 · GROUP ${m.gr}
+          </div>
+          <button class="btn" style=${{fontSize:11,padding:'2px 10px',color:'rgba(255,255,255,.5)',borderColor:'rgba(255,255,255,.2)'}}
+            onClick=${props.onClose}>✕</button>
+        </div>
+
+        <!-- Score display -->
+        <div style=${{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:12,marginBottom:14}}>
+          <!-- Home -->
+          <div style=${{textAlign:'center'}}>
+            <${FlagImg} team=${m.h} w=${52} />
+            <div style=${{fontSize:13,fontWeight:700,color:'#fff',marginTop:8,lineHeight:1.2}}>${m.h}</div>
+          </div>
+          <!-- Score -->
+          <div style=${{textAlign:'center',minWidth:90}}>
+            <div style=${{display:'flex',alignItems:'center',gap:6,justifyContent:'center',marginBottom:4}}>
+              ${isLive&&html`<span style=${{width:8,height:8,borderRadius:4,background:'#ef4444',display:'inline-block',animation:'pulse 1s infinite'}}></span>`}
+              <span style=${{fontSize:11,fontWeight:700,color:statusColor,letterSpacing:.5,textTransform:'uppercase'}}>${statusLabel}</span>
+            </div>
+            <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:48,fontWeight:900,color:'#fff',lineHeight:1,letterSpacing:2}}>
+              ${(score.h!==undefined&&score.h!==null)?score.h+'–'+score.a:'–'}
+            </div>
+            ${lv&&lv.htH!==undefined&&lv.htH!==null&&html`
+              <div style=${{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>HT: ${lv.htH}–${lv.htA}</div>`}
+          </div>
+          <!-- Away -->
+          <div style=${{textAlign:'center'}}>
+            <${FlagImg} team=${m.a} w=${52} />
+            <div style=${{fontSize:13,fontWeight:700,color:'#fff',marginTop:8,lineHeight:1.2}}>${m.a}</div>
+          </div>
+        </div>
+
+        <!-- Kickoff info -->
+        <div style=${{textAlign:'center',fontSize:11,color:'rgba(255,255,255,.45)'}}>
+          📅 ${mvtKick} MVT · 🏟 ${m.v||''}
+        </div>
+      </div>
+
+      <!-- User's prediction -->
+      ${props.pred&&html`<div style=${{padding:'12px 16px',borderBottom:'1px solid var(--bdr)'}}>
+        <div style=${{fontSize:11,color:'var(--dm)',marginBottom:4,fontWeight:600,letterSpacing:.3}}>YOUR PREDICTION</div>
+        <div style=${{display:'flex',alignItems:'center',gap:10}}>
+          <span style=${{fontFamily:'Barlow Condensed',fontSize:28,fontWeight:800,color:'var(--tx)'}}>${props.pred.h}–${props.pred.a}</span>
+          ${res&&html`<span style=${{fontSize:12,fontWeight:600,
+            color:(props.pred.h==res.h&&props.pred.a==res.a)?'#fbbf24':
+                  ((props.pred.h>props.pred.a&&res.h>res.a)||(props.pred.h<props.pred.a&&res.h<res.a)||(props.pred.h==props.pred.a&&res.h==res.a))?'#4ade80':'#f87171'}}>
+            ${(props.pred.h==res.h&&props.pred.a==res.a)?'🎯 Exact! +4pts':
+              ((props.pred.h>props.pred.a&&res.h>res.a)||(props.pred.h<props.pred.a&&res.h<res.a)||(props.pred.h==props.pred.a&&res.h==res.a))?'✓ Correct +2pts':'✗ 0pts'}
+          </span>`}
+          ${isLive&&lv&&html`<span style=${{fontSize:11,color:'var(--dm)'}}>${(props.pred.h==lv.h&&props.pred.a==lv.a)?'🎯 On track!':((props.pred.h>props.pred.a&&lv.h>lv.a)||(props.pred.h<props.pred.a&&lv.h<lv.a)||(props.pred.h==props.pred.a&&lv.h==lv.a))?'📍 Result tracking':'📍 Off track'}</span>`}
+        </div>
+      </div>`}
+
+      <!-- Action buttons -->
+      <div style=${{padding:'12px 16px',display:'flex',gap:8}}>
+        <button class="btn" style=${{flex:1,fontSize:12,padding:'8px'}}
+          onClick=${function(){window.open('https://www.livescore.com/en/football/world-cup/world-cup-2026/','_blank');}}>
+          🌐 Full stats & lineups
+        </button>
+        ${!res&&html`<button class="btn-p" style=${{flex:1,fontSize:12,padding:'8px'}}
+          onClick=${props.onPredict}>
+          ${props.pred?'✎ Edit prediction':'⚽ Predict'}
+        </button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+
+function RoomChat(props) {
+  var _lastSent = React.useRef(0);
+  var _pollTimer= React.useRef(null);
+  var _rid      = props.roomId;
+
+  // Load messages: localStorage first, then GAS
+  var sM = useState(function(){
+    try{ return JSON.parse(localStorage.getItem('wc26_chat_'+_rid)||'[]'); }catch(e){return [];}
+  });
+  var msgs = sM[0]; var setMsgs = sM[1];
+  var sI  = useState(''); var input=sI[0]; var setInput=sI[1];
+  var sL  = useState(false); var loading=sL[0]; var setLoading=sL[1];
+
+  // Save to localStorage helper
+  function save(arr){
+    try{ localStorage.setItem('wc26_chat_'+_rid, JSON.stringify(arr.slice(-150))); }catch(e){}
+    setMsgs(arr.slice(-150));
+  }
+
+  // Poll GAS – only if not recently sent
+  function pollGAS(){
+    if(Date.now()-_lastSent.current < 12000) return;
+    fetch(GS_URL+'?action=get&key=wc26_chat_'+encodeURIComponent(_rid)+'&_='+Date.now(),{redirect:'follow'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok||!Array.isArray(d.value)) return;
+      var remote = d.value;
+      // Only update if remote has messages we don't
+      var localKeys = {};
+      msgs.forEach(function(m){if(m&&m.ts&&m.uid)localKeys[m.uid+'|'+m.ts]=1;});
+      var hasNew = remote.some(function(m){return m&&m.ts&&m.uid&&!localKeys[m.uid+'|'+m.ts];});
+      if(hasNew){ save(remote); }
+    })
+    .catch(function(){});
+  }
+
+  // Set up poll interval + initial GAS fetch after 3s
+  useEffect(function(){
+    var init = setTimeout(pollGAS, 3000);
+    _pollTimer.current = setInterval(pollGAS, 10000);
+    return function(){
+      clearTimeout(init);
+      clearInterval(_pollTimer.current);
+    };
+  },[_rid]);
+
+  // Auto-scroll to bottom
+  useEffect(function(){
+    var el = document.getElementById('rc-scroll-'+_rid);
+    if(el) el.scrollTop = el.scrollHeight;
+  },[msgs]);
+
+  function doSend(){
+    var txt = (input||'').trim();
+    if(!txt || !props.user) return;
+    var msg = {uid:props.user.id, name:props.user.name||'?', text:txt, ts:new Date().toISOString()};
+    var next = msgs.concat([msg]);
+    save(next);
+    setInput('');
+    _lastSent.current = Date.now();
+    // Save to GAS
+    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'set',key:'wc26_chat_'+_rid,value:next.slice(-150)})})
+    .catch(function(){});
+  }
+
+  return html`<div style=${{display:'flex',flexDirection:'column',height:'calc(100vh - 260px)',minHeight:360}}>
+    <!-- Messages -->
+    <div id=${'rc-scroll-'+_rid} style=${{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8,padding:'10px 0 6px'}}>
+      ${msgs.length===0&&html`<div style=${{textAlign:'center',padding:'40px 20px',color:'var(--dm)'}}>
+        <div style=${{fontSize:28,marginBottom:6}}>💬</div>
+        <div style=${{fontSize:13,fontWeight:600}}>No messages yet</div>
+        <div style=${{fontSize:12,marginTop:3}}>Say something!</div>
+      </div>`}
+      ${msgs.map(function(m,i){
+        var isMe = props.user&&m.uid===props.user.id;
+        var prev = msgs[i-1];
+        var showName = !prev||prev.uid!==m.uid;
+        var ts = m.ts?new Date(m.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'}):'';
+        return html`<div key=${i} style=${{display:'flex',flexDirection:isMe?'row-reverse':'row',alignItems:'flex-end',gap:6,padding:'0 4px'}}>
+          ${!isMe&&showName&&html`<div style=${{width:26,height:26,borderRadius:13,flexShrink:0,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff'}}>${(m.name||'?')[0].toUpperCase()}</div>`}
+          ${!isMe&&!showName&&html`<div style=${{width:26,flexShrink:0}}></div>`}
+          <div style=${{maxWidth:'72%',background:isMe?'#1a56db':'var(--bg3)',color:isMe?'#fff':'var(--tx)',borderRadius:isMe?'16px 16px 4px 16px':'16px 16px 16px 4px',padding:'7px 11px',boxShadow:'0 1px 2px rgba(0,0,0,.2)'}}>
+            ${!isMe&&showName&&html`<div style=${{fontSize:10,fontWeight:700,color:'#93c5fd',marginBottom:2}}>${m.name}</div>`}
+            <div style=${{fontSize:13,lineHeight:1.4,wordBreak:'break-word'}}>${m.text}</div>
+            <div style=${{fontSize:9,opacity:.55,marginTop:2,textAlign:isMe?'right':'left'}}>${ts}</div>
+          </div>
+        </div>`;
+      })}
+    </div>
+    <!-- Input -->
+    <div style=${{display:'flex',gap:8,alignItems:'flex-end',padding:'6px 0 2px',borderTop:'1px solid var(--bdr)',flexShrink:0}}>
+      <textarea placeholder="Type a message…" rows="1"
+        value=${input}
+        style=${{flex:1,resize:'none',border:'1px solid var(--bdr)',borderRadius:20,padding:'8px 14px',fontSize:13,background:'var(--bg3)',color:'var(--tx)',lineHeight:1.4,maxHeight:80,overflow:'auto',outline:'none'}}
+        onInput=${function(e){setInput(e.target.value);e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,80)+'px';}}
+        onKeyDown=${function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}}} />
+      <button class="btn-p" style=${{borderRadius:20,padding:'8px 16px',fontSize:13,flexShrink:0}} onClick=${doSend}>Send ↑</button>
+    </div>
+  </div>`;
+}
+
+
 class RoomErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -4587,6 +4701,8 @@ function App() {
   var apiKey=s11g[0]; var setApiKey=s11g[1];
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
   var s_ls=useState({}); var liveScores=s_ls[0]; var setLiveScores=s_ls[1];
+  var s_lm=useState(null); var liveMatchDetail=s_lm[0]; var setLiveMatchDetail=s_lm[1];
+  var s_lm=useState(null); var liveMatchDetail=s_lm[0]; var setLiveMatchDetail=s_lm[1];
   var s_sy=useState(0); var lastSync=s_sy[0]; var setLastSync=s_sy[1];
   var s_ss=useState('idle'); var syncStatus=s_ss[0]; var setSyncStatus=s_ss[1];
   var s_ga=useState([]); var globalAnns=s_ga[0]; var setGlobalAnns=s_ga[1];
@@ -4662,77 +4778,6 @@ function App() {
     // Chat messages — per room, keyed as wc26_chat_{roomId}
     var chatUnsub = null;
     var annUnsub  = null;
-    function subscribeChatRoom(roomId) {
-      // Clean up previous subscription
-      if (chatUnsub) { chatUnsub(); chatUnsub = null; }
-      if (annUnsub)  { annUnsub();  annUnsub  = null; }
-      if (!roomId) return;
-
-      // Step 1: Show from localStorage instantly (no GAS wait)
-      try {
-        var lc = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]');
-        if (Array.isArray(lc) && lc.length > 0)
-          setChatMsgs(function(p){ var n=Object.assign({},p); n[roomId]=lc; return n; });
-      } catch(e) {}
-      try {
-        var la = JSON.parse(localStorage.getItem('wc26_ann_' + roomId) || '[]');
-        if (Array.isArray(la) && la.length > 0)
-          setAnnsByRoom(function(p){ var n=Object.assign({},p); n[roomId]=la; return n; });
-      } catch(e) {}
-
-      // Step 2: Poll GAS directly — merge with localStorage, never overwrite local messages
-      function fetchChatFromGAS() {
-        fetch(GS_URL + '?action=get&key=' + encodeURIComponent('wc26_chat_' + roomId) + '&_=' + Date.now(), {redirect:'follow'})
-          .then(function(r){ return r.json(); })
-          .then(function(d){
-            if (!d.ok || !Array.isArray(d.value) || !d.value.length) return;
-            // Merge GAS data with local — union by uid+ts key, never shrink
-            var local = [];
-            try { local = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]'); } catch(e){}
-            var byKey = {};
-            local.forEach(function(m){ if(m&&m.ts&&m.uid) byKey[m.uid+'|'+m.ts]=m; });
-            d.value.forEach(function(m){ if(m&&m.ts&&m.uid) byKey[m.uid+'|'+m.ts]=m; });
-            var merged = Object.values(byKey)
-              .sort(function(a,b){ return new Date(a.ts)-new Date(b.ts); })
-              .slice(-200);
-            if (merged.length <= local.length && !d.value.some(function(m){
-              return !local.some(function(l){ return l.uid===m.uid&&l.ts===m.ts; });
-            })) return; // nothing new from GAS
-            try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(merged)); } catch(e){}
-            setChatMsgs(function(prev){
-              var cur = prev[roomId] || [];
-              // Only update if GAS has messages we don't have yet
-              if (merged.length <= cur.length) return prev;
-              var n = Object.assign({}, prev); n[roomId] = merged; return n;
-            });
-          })
-          .catch(function(){});
-      }
-
-      fetchChatFromGAS();
-      var chatTimer = setInterval(fetchChatFromGAS, 8000);
-
-      // Announcements — keep using Store.listen (it works fine for anns)
-      annUnsub = Store.listen('ann_' + roomId, function(v) {
-        var anns = Array.isArray(v) && v.length > 0 ? v : null;
-        if (anns) {
-          try { localStorage.setItem('wc26_ann_' + roomId, JSON.stringify(anns)); } catch(e) {}
-        } else {
-          try {
-            var local = JSON.parse(localStorage.getItem('wc26_ann_' + roomId) || '[]');
-            anns = Array.isArray(local) ? local : [];
-          } catch(e) { anns = []; }
-        }
-        setAnnsByRoom(function(prev) {
-          var upd = Object.assign({}, prev);
-          upd[roomId] = anns;
-          return upd;
-        });
-      });
-
-      chatUnsub = function() { clearInterval(chatTimer); if(annUnsub){annUnsub();annUnsub=null;} };
-    }
-
 
     function runSync(key) {
       if (!key) return;
@@ -4892,7 +4937,7 @@ function App() {
     setAdminAuth(na); // Admin auth in memory only — enter passphrase each session for security
     try { localStorage.setItem('wc26_room_cache_'+id, JSON.stringify(nr[id])); } catch(e) {}
     setRoom(nr[id]); setModal(null); setTab('leaderboard'); setScr('room');
-    subscribeChatRoom(id);
+    
     notify('Room created! Share code: ' + code);
   }
   function doJoin(code) {
@@ -4906,7 +4951,7 @@ function App() {
       Store.set('rooms', nr);
     }
     try { localStorage.setItem('wc26_room_cache_'+upd.id, JSON.stringify(upd)); } catch(e) {}
-    setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); subscribeChatRoom(upd.id);
+    setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); 
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
@@ -5073,141 +5118,7 @@ function getAchievements(uid, predsMap, resultsMap) {
   var myPick = room ? (tpicks[user&&user.id+'_'+room.id]||{}).team : null;
   var isAdmin = room && adminAuth[room.id] === true;
   var qualifiers = getKOQualifiers(results);
-  var unreadChat = room ? Math.max(0,
-    (chatMsgs[room.id]||[]).filter(function(m){ return m && m.uid !== (user&&user.id); }).length
-    - (lastReadChat[room.id]||0)
-  ) : 0;
-
-  function saveAnnouncement(ann) {
-    if (!room) return;
-    var rid = room.id;
-    var existing = (annsByRoom[rid] || []);
-    var updated = ann.id && existing.find(function(a){ return a.id === ann.id; })
-      ? existing.map(function(a){ return a.id === ann.id ? ann : a; })
-      : existing.concat([ann]);
-    // Primary: localStorage (instant, no GAS dependency)
-    try { localStorage.setItem('wc26_ann_'+rid, JSON.stringify(updated)); } catch(e){}
-    // Also try GAS (may fail silently on old deployment)
-    Store.set('ann_' + rid, updated);
-    setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
-    setAnnModal(null);
-    notify('Announcement saved!');
-  }
-
-  function deleteAnnouncement(annId) {
-    if (!room) return;
-    var rid = room.id;
-    var updated = (annsByRoom[rid] || []).filter(function(a){ return a.id !== annId; });
-    try { localStorage.setItem('wc26_ann_'+rid, JSON.stringify(updated)); } catch(e){}
-    Store.set('ann_' + rid, updated);
-    setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
-    notify('Announcement removed');
-  }
-
-  function markChatRead() {
-    if (!room) return;
-    // Count only messages from others (matches unread calculation)
-    var count = (chatMsgs[room.id]||[]).filter(function(m){ return m&&m.uid!==user.id; }).length;
-    setLastReadChat(function(prev){ var n=Object.assign({},prev); n[room.id]=count; return n; });
-  }
-
-  function doLockRoom(locked) {
-    if (!room) return;
-    var upd = Object.assign({}, room, {locked: locked});
-    var nr = Object.assign({}, rooms); nr[room.id] = upd;
-    Store.set('rooms', nr);
-    setRoom(upd);
-    notify(locked ? '🔒 Room locked — no new members can join' : '🔓 Room unlocked');
-  }
-
-  function leaveRoom() {
-    if (!room || !user) return;
-    if (!confirm('Leave "' + room.name + '"?\nYou can rejoin with the room code.')) return;
-    var nr = Object.assign({}, rooms);
-    var upd = Object.assign({}, room, {members: (room.members||[]).filter(function(id){return id!==user.id;})});
-    nr[room.id] = upd;
-    Store.set('rooms', nr);
-    setScr('dash');
-    notify('You left "' + room.name + '"');
-  }
-
-  function removeFromRoom(uid) {
-    if (!room) return;
-    var u = users[uid];
-    if (!confirm('Remove "' + (u&&u.name||uid) + '" from this room?')) return;
-    var upd = Object.assign({}, room, {members: (room.members||[]).filter(function(id){return id!==uid;})});
-    var nr = Object.assign({}, rooms); nr[room.id] = upd;
-    Store.set('rooms', nr);
-    setRoom(upd);
-    notify((u&&u.name||'User') + ' removed');
-  }
-
-  function addToRoomByPhone(phone) {
-    if (!room || !phone) return;
-    var ph = phone.trim();
-    var found = Object.values(users).find(function(u){ return u.phone===ph; });
-    if (!found) return notify('No user found with that phone number', 'err');
-    if ((room.members||[]).includes(found.id)) return notify(found.name + ' is already in this room', 'err');
-    var upd = Object.assign({}, room, {members: (room.members||[]).concat([found.id])});
-    var nr = Object.assign({}, rooms); nr[room.id] = upd;
-    Store.set('rooms', nr);
-    setRoom(upd);
-    notify(found.name + ' added to room!');
-  }
-
-  function sendChatMessage(newMsg, onDone) {
-    if (!room) return;
-    var rid = room.id;
-    // 1. Read current messages from localStorage (source of truth)
-    var existing = [];
-    try { existing = JSON.parse(localStorage.getItem('wc26_chat_'+rid) || '[]'); } catch(e){}
-    if (!Array.isArray(existing)) existing = [];
-    var updated = existing.concat([newMsg]).slice(-200);
-    // 2. Save to localStorage immediately
-    try { localStorage.setItem('wc26_chat_'+rid, JSON.stringify(updated)); } catch(e){}
-    // 3. Update React state directly — no Store dependency
-    setChatMsgs(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
-    // 4. Save to GAS in background (for other users)
-    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'set',key:'wc26_chat_'+rid,value:updated})})
-      .catch(function(){});
-    if (onDone) onDone();
-  }
-
-  function saveAPIKey(key) {
-    localStorage.setItem('wc26_apikey', key);
-    setApiKey(key);
-    // restart sync with new key
-    fetchLiveScores(key, function(updates) {
-      var grpU={}, koU={};
-      Object.keys(updates).forEach(function(id){
-        if(KO_MS.some(function(m){return m.id===id;})) koU[id]=updates[id];
-        else grpU[id]=updates[id];
-      });
-      if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
-      if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));Store.set('koresults',n);return n;});
-    });
-    notify('API key saved — scores syncing!');
-  }
-
-  function doKOResult(km, h, a, hs, as) {
-    var upd = Object.assign({}, koResults);
-    upd[km.id] = {h: parseInt(hs)||0, a: parseInt(as)||0};
-    setKoResults(upd);
-    localStorage.setItem('wc26_kores', JSON.stringify(upd));
-    Store.set('koresults', upd);  // persist to GAS so all users see it
-    notify('KO result saved!');
-  }
-  function verifyAdmin(pass) {
-    if (!room || !pass) return false;
-    if (room.adminPass === pass.trim()) {
-      var na = Object.assign({}, adminAuth); na[room.id] = true;
-      setAdminAuth(na);
-      // Admin auth kept in memory only (no localStorage) — prevents cross-user leaks
-      return true;
-    }
-    return false;
-  }
+  var unreadChat = 0;  // new chat uses RoomChat component directly
   var dl = daysTill(WCS);
 
   function doExport() {
@@ -5289,6 +5200,13 @@ function getAchievements(uid, predsMap, resultsMap) {
 
     ${toast&&html`<div class=${'toast '+(toast.t==='err'?'ter':'tok')}>${toast.msg}</div>`}
 
+    ${liveMatchDetail&&html`<${LiveMatchModal}
+      match=${liveMatchDetail.m}
+      live=${liveScores[liveMatchDetail.m&&liveMatchDetail.m.id]||null}
+      result=${results[liveMatchDetail.m&&liveMatchDetail.m.id]||null}
+      pred=${user&&preds[user.id+'_'+(liveMatchDetail.m&&liveMatchDetail.m.id)]||null}
+      onClose=${function(){setLiveMatchDetail(null);}}
+      onPredict=${function(){setLiveMatchDetail(null);setModal({t:'pred',m:liveMatchDetail.m});}} />`}
     ${h2hUser&&html`<${UserPredictionsModal}
       user=${h2hUser}
       currentUser=${user}
@@ -5323,9 +5241,9 @@ function getAchievements(uid, predsMap, resultsMap) {
       var cached = null;
       try { cached = JSON.parse(localStorage.getItem('wc26_room_cache_'+r.id)||'null'); } catch(e) {}
       var useRoom = (cached&&cached.members&&cached.members.length>=(r.members||[]).length)?cached:r;
-      setRoom(useRoom); setTab('leaderboard'); setScr('room'); subscribeChatRoom(r.id);
+      setRoom(useRoom); setTab('leaderboard'); setScr('room'); 
     }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
-      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
+      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
           chatMsgs=${room&&chatMsgs[room.id]||[]}
@@ -5355,4 +5273,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-
+      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
