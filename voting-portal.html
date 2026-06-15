@@ -447,9 +447,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
     <!-- Voter login (default) -->
     <div id="login-voter-panel">
-      <p class="login-sub">Enter your Employee ID and Voter PIN</p>
+      <p class="login-sub">Enter your Staff ID and Voter PIN</p>
       <div class="login-form">
-        <label class="form-lbl">Employee ID</label>
+        <label class="form-lbl">Staff ID</label>
         <input class="form-inp" id="voter-empid-inp" type="text" placeholder="e.g. EMP001" autocomplete="off" style="text-transform:uppercase;letter-spacing:.05em;" onkeydown="if(event.key==='Enter')document.getElementById('voter-pin-inp').focus()">
         <label class="form-lbl" style="margin-top:12px;">Voter PIN</label>
         <input class="form-inp" id="voter-pin-inp" type="password" maxlength="10" placeholder="Enter your PIN" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
@@ -464,7 +464,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div id="login-admin-panel" style="display:none;">
       <p class="login-sub">Administrator sign in</p>
       <div class="login-form">
-        <label class="form-lbl">Employee ID</label>
+        <label class="form-lbl">Staff ID</label>
         <input class="form-inp" id="admin-empid-inp" type="text" placeholder="e.g. EMP001" autocomplete="off" style="text-transform:uppercase;letter-spacing:.05em;" onkeydown="if(event.key==='Enter')document.getElementById('admin-pw-inp').focus()">
         <label class="form-lbl" style="margin-top:12px;">Password</label>
         <input class="form-inp" id="admin-pw-inp" type="password" placeholder="Enter your password" autocomplete="off" onkeydown="if(event.key==='Enter')doAdminLogin()">
@@ -1548,7 +1548,7 @@ function showAdminLogin(){
 function doLogin(){
   const empId = (document.getElementById('voter-empid-inp')?.value||'').trim().toUpperCase();
   const pin   = (document.getElementById('voter-pin-inp')?.value||'').trim();
-  if(!empId||!pin){ setLoginErr('Please enter your Employee ID and PIN'); return; }
+  if(!empId||!pin){ setLoginErr('Please enter your Staff ID and PIN'); return; }
   // Sync pin-dots visual (kept for compatibility but not primary UI now)
   const voter = DATA.voters.find(v=>{
     // If voter has an empId set, require both empId + PIN
@@ -1557,7 +1557,7 @@ function doLogin(){
     // (allows login before empId is added to sheet)
     return v.pin===pin;
   });
-  if(!voter){ setLoginErr('Employee ID or PIN is incorrect.'); return; }
+  if(!voter){ setLoginErr('Staff ID or PIN is incorrect.'); return; }
   if(voter.hasVoted){ setLoginErr('You have already submitted your vote.'); return; }
   if(!CFG.votingOpen){ setLoginErr('Voting is currently closed.'); return; }
   currentUser={...voter,type:'voter'};
@@ -1572,14 +1572,14 @@ function doAdminLogin(){
   const empId = (document.getElementById('admin-empid-inp')?.value||'').trim().toUpperCase();
   const pw    = (document.getElementById('admin-pw-inp')?.value||'').trim();
   const errEl = document.getElementById('admin-login-err');
-  if(!empId||!pw){ errEl.textContent='Please enter your Employee ID and password'; return; }
+  if(!empId||!pw){ errEl.textContent='Please enter your Staff ID and password'; return; }
   // Match admin by empId (or PIN as fallback for existing accounts without empId)
   const admin = DATA.admins.find(a=>{
     if(a.empId) return a.empId.toUpperCase()===empId;
     // Fallback: no empId set yet — treat empId field as PIN
     return a.pin===empId;
   });
-  if(!admin){ errEl.textContent='Employee ID not recognised.'; return; }
+  if(!admin){ errEl.textContent='Staff ID not recognised.'; return; }
   // Password check
   if(!admin.password){
     // First login — no password set yet → force set-password screen
@@ -1972,6 +1972,7 @@ function renderAdminVoterList(){
         <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
         <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
       </div>
+      <button class="btn-sm gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
     </div>`).join('');
 }
 
@@ -2403,7 +2404,6 @@ function arDeptChanged(){
 }
 
 function renderAdminResults(){
-  // Populate dept filter
   const deptEl = document.getElementById('ar-fdept');
   if(deptEl && deptEl.options.length<=1)
     deptEl.innerHTML = `<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
@@ -2411,11 +2411,22 @@ function renderAdminResults(){
   const deptF = document.getElementById('ar-fdept')?.value||'';
   const unitF = document.getElementById('ar-funit')?.value||'';
 
+  // Only show nominees that have at least 1 vote — results page is for actual results
   const filterNoms = (noms) => noms
     .filter(n=>(!deptF||n.dept===deptF)&&(!unitF||n.unit===unitF))
     .map(n=>({...n, votes:getVotes(n.id,n.name)}))
+    .filter(n=>n.votes>0)
     .sort((a,b)=>b.votes-a.votes)
     .map((n,i,arr)=>({...n, _rank:i, _maxV:arr[0]?.votes||1}));
+
+  // If no votes at all, show empty state across all sections
+  if(!DATA.votes.length){
+    ['ar-by-category','ar-by-department','ar-by-unit'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.innerHTML='<div class="empty-state"><div class="empty-state-icon">📊</div>No votes have been cast yet.</div>';
+    });
+    return;
+  }
 
   // ─── SECTION 1: By Award Category ───────────────────────
   const catEl = document.getElementById('ar-by-category');
@@ -3011,9 +3022,67 @@ function renderVoterList(){
         <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
         <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
       </div>
+      <button class="btn-sm gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
       <button class="btn-sm" onclick="resetVoter('${v.pin}')">Reset</button>
       <button class="btn-sm red" onclick="removeVoter('${v.pin}')">✕</button>
     </div>`).join('');
+}
+
+function openEditVoterModal(pin){
+  const v=DATA.voters.find(x=>x.pin===pin);
+  if(!v){showToast('Voter not found','err');return;}
+  const dOpts=DATA.departments.map(d=>`<option value="${d.id}" ${d.id===v.dept?'selected':''}>${d.name}</option>`).join('');
+  openModal(`<div class="modal-title">Edit Voter — ${v.name}</div>
+    <div class="modal-field"><label class="modal-lbl">Staff ID</label>
+      <input class="modal-inp" id="ev-empid" value="${v.empId||''}" placeholder="e.g. EMP001" style="text-transform:uppercase;">
+    </div>
+    <div class="modal-field"><label class="modal-lbl">Full Name</label>
+      <input class="modal-inp" id="ev-name" value="${v.name}">
+    </div>
+    <div class="modal-field"><label class="modal-lbl">Department</label>
+      <select class="modal-sel" id="ev-dept" onchange="fillEditVoterUnits('${pin}')">${dOpts}</select>
+    </div>
+    <div class="modal-field"><label class="modal-lbl">Unit</label>
+      <select class="modal-sel" id="ev-unit"></select>
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Voting Eligibility</label>
+      <div style="display:flex;gap:16px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="ev-elig-2024" ${!v.excl2024?'checked':''} style="width:15px;height:15px;accent-color:var(--gold);"> 2024
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="ev-elig-2025" ${!v.excl2025?'checked':''} style="width:15px;height:15px;accent-color:var(--gold);"> 2025
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="saveEditVoter('${pin}')">Save Changes</button>
+    </div>`);
+  fillEditVoterUnits(pin, v.unit);
+}
+function fillEditVoterUnits(pin, preselect){
+  const deptId=document.getElementById('ev-dept')?.value;
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const sel=document.getElementById('ev-unit');
+  const voterUnit=preselect||(DATA.voters.find(v=>v.pin===pin)?.unit||'');
+  if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}" ${u.id===voterUnit?'selected':''}>${u.name}</option>`).join('');
+}
+async function saveEditVoter(pin){
+  const v=DATA.voters.find(x=>x.pin===pin);
+  if(!v){showToast('Voter not found','err');return;}
+  v.empId = (document.getElementById('ev-empid')?.value||'').trim().toUpperCase();
+  v.name  = document.getElementById('ev-name')?.value.trim()||v.name;
+  v.dept  = document.getElementById('ev-dept')?.value||v.dept;
+  v.unit  = document.getElementById('ev-unit')?.value||v.unit;
+  v.excl2024 = !(document.getElementById('ev-elig-2024')?.checked??true);
+  v.excl2025 = !(document.getElementById('ev-elig-2025')?.checked??true);
+  cacheData();
+  closeModal();
+  renderVoterList(); renderAdminVoterList();
+  await writeToSheets('updateVoter',{voter:v});
+  showToast(`${v.name} updated`,'ok');
 }
 
 // Generate a unique random 6-digit PIN not already in use
@@ -3072,6 +3141,7 @@ async function removeVoter(pin){
   if(!confirm(`Remove voter "${v.name}"?`))return;
   DATA.voters=DATA.voters.filter(x=>x.pin!==pin);
   DATA.votes=DATA.votes.filter(x=>x.pin!==pin);
+  cacheData();
   renderVoterList();renderStats('sa');
   await writeToSheets('removeVoter',{pin});
   showToast(`${v.name} removed`,'ok');
@@ -3151,6 +3221,7 @@ function renderNominees(){
           <div class="nom-list-meta">${getDeptName(nom.dept)} · ${getUnitName(nom.unit)}</div>
         </div>
         <div class="nom-list-votes">${votes}v</div>
+        <button class="btn-sm gold" onclick="openEditNomModal('${nom.id}')" style="padding:4px 9px;">✎</button>
         <button class="btn-sm red" onclick="removeNom('${nom.id}')" style="padding:4px 9px;">✕</button>
       </div>`;
     }).join('');
@@ -3180,8 +3251,9 @@ async function removeNom(id){
   if(!nom||!confirm(`Remove "${nom.name}"?`))return;
   DATA.nominees=DATA.nominees.filter(n=>n.id!==id);
   DATA.votes=DATA.votes.filter(v=>v.nomineeId!==id);
+  cacheData(); // Persist so removal survives page refresh
   renderNominees();
-  await writeToSheets('removeNominee',{id});
+  await writeToSheets('removeNominee',{id, name:nom.name});
   showToast(`${nom.name} removed`,'ok');
 }
 
@@ -3206,8 +3278,9 @@ function renderStaff(){
         <div class="staff-name">${s.name}</div>
         <div class="staff-dept">${getDeptName(s.dept)} · ${getUnitName(s.unit)}</div>
       </div>
-      <span style="font-size:11px;color:var(--gold);font-family:monospace;font-weight:600;padding:2px 8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:5px;flex-shrink:0;" title="Employee ID">${s.empId||s.id}</span>
+      <span style="font-size:11px;color:var(--gold);font-family:monospace;font-weight:600;padding:2px 8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:5px;flex-shrink:0;" title="Staff ID">${s.empId||s.id}</span>
       <button class="btn-sm green" onclick="nomStaffFor('${s.id}')" style="margin-left:auto;">+ Nominate</button>
+      <button class="btn-sm gold" onclick="openEditStaffModal('${s.id}')">✎</button>
       <button class="btn-sm red" onclick="removeStaff('${s.id}')">✕</button>
     </div>`).join('')+`</div>`;
 }
@@ -3237,7 +3310,7 @@ function openAddStaffModal(){
   const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
   openModal(`<div class="modal-title">Add Staff Member</div>
     <div class="modal-field">
-      <label class="modal-lbl">Employee ID</label>
+      <label class="modal-lbl">Staff ID</label>
       <input class="modal-inp" id="ms-empid" placeholder="e.g. EMP001" oninput="checkStaffDup()" style="text-transform:uppercase;letter-spacing:0.05em;">
       <div id="ms-dup-warn" style="font-size:11px;margin-top:4px;display:none;"></div>
     </div>
@@ -3261,7 +3334,7 @@ function checkStaffDup(){
   const exists=DATA.staff.find(s=>s.id===empId||s.empId===empId);
   if(exists){
     warn.style.color='var(--red)';
-    warn.textContent=`⛔ Employee ID "${empId}" is already used by ${exists.name}`;
+    warn.textContent=`⛔ Staff ID "${empId}" is already used by ${exists.name}`;
     warn.style.display='block';
   } else {
     warn.style.display='none';
@@ -3281,7 +3354,7 @@ async function addStaff(){
   if(!empId){ showToast('Employee ID required','err'); return; }
   if(!name)  { showToast('Name required','err'); return; }
   if(DATA.staff.find(s=>s.empId===empId||s.id===empId)){
-    showToast(`Employee ID "${empId}" already exists`,'err'); return;
+    showToast(`Staff ID "${empId}" already exists`,'err'); return;
   }
   const s={id:empId, empId, name, dept, unit};
   DATA.staff.push(s);
@@ -3290,6 +3363,136 @@ async function addStaff(){
   await writeToSheets('addStaff',{staff:s});
   showToast(`${name} (${empId}) added to staff`,'ok');
 }
+function openEditStaffModal(id){
+  const s=DATA.staff.find(x=>x.id===id);
+  if(!s){showToast('Staff not found','err');return;}
+  const dOpts=DATA.departments.map(d=>`<option value="${d.id}" ${d.id===s.dept?'selected':''}>${d.name}</option>`).join('');
+  openModal(`<div class="modal-title">Edit Staff — ${s.name}</div>
+    <div class="modal-field"><label class="modal-lbl">Staff ID</label>
+      <input class="modal-inp" id="es-empid" value="${s.empId||''}" style="text-transform:uppercase;">
+    </div>
+    <div class="modal-field"><label class="modal-lbl">Full Name</label>
+      <input class="modal-inp" id="es-name" value="${s.name}">
+    </div>
+    <div class="modal-field"><label class="modal-lbl">Department</label>
+      <select class="modal-sel" id="es-dept" onchange="fillEditStaffUnits('${id}')">${dOpts}</select>
+    </div>
+    <div class="modal-field"><label class="modal-lbl">Unit</label>
+      <select class="modal-sel" id="es-unit"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="saveEditStaff('${id}')">Save Changes</button>
+    </div>`);
+  fillEditStaffUnits(id, s.unit);
+}
+function fillEditStaffUnits(id, preselect){
+  const deptId=document.getElementById('es-dept')?.value;
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const sel=document.getElementById('es-unit');
+  const curUnit=preselect||(DATA.staff.find(s=>s.id===id)?.unit||'');
+  if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}" ${u.id===curUnit?'selected':''}>${u.name}</option>`).join('');
+}
+async function saveEditStaff(id){
+  const s=DATA.staff.find(x=>x.id===id);
+  if(!s){showToast('Staff not found','err');return;}
+  s.name  = document.getElementById('es-name')?.value.trim()||s.name;
+  s.empId = (document.getElementById('es-empid')?.value||'').trim().toUpperCase()||s.empId;
+  s.dept  = document.getElementById('es-dept')?.value||s.dept;
+  s.unit  = document.getElementById('es-unit')?.value||s.unit;
+  cacheData();
+  closeModal(); renderStaff();
+  await writeToSheets('updateStaff',{staff:s});
+  showToast(`${s.name} updated`,'ok');
+}
+
+function openEditNomModal(id){
+  const nom=DATA.nominees.find(n=>n.id===id);
+  if(!nom){showToast('Nominee not found','err');return;}
+  const cOpts=buildCatOptGroups(nom.category);
+  // Build staff opts
+  const sortedStaff=[...DATA.staff].sort((a,b)=>a.name.localeCompare(b.name));
+  const staffOpts=sortedStaff.map(s=>`<option value="${s.id}" ${s.name===nom.name?'selected':''}>[${s.empId||s.id}] ${s.name} — ${getDeptName(s.dept)} · ${getUnitName(s.unit)}</option>`).join('');
+  openModal(`<div class="modal-title">Edit Nominee — ${nom.name}</div>
+    ${DATA.staff.length?`
+    <div class="modal-field"><label class="modal-lbl">Staff Member</label>
+      <select class="modal-sel" id="en-staff">
+        <option value="">— keep current (${nom.name}) —</option>
+        ${staffOpts}
+      </select>
+    </div>`:''}
+    <div class="modal-field"><label class="modal-lbl">Award / Category</label>
+      <select class="modal-sel" id="en-cat">${cOpts}</select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="saveEditNom('${id}')">Save Changes</button>
+    </div>`);
+}
+async function saveEditNom(id){
+  const nom=DATA.nominees.find(n=>n.id===id);
+  if(!nom){showToast('Nominee not found','err');return;}
+  const staffSel=document.getElementById('en-staff');
+  const newCatId=document.getElementById('en-cat')?.value||nom.category;
+  if(staffSel?.value){
+    const s=DATA.staff.find(x=>x.id===staffSel.value);
+    if(s){ nom.name=s.name; nom.dept=s.dept; nom.unit=s.unit; }
+  }
+  nom.category=newCatId;
+  cacheData();
+  closeModal(); renderNominees();
+  await writeToSheets('updateNominee',{nominee:nom});
+  showToast(`${nom.name} updated`,'ok');
+}
+
+function openEditCatModal(id){
+  const cat=DATA.categories.find(c=>c.id===id);
+  if(!cat){showToast('Category not found','err');return;}
+  const dOpts=DATA.departments.map(d=>`<option value="${d.id}" ${d.id===cat.linkedDept?'selected':''}>${d.name}</option>`).join('');
+  const yrOpts=YEARS.map(y=>`<option value="${y}" ${y===cat.year?'selected':''}>${y}</option>`).join('');
+  const scopeOpts=[
+    {v:'global',l:'🌐 Company-wide'},
+    {v:'dept',l:'🏢 Department'},
+    {v:'unit',l:'📍 Unit'}
+  ].map(o=>`<option value="${o.v}" ${o.v===cat.scope?'selected':''}>${o.l}</option>`).join('');
+  openModal(`<div class="modal-title">Edit Category — ${cat.name}</div>
+    <div class="modal-field"><label class="modal-lbl">Category Name</label>
+      <input class="modal-inp" id="ec-name" value="${cat.name}">
+    </div>
+    <div class="modal-field"><label class="modal-lbl">Award Year</label>
+      <select class="modal-sel" id="ec-year">${yrOpts}</select>
+    </div>
+    <div class="modal-field"><label class="modal-lbl">Visibility</label>
+      <select class="modal-sel" id="ec-scope" onchange="editCatScopeChanged()">${scopeOpts}</select>
+    </div>
+    <div id="ec-dept-wrap" style="display:${cat.scope==='dept'?'block':'none'};">
+      <div class="modal-field"><label class="modal-lbl">Select Department</label>
+        <select class="modal-sel" id="ec-linked-dept"><option value="">— choose —</option>${dOpts}</select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="saveEditCat('${id}')">Save Changes</button>
+    </div>`);
+}
+function editCatScopeChanged(){
+  const scope=document.getElementById('ec-scope')?.value;
+  const dw=document.getElementById('ec-dept-wrap');
+  if(dw) dw.style.display=(scope==='dept')?'block':'none';
+}
+async function saveEditCat(id){
+  const cat=DATA.categories.find(c=>c.id===id);
+  if(!cat){showToast('Category not found','err');return;}
+  cat.name=document.getElementById('ec-name')?.value.trim()||cat.name;
+  cat.year=document.getElementById('ec-year')?.value||cat.year;
+  cat.scope=document.getElementById('ec-scope')?.value||cat.scope;
+  cat.linkedDept=document.getElementById('ec-linked-dept')?.value||'';
+  cacheData();
+  closeModal(); renderCatList();
+  await writeToSheets('updateCategory',{category:cat});
+  showToast(`"${cat.name}" updated`,'ok');
+}
+
 async function removeStaff(id){
   const s=DATA.staff.find(x=>x.id===id);
   if(!s||!confirm(`Remove ${s.name} from staff list?`)) return;
@@ -3360,6 +3563,7 @@ function renderCatList(){
           <span style="font-size:11px;color:var(--text3);">${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</span>
         </div>
       </div>
+      <button class="btn-sm gold" onclick="openEditCatModal('${cat.id}')">✎</button>
       <button class="btn-sm red" onclick="removeCat('${cat.id}')">✕</button>
     </div>`;
   }).join('') + '</div>';
@@ -3370,6 +3574,7 @@ async function removeCat(id){
   DATA.categories=DATA.categories.filter(c=>c.id!==id);
   DATA.nominees=DATA.nominees.filter(n=>n.category!==id);
   DATA.votes=DATA.votes.filter(v=>v.category!==id);
+  cacheData();
   renderCatList();renderNominees();
   await writeToSheets('removeCategory',{id});
   showToast(`Category removed`,'ok');
@@ -3550,7 +3755,7 @@ function openAddVoterModal(){
   const autoPin=generatePin();
   openModal(`<div class="modal-title">Add Voter</div>
     <div class="modal-field">
-      <label class="modal-lbl">Employee ID <span style="color:var(--text3);font-weight:400;">(optional)</span></label>
+      <label class="modal-lbl">Staff ID <span style="color:var(--text3);font-weight:400;">(optional)</span></label>
       <input class="modal-inp" id="mv-empid" placeholder="e.g. EMP001" style="text-transform:uppercase;">
     </div>
     <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mv-name" placeholder="Staff full name"></div>
@@ -3710,7 +3915,7 @@ function onNomStaffChange(){
   const un=document.getElementById('mn-card-unit');
   if(nm) nm.textContent=s.name;
   if(dp) dp.textContent='🏢 '+getDeptName(s.dept)+' · 📍 '+getUnitName(s.unit);
-  if(un) un.textContent='🪪 Employee ID: '+(s.empId||s.id);
+  if(un) un.textContent='🪪 Staff ID: '+(s.empId||s.id);
   card.style.display='block';
   checkNomDuplicate();
 }
@@ -3965,7 +4170,85 @@ function handleRequest(raw) {
       getOrCreate(ss, 'Nominees').appendRow([n.id, n.name, n.dept, n.unit, n.category, n.scope]);
     }
     else if (action === 'removeNominee') {
-      deleteRowByValue(ss.getSheetByName('Nominees'), data.id, 0);
+      // Try by ID (col A) first, then by name (col B) as fallback for sheet-entered rows
+      var nomSheet = ss.getSheetByName('Nominees');
+      if(nomSheet && nomSheet.getLastRow() > 1){
+        var nomRows = nomSheet.getDataRange().getValues();
+        for(var i = nomRows.length - 1; i >= 1; i--){
+          if(String(nomRows[i][0]).trim() === String(data.id).trim() ||
+             (data.name && String(nomRows[i][1]).trim().toLowerCase() === String(data.name).trim().toLowerCase())){
+            nomSheet.deleteRow(i + 1); break;
+          }
+        }
+      }
+    }
+    else if (action === 'updateVoter') {
+      var v = data.voter;
+      var vs = ss.getSheetByName('Voters');
+      if(vs && vs.getLastRow() > 1){
+        var vrows = vs.getDataRange().getValues();
+        for(var i = 1; i < vrows.length; i++){
+          if(String(vrows[i][0]).trim() === String(v.pin).trim()){
+            vs.getRange(i+1,2).setValue(v.name||'');
+            vs.getRange(i+1,3).setValue(v.dept||'');
+            vs.getRange(i+1,4).setValue(v.unit||'');
+            vs.getRange(i+1,6).setValue(v.empId||'');
+            vs.getRange(i+1,7).setValue(v.excl2024?'TRUE':'');
+            vs.getRange(i+1,8).setValue(v.excl2025?'TRUE':'');
+            break;
+          }
+        }
+      }
+    }
+    else if (action === 'updateStaff') {
+      var s = data.staff;
+      var ss2 = ss.getSheetByName('Staff');
+      if(ss2 && ss2.getLastRow() > 1){
+        var srows = ss2.getDataRange().getValues();
+        for(var i = 1; i < srows.length; i++){
+          if(String(srows[i][0]).trim() === String(s.id).trim()){
+            ss2.getRange(i+1,1).setValue(s.empId||s.id);
+            ss2.getRange(i+1,2).setValue(s.name||'');
+            ss2.getRange(i+1,3).setValue(s.dept||'');
+            ss2.getRange(i+1,4).setValue(s.unit||'');
+            break;
+          }
+        }
+      }
+    }
+    else if (action === 'updateNominee') {
+      var n = data.nominee;
+      var ns = ss.getSheetByName('Nominees');
+      if(ns && ns.getLastRow() > 1){
+        var nrows = ns.getDataRange().getValues();
+        for(var i = 1; i < nrows.length; i++){
+          if(String(nrows[i][0]).trim() === String(n.id).trim()||
+             String(nrows[i][1]).trim().toLowerCase() === String(n.name||'').trim().toLowerCase()){
+            ns.getRange(i+1,2).setValue(n.name||'');
+            ns.getRange(i+1,3).setValue(n.dept||'');
+            ns.getRange(i+1,4).setValue(n.unit||'');
+            ns.getRange(i+1,5).setValue(n.category||'');
+            break;
+          }
+        }
+      }
+    }
+    else if (action === 'updateCategory') {
+      var c = data.category;
+      var cs = ss.getSheetByName('Categories');
+      if(cs && cs.getLastRow() > 1){
+        var crows = cs.getDataRange().getValues();
+        for(var i = 1; i < crows.length; i++){
+          if(String(crows[i][0]).trim() === String(c.id).trim()){
+            cs.getRange(i+1,2).setValue(c.name||'');
+            cs.getRange(i+1,3).setValue(c.scope||'');
+            cs.getRange(i+1,4).setValue(c.linkedDept||'');
+            cs.getRange(i+1,5).setValue(c.linkedUnit||'');
+            cs.getRange(i+1,6).setValue(c.year||'');
+            break;
+          }
+        }
+      }
     }
 
     // ── CATEGORIES ──
