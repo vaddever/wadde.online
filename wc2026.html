@@ -1559,6 +1559,8 @@ function SuperAdminApp() {
 
   // Data
   var uS  = useState({}); var saUsers = uS[0]; var setSaUsers = uS[1];
+  var plS = useState([]); var predLog=plS[0]; var setPredLog=plS[1];
+  var plS = useState([]); var predLog  = plS[0]; var setPredLog  = plS[1];
   var rS  = useState({}); var saRooms = rS[0]; var setSaRooms = rS[1];
   var prS = useState({}); var saPreds = prS[0]; var setSaPreds = prS[1];
   var reS = useState({}); var saResults = reS[0]; var setSaResults = reS[1];
@@ -1608,7 +1610,7 @@ function SuperAdminApp() {
 
   function loadAll() {
     setLoading(true);
-    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns'];
+    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log'];
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults,
@@ -1739,6 +1741,7 @@ function SuperAdminApp() {
     {id:'rooms',     label:'🏠 Rooms ('+rList.length+')'},
     {id:'preds',     label:'⚽ Predictions ('+prList.length+')'},
     {id:'results',   label:'📊 Results ('+reList.length+')'},
+    {id:'audit',     label:'📋 Audit Log'},
     {id:'anns',     label:'📢 Announcements'},
     {id:'recovery',  label:'🔧 Recovery'},
     {id:'settings',  label:'⚙️ Settings'},
@@ -2556,6 +2559,82 @@ function SuperAdminApp() {
       </div>`}
 
       <!-- ── Improved Settings tab ─────────────────────────────────── -->
+      ${saTab==='audit'&&html`<div>
+
+        <div style=${{marginBottom:14,padding:'12px 14px',background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.3)',borderRadius:'var(--rs)',fontSize:12,color:'var(--mu)'}}>
+          <div style=${{fontWeight:700,color:'#f59e0b',marginBottom:4,fontSize:13}}>⚠️ Schedule Update Notice — Jun 14–15</div>
+          <div>Match IDs m11–m37 were reassigned when the full 72-match schedule was added. Predictions made <strong style=${{color:'var(--tx)'}}>before this update</strong> on those IDs may now show against the wrong fixtures. Entries marked <span style=${{color:'#f59e0b',fontWeight:700}}>⚠️ Suspect ID</span> are in this range. Review and delete if incorrect.</div>
+        </div>
+
+        ${(function(){
+          var log = predLog.slice().reverse();
+          var editsOnly = log.filter(function(e){return e.action==='edit';});
+          var afterKoAll = log.filter(function(e){
+            var m=MS.find(function(x){return x.id===e.matchId;})||KO_MS.find(function(x){return x.id===e.matchId;});
+            return m&&e.ts&&new Date(e.ts)>new Date(m.utc);
+          });
+          var suspectAll = log.filter(function(e){var n=parseInt((e.matchId||'').replace('m',''));return n>=11&&n<=37;});
+
+          return html`<div>
+            <div style=${{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8,marginBottom:14}}>
+              ${[[log.length,'Total','#60a5fa'],[editsOnly.length,'Edits','#f59e0b'],[afterKoAll.length,'Post-KO ⚠️','#ef4444'],[suspectAll.length,'Suspect IDs','#a78bfa']].map(function(s,i){
+                return html`<div key=${i} style=${{textAlign:'center',background:'var(--bg3)',borderRadius:'var(--rs)',padding:'8px 6px',border:'1px solid var(--bdr)'}}>
+                  <div style=${{fontSize:20,fontWeight:800,color:s[2],fontFamily:'Barlow Condensed'}}>${s[0]}</div>
+                  <div style=${{fontSize:9,color:'var(--dm)',textTransform:'uppercase',letterSpacing:.5,marginTop:2}}>${s[1]}</div>
+                </div>`;
+              })}
+            </div>
+            ${log.length===0&&html`<div style=${{textAlign:'center',padding:'40px 20px',color:'var(--dm)'}}>
+              <div style=${{fontSize:32,marginBottom:8}}>📋</div>
+              <div style=${{fontSize:14,fontWeight:600}}>No log entries yet</div>
+              <div style=${{fontSize:12,marginTop:4}}>Prediction creates & edits will appear here going forward.</div>
+            </div>`}
+            <div style=${{display:'flex',flexDirection:'column',gap:6}}>
+              ${log.slice(0,200).map(function(entry,i){
+                var m=MS.find(function(x){return x.id===entry.matchId;})||KO_MS.find(function(x){return x.id===entry.matchId;});
+                var afterKO=m&&entry.ts&&new Date(entry.ts)>new Date(m.utc);
+                var nid=parseInt((entry.matchId||'').replace('m',''));
+                var suspect=nid>=11&&nid<=37;
+                var mvtTs=entry.ts?new Date(entry.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'}):'?';
+                return html`<div key=${i} style=${{
+                  padding:'9px 12px',borderRadius:'var(--rs)',fontSize:12,
+                  border:'1px solid '+(afterKO?'rgba(239,68,68,.3)':suspect?'rgba(245,158,11,.3)':'var(--bdr)'),
+                  background:afterKO?'rgba(239,68,68,.05)':suspect?'rgba(245,158,11,.04)':'var(--bg3)'
+                }}>
+                  <div style=${{display:'flex',justifyContent:'space-between',gap:8}}>
+                    <div style=${{flex:1,minWidth:0}}>
+                      <div style=${{display:'flex',gap:5,flexWrap:'wrap',marginBottom:3,alignItems:'center'}}>
+                        <span style=${{fontWeight:700}}>${entry.name||'?'}</span>
+                        <span style=${{fontSize:10,padding:'1px 7px',borderRadius:8,fontWeight:600,
+                          background:entry.action==='edit'?'rgba(245,158,11,.2)':'rgba(34,197,94,.15)',
+                          color:entry.action==='edit'?'#f59e0b':'#22c55e'}}>
+                          ${entry.action==='edit'?'✎ EDITED':'✚ NEW'}
+                        </span>
+                        ${afterKO&&html`<span style=${{fontSize:10,padding:'1px 7px',borderRadius:8,background:'rgba(239,68,68,.15)',color:'#f87171',fontWeight:700}}>⚠️ After kickoff</span>`}
+                        ${suspect&&html`<span style=${{fontSize:10,padding:'1px 7px',borderRadius:8,background:'rgba(245,158,11,.1)',color:'#f59e0b'}}>⚠️ Suspect ID</span>`}
+                      </div>
+                      <div style=${{color:'var(--dm)',marginBottom:2}}>
+                        <span style=${{fontFamily:'monospace',fontSize:11}}>${entry.matchId}</span>
+                        · <span style=${{color:'var(--tx)'}}>${entry.matchLabel||m?(m.h+' vs '+m.a):'Unknown'}</span>
+                      </div>
+                      <div style=${{display:'flex',alignItems:'center',gap:8}}>
+                        ${entry.action==='edit'&&entry.oldH!==null&&entry.oldH!==undefined&&html`
+                          <span style=${{fontSize:11,color:'var(--dm)',textDecoration:'line-through'}}>${entry.oldH}–${entry.oldA}</span>
+                          <span style=${{color:'var(--dm)'}}>→</span>`}
+                        <span style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:800,color:'var(--tx)'}}>${entry.newH}–${entry.newA}</span>
+                      </div>
+                    </div>
+                    <div style=${{fontSize:10,color:'var(--dm)',textAlign:'right',flexShrink:0}}>
+                      ${mvtTs}<br/>MVT
+                    </div>
+                  </div>
+                </div>`;
+              })}
+            </div>
+          </div>`;
+        })()}
+      </div>`}
+
       ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16,maxWidth:480}}>
 
         <!-- Match Kickoff Time Editor -->
@@ -4831,7 +4910,36 @@ function App() {
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
-    Store.set('preds/' + user.id + '_' + mId, {h:h, a:a, ts:new Date().toISOString()});
+    var key = user.id + '_' + mId;
+    var oldPred = preds[key];
+    var newPred = {h:h, a:a, ts:new Date().toISOString()};
+    Store.set('preds/' + key, newPred);
+    // Audit log entry
+    var m = MS.find(function(x){return x.id===mId;}) || KO_MS.find(function(x){return x.id===mId;});
+    var logEntry = {
+      ts: new Date().toISOString(),
+      uid: user.id,
+      name: user.name||'',
+      matchId: mId,
+      matchLabel: m?(m.h+' vs '+m.a):mId,
+      action: oldPred ? 'edit' : 'new',
+      old: oldPred ? {h:oldPred.h, a:oldPred.a} : null,
+      'new': {h:h, a:a}
+    };
+    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'appendLog', key:'wc26_pred_log', entry:logEntry})})
+    .catch(function(){
+      // Fallback: read-merge-write
+      fetch(GS_URL+'?action=get&key=wc26_pred_log&_='+Date.now(),{redirect:'follow'})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var log = Array.isArray(d&&d.value) ? d.value : [];
+        log.push(logEntry);
+        if (log.length > 500) log = log.slice(-500);
+        fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({action:'set',key:'wc26_pred_log',value:log})}).catch(function(){});
+      }).catch(function(){});
+    });
     setModal(null); notify('Prediction saved! ⚽');
   }
   function doPickW(team) {
@@ -5247,4 +5355,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
