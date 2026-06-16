@@ -4966,35 +4966,31 @@ function App() {
   }
   function doPredict(mId, h, a) {
     var key = user.id + '_' + mId;
-    var oldPred = preds[key];
+    var oldPred = preds[key] || null;
     var newPred = {h:h, a:a, ts:new Date().toISOString()};
-    Store.set('preds/' + key, newPred);
-    // Audit log entry
+    // Update local state IMMEDIATELY so UI reflects the save
+    var upd = Object.assign({}, preds);
+    upd[key] = newPred;
+    setPreds(upd);
+    // Write FULL preds object to GAS (nested path doesn't work reliably)
+    Store.set('preds', upd);
+    // Audit log (fire-and-forget)
     var m = MS.find(function(x){return x.id===mId;}) || KO_MS.find(function(x){return x.id===mId;});
     var logEntry = {
-      ts: new Date().toISOString(),
-      uid: user.id,
-      name: user.name||'',
-      matchId: mId,
-      matchLabel: m?(m.h+' vs '+m.a):mId,
-      action: oldPred ? 'edit' : 'new',
-      old: oldPred ? {h:oldPred.h, a:oldPred.a} : null,
-      'new': {h:h, a:a}
+      ts: newPred.ts, uid: user.id, name: user.name||'',
+      matchId: mId, matchLabel: m?(m.h+' vs '+m.a):mId,
+      action: oldPred?'edit':'new',
+      oldH: oldPred?oldPred.h:null, oldA: oldPred?oldPred.a:null,
+      newH: h, newA: a
     };
-    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({action:'appendLog', key:'wc26_pred_log', entry:logEntry})})
-    .catch(function(){
-      // Fallback: read-merge-write
-      fetch(GS_URL+'?action=get&key=wc26_pred_log&_='+Date.now(),{redirect:'follow'})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        var log = Array.isArray(d&&d.value) ? d.value : [];
-        log.push(logEntry);
-        if (log.length > 500) log = log.slice(-500);
-        fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({action:'set',key:'wc26_pred_log',value:log})}).catch(function(){});
-      }).catch(function(){});
-    });
+    fetch(GS_URL+'?action=get&key=wc26_pred_log&_='+Date.now(),{redirect:'follow'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var log=Array.isArray(d&&d.value)?d.value:[];
+      log.push(logEntry); if(log.length>500) log=log.slice(-500);
+      fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'set',key:'wc26_pred_log',value:log})}).catch(function(){});
+    }).catch(function(){});
     setModal(null); notify('Prediction saved! ⚽');
   }
   function doPickW(team) {
