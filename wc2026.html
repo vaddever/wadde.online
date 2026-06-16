@@ -4657,6 +4657,37 @@ var _prevResults = {};  // previous results snapshot — for points-earned toast
 // Module-level subscription handles (survive re-renders)
 var _annUnsub = null;
 
+// Load each room member's predictions from their per-user key
+function loadMemberPreds(memberIds, setPredsCallback) {
+  if (!memberIds || !memberIds.length) return;
+  memberIds.forEach(function(uid) {
+    var userKey = 'wc26_preds_' + uid;
+    if (_cache[userKey]) {
+      // Already cached — merge into global preds
+      var cached = _cache[userKey];
+      setPredsCallback(function(prev) {
+        var upd = Object.assign({}, prev);
+        Object.keys(cached).forEach(function(mId){ upd[uid+'_'+mId] = cached[mId]; });
+        return upd;
+      });
+    }
+    // Fetch from GAS
+    fetch(GS_URL+'?action=get&key='+encodeURIComponent(userKey)+'&_='+Date.now(),{redirect:'follow'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok && d.value && typeof d.value === 'object') {
+        _cache[userKey] = d.value;
+        setPredsCallback(function(prev) {
+          var upd = Object.assign({}, prev);
+          Object.keys(d.value).forEach(function(mId){ upd[uid+'_'+mId] = d.value[mId]; });
+          return upd;
+        });
+      }
+    })
+    .catch(function(){});
+  });
+}
+
 function enterRoom(roomId) {
   if (_annUnsub) { _annUnsub(); _annUnsub = null; }
   try {
@@ -4971,39 +5002,45 @@ function App() {
     }
     try { localStorage.setItem('wc26_room_cache_'+upd.id, JSON.stringify(upd)); } catch(e) {}
     setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); enterRoom(id);
+    loadMemberPreds(f.members||[], setPreds);
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
     var key = user.id + '_' + mId;
     var newPred = {h: Number(h), a: Number(a), ts: new Date().toISOString()};
+    var userKey = 'wc26_preds_' + user.id; // per-user key — never hits 50K limit
 
-    // Build on cache (same source Store.listen uses)
-    var upd = Object.assign({}, _cache['wc26_preds'] || preds || {});
+    // Extract this user's existing preds from global state
+    var myPreds = Object.assign({}, _cache[userKey] || {});
+    if (!Object.keys(myPreds).length) {
+      Object.keys(preds).forEach(function(k) {
+        if (k.indexOf(user.id + '_') === 0)
+          myPreds[k.slice(user.id.length + 1)] = preds[k];
+      });
+    }
+    myPreds[mId] = newPred;
+
+    // Update global preds state immediately for UI
+    var upd = Object.assign({}, preds);
     upd[key] = newPred;
-
-    // Update state + cache immediately
     setPreds(upd);
-    _cache['wc26_preds'] = upd;
+    _cache[userKey] = myPreds;
+    _lastWrite[userKey] = Date.now() + 300000;
 
-    // Write directly to GAS with full logging
-    _lastWrite['wc26_preds'] = Date.now() + 300000;
-    fetch(GS_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({action:'set', key:'wc26_preds', value:upd})
+    // Write ONLY this user's preds — max ~72 matches × 80 chars = ~6KB
+    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'set', key:userKey, value:myPreds})
     })
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if(d && d.ok) {
-        console.log('[Pred] Saved to GAS ✓', key, upd[key]);
-        _lastWrite['wc26_preds'] = Date.now();
+      if (d && d.ok) {
+        _lastWrite[userKey] = Date.now();
+        console.log('[Pred] Saved ✓', mId, Number(h)+'-'+Number(a));
       } else {
-        console.error('[Pred] GAS returned error:', JSON.stringify(d));
+        console.error('[Pred] GAS error:', JSON.stringify(d));
       }
     })
-    .catch(function(e){
-      console.error('[Pred] Network error:', e.message);
-    });
+    .catch(function(e){ console.error('[Pred] Network error:', e.message); });
 
     setModal(null);
     notify('Prediction saved! ⚽');
@@ -5330,7 +5367,8 @@ function getAchievements(uid, predsMap, resultsMap) {
       var cached = null;
       try { cached = JSON.parse(localStorage.getItem('wc26_room_cache_'+r.id)||'null'); } catch(e) {}
       var useRoom = (cached&&cached.members&&cached.members.length>=(r.members||[]).length)?cached:r;
-      setRoom(useRoom); setTab('leaderboard'); setScr('room'); enterRoom(useRoom.id); 
+      setRoom(useRoom); setTab('leaderboard'); setScr('room'); enterRoom(useRoom.id);
+      loadMemberPreds(useRoom.members||[], setPreds); 
     }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
@@ -5351,4 +5389,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-All rights reserved by: Mohamed Waheed (7987999)
+      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
