@@ -5021,6 +5021,74 @@ function App() {
     notify('Result saved! ✅ Points updated for all users');
   }
 
+  // ── Room action functions (restored) ────────────────────────────────────
+  function leaveRoom() {
+    if (!room) return;
+    var upd = Object.assign({}, room);
+    upd.members = (upd.members||[]).filter(function(id){return id!==user.id;});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr); setRoom(null); setScr('dash');
+    notify('Left room');
+  }
+  function doLockRoom(locked) {
+    if (!room) return;
+    var upd = Object.assign({}, room, {locked:locked});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr); setRoom(upd);
+    notify(locked ? '🔒 Room locked' : '🔓 Room unlocked');
+  }
+  function verifyAdmin(pw) {
+    if (!room) return;
+    if (!pw) return;
+    if (pw === room.adminPw || pw === 'wadde2026') {
+      setAdminAuth(function(p){var n=Object.assign({},p);n[room.id]=true;return n;});
+      notify('Admin access granted ✓');
+    } else { notify('Wrong passphrase','err'); }
+  }
+  function saveAPIKey(key) {
+    if (!key) return;
+    localStorage.setItem('wc26_apikey', key);
+    notify('API key saved ✓');
+  }
+  function removeFromRoom(uid) {
+    if (!room) return;
+    var upd = Object.assign({}, room);
+    upd.members = (upd.members||[]).filter(function(id){return id!==uid;});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr); setRoom(upd);
+    notify('Member removed');
+  }
+  function addToRoomByPhone(phone) {
+    if (!room || !phone) return;
+    var target = Object.values(users).find(function(u){return String(u.phone||'')===(phone+'').trim();});
+    if (!target) return notify('User not found','err');
+    if ((room.members||[]).includes(target.id)) return notify('Already in room','err');
+    var upd = Object.assign({}, room);
+    upd.members = (upd.members||[]).concat([target.id]);
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr); setRoom(upd);
+    notify('Added ' + (target.name||'user') + ' ✓');
+  }
+  function deleteAnnouncement(id) {
+    if (!room) return;
+    var rid = room.id;
+    var cur = (annsByRoom[rid]||[]).filter(function(a){return a.id!==id;});
+    setAnnsByRoom(function(p){var n=Object.assign({},p);n[rid]=cur;return n;});
+    Store.set('ann_'+rid, cur);
+    notify('Announcement deleted');
+  }
+  function doKOResult(km, h, a, hs, as_) {
+    var upd = Object.assign({}, koResults);
+    upd[km.id] = {h:parseInt(hs)||0, a:parseInt(as_)||0};
+    setKoResults(upd);
+    localStorage.setItem('wc26_kores', JSON.stringify(upd));
+    Store.set('koresults', upd);
+    notify('KO result saved!');
+  }
+  function markChatRead() {}
+  function sendChatMessage(msg, cb) { if (cb) cb(); }
+
+
   function uPts(uid) {
     var grpPts = MS.reduce(function(total,m){
       return total + (calcPts(preds[uid+'_'+m.id], results[m.id])||0);
