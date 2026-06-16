@@ -745,6 +745,7 @@ var WC_PLAYERS=[
 // predictions don't overwrite the whole predictions object.
 var _cache = {};
 var _listeners = {};
+var _lastWrite = {};  // tracks when each key was last written locally
 
 // Team primary colors (for avatars)
 var TC = {
@@ -1083,6 +1084,7 @@ var Store = {
     if (parts.length === 1) {
       // Simple set
       _cache[rootKey] = val;
+      _lastWrite[rootKey] = Date.now();   // record when we wrote
       (_listeners[rootKey] || []).forEach(function(cb) { cb(val || {}); });
       return self._write(rootKey, val);
     } else {
@@ -1116,7 +1118,14 @@ var Store = {
 
     function load() {
       self._read(key).then(function(v) {
-        if (v !== null) _cache[key] = v;
+        if (v !== null) {
+          // Don't overwrite cache with GAS data if we wrote locally in the last 8s
+          // (GAS write may not have been processed yet)
+          var writtenRecently = _lastWrite[key] && (Date.now() - _lastWrite[key] < 8000);
+          if (!writtenRecently) {
+            _cache[key] = v;
+          }
+        }
         cb(_cache[key] || {});
       }).catch(function() { cb(_cache[key] || {}); });
     }
