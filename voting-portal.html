@@ -939,14 +939,15 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div>
               <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);display:block;margin-bottom:5px;">Voting Opens</label>
-              <input type="datetime-local" id="vp-start" class="gs-inp" style="width:100%;" onchange="saveVotingPeriod()">
+              <input type="datetime-local" id="vp-start" class="gs-inp" style="width:100%;" oninput="updateVotingPeriodPreview()">
             </div>
             <div>
               <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);display:block;margin-bottom:5px;">Voting Closes</label>
-              <input type="datetime-local" id="vp-end" class="gs-inp" style="width:100%;" onchange="saveVotingPeriod()">
+              <input type="datetime-local" id="vp-end" class="gs-inp" style="width:100%;" oninput="updateVotingPeriodPreview()">
             </div>
           </div>
           <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+            <button class="btn-sm green" onclick="saveVotingPeriod()">💾 Save schedule</button>
             <button class="btn-sm red" onclick="clearVotingPeriod()">✕ Clear schedule</button>
           </div>
           <div id="vp-preview" style="margin-top:10px;font-size:12px;color:var(--text3);"></div>
@@ -1606,7 +1607,17 @@ function doLogin(){
   });
   if(!voter){ setLoginErr('Staff ID or PIN is incorrect.'); return; }
   if(voter.hasVoted){ setLoginErr('You have already submitted your vote.'); return; }
-  if(!CFG.votingOpen){ setLoginErr('Voting is currently closed.'); return; }
+  if(!votingIsLive()){
+    const start=CFG.votingStart;
+    const now=new Date();
+    const startDt=start?new Date(start):null;
+    if(startDt && now < startDt){
+      setLoginErr(`Voting opens on ${fmtDateTime(start)}`);
+    } else {
+      setLoginErr('Voting is currently closed.');
+    }
+    return;
+  }
   currentUser={...voter,type:'voter'};
   selections={};
   saveSession(voter.pin);
@@ -1688,7 +1699,7 @@ function restoreSession(){
     currentUser={...admin};showScreen('screen-admin');initAdmin();return true;
   }
   const voter=DATA.voters.find(v=>v.pin===pin);
-  if(voter && !voter.hasVoted && CFG.votingOpen){
+  if(voter && !voter.hasVoted && votingIsLive()){
     currentUser={...voter,type:'voter'};selections={};
     showScreen('screen-voter');initVoter();return true;
   }
@@ -2188,7 +2199,7 @@ function updateVProg(){
     return;
   }
   document.getElementById('vprog').innerHTML=`<b>${sel}/${total}</b> categories voted`;
-  btn.disabled=sel<total||!CFG.votingOpen;
+  btn.disabled=sel<total||!votingIsLive();
 }
 
 function voterEligibleForYear(voter, year){
@@ -3783,14 +3794,18 @@ function votingIsLive(){
 function saveVotingPeriod(){
   const start=document.getElementById('vp-start')?.value||'';
   const end=document.getElementById('vp-end')?.value||'';
+  // Validate
+  if(start && end && new Date(start) >= new Date(end)){
+    showToast('End time must be after start time','err'); return;
+  }
   CFG.votingStart=start;
   CFG.votingEnd=end;
   updateVotingPeriodPreview();
   renderAllVotingPeriodBanners();
-  // Save to Config sheet
-  if(start) writeToSheets('setConfig',{key:'votingStart',value:start});
-  if(end)   writeToSheets('setConfig',{key:'votingEnd',  value:end});
-  showToast('Voting schedule saved','ok');
+  // Write to Config sheet — send both even if empty (to clear old values)
+  writeToSheets('setConfig',{key:'votingStart',value:start});
+  writeToSheets('setConfig',{key:'votingEnd',  value:end});
+  showToast('Voting schedule saved ✓','ok');
 }
 
 function clearVotingPeriod(){
@@ -3807,13 +3822,22 @@ function clearVotingPeriod(){
 function updateVotingPeriodPreview(){
   const el=document.getElementById('vp-preview');
   if(!el) return;
-  const s=CFG.votingStart, e=CFG.votingEnd;
-  if(!s&&!e){ el.textContent='No schedule set — using manual open/close.'; return; }
+  // Read live from inputs if open, else from CFG
+  const sInput=document.getElementById('vp-start');
+  const eInput=document.getElementById('vp-end');
+  const s=sInput?sInput.value:CFG.votingStart;
+  const e=eInput?eInput.value:CFG.votingEnd;
+  if(!s&&!e){ el.textContent='No schedule set — using manual open/close only.'; el.style.color='var(--text3)'; return; }
+  if(s && e && new Date(s)>=new Date(e)){
+    el.textContent='⚠ End time must be after start time';
+    el.style.color='var(--red)'; return;
+  }
   let txt='';
   if(s) txt+=`Opens: ${fmtDateTime(s)}`;
-  if(s&&e) txt+='  →  ';
+  if(s&&e) txt+=' → ';
   if(e) txt+=`Closes: ${fmtDateTime(e)}`;
   el.textContent=txt;
+  el.style.color='var(--text2)';
 }
 
 function loadVotingPeriodInputs(){
