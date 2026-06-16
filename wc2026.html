@@ -4975,44 +4975,24 @@ function App() {
   }
   function doPredict(mId, h, a) {
     var key = user.id + '_' + mId;
-    var newPred = {h:h, a:a, ts:new Date().toISOString()};
+    var newPred = {h: Number(h), a: Number(a), ts: new Date().toISOString()};
 
-    // 1. Show the prediction immediately in the UI
-    var localUpd = Object.assign({}, _cache['wc26_preds']||{}, preds);
-    localUpd[key] = newPred;
-    setPreds(localUpd);
-    _cache['wc26_preds'] = localUpd;
-    _lastWrite['wc26_preds'] = Date.now();
+    // Build on cache (same source Store.listen uses)
+    var upd = Object.assign({}, _cache['wc26_preds'] || preds || {});
+    upd[key] = newPred;
 
-    // 2. Read current state from GAS → merge → write back
-    //    This prevents overwriting other users' predictions
-    fetch(GS_URL + '?action=get&key=wc26_preds&_=' + Date.now(), {redirect:'follow'})
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var base = (d.ok && d.value && typeof d.value === 'object') ? d.value : {};
-      var merged = Object.assign({}, base, localUpd);
-      merged[key] = newPred; // ensure our prediction wins
-      _cache['wc26_preds'] = merged;
-      _lastWrite['wc26_preds'] = Date.now();
-      setPreds(merged);
-      // Write merged result to GAS
-      return fetch(GS_URL, {
-        method:'POST', redirect:'follow',
-        headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({action:'set', key:'wc26_preds', value:merged})
-      });
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){ if(!d.ok) notify('Save error — try again','err'); })
-    .catch(function(){
-      // If GAS read failed, still try to write what we have
-      fetch(GS_URL,{method:'POST',redirect:'follow',
-        headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({action:'set',key:'wc26_preds',value:localUpd})
-      }).catch(function(){});
-    });
+    // Update state + cache immediately
+    setPreds(upd);
+    _cache['wc26_preds'] = upd;
 
-    setModal(null); notify('Prediction saved! ⚽');
+    // Use Store.set — IDENTICAL to how doResult saves (Store.set('results', upd))
+    Store.set('preds', upd);
+
+    // Extend write guard to 5 min so polling doesn't revert before GAS confirms
+    _lastWrite['wc26_preds'] = Date.now() + 300000;
+
+    setModal(null);
+    notify('Prediction saved! ⚽');
   }
   function doPickW(team) {
     // Global champion pick — saved once to user profile (not per-room)
@@ -5357,4 +5337,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
