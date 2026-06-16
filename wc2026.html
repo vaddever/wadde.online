@@ -4819,7 +4819,20 @@ function App() {
         return Object.assign({}, gasRoom, {members: cur.members});
       });
     });
-    Store.listen('preds', function(v) { setPreds(v||{}); });
+    Store.listen('preds', function(v) {
+      setPreds(function(prev) {
+        var base = Object.assign({}, v || {});
+        // Overlay per-user cached preds so polling never reverts a saved prediction
+        Object.keys(_cache).forEach(function(k) {
+          if (k.indexOf('wc26_preds_') === 0) {
+            var uid = k.slice('wc26_preds_'.length);
+            var up = _cache[k] || {};
+            Object.keys(up).forEach(function(mId) { base[uid+'_'+mId] = up[mId]; });
+          }
+        });
+        return base;
+      });
+    });
     // tpicks listener removed — champion team now stored in user.champTeam
     Store.listen('results', function(v) { setResults(v||{}); });
     Store.listen('koresults', function(v) {
@@ -5006,28 +5019,31 @@ function App() {
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
-    var key = user.id + '_' + mId;
-    var newPred = {h: Number(h), a: Number(a), ts: new Date().toISOString()};
-    var userKey = 'wc26_preds_' + user.id; // per-user key — never hits 50K limit
+    var key      = user.id + '_' + mId;
+    var userKey  = 'wc26_preds_' + user.id;
+    var newPred  = {h: Number(h), a: Number(a), ts: new Date().toISOString()};
 
-    // Extract this user's existing preds from global state
+    // Build this user's prediction set
     var myPreds = Object.assign({}, _cache[userKey] || {});
     if (!Object.keys(myPreds).length) {
       Object.keys(preds).forEach(function(k) {
-        if (k.indexOf(user.id + '_') === 0)
-          myPreds[k.slice(user.id.length + 1)] = preds[k];
+        if (k.indexOf(user.id+'_') === 0)
+          myPreds[k.slice(user.id.length+1)] = preds[k];
       });
     }
     myPreds[mId] = newPred;
 
-    // Update global preds state immediately for UI
+    // Update global preds state immediately
     var upd = Object.assign({}, preds);
     upd[key] = newPred;
     setPreds(upd);
-    _cache[userKey] = myPreds;
-    _lastWrite[userKey] = Date.now() + 300000;
 
-    // Write ONLY this user's preds — max ~72 matches × 80 chars = ~6KB
+    // Update caches so the merge listener keeps the new prediction
+    _cache[userKey]       = myPreds;
+    _cache['wc26_preds']  = upd;           // global cache holds merged state
+    _lastWrite['wc26_preds'] = Date.now() + 300000; // 5-min guard on global poll
+
+    // Write ONLY this user's preds — max ~6KB, never hits 50K limit
     fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({action:'set', key:userKey, value:myPreds})
     })
