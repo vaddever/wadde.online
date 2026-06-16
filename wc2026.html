@@ -4975,31 +4975,43 @@ function App() {
   }
   function doPredict(mId, h, a) {
     var key = user.id + '_' + mId;
-    var oldPred = preds[key] || null;
     var newPred = {h:h, a:a, ts:new Date().toISOString()};
-    // Update local state IMMEDIATELY so UI reflects the save
-    var upd = Object.assign({}, preds);
-    upd[key] = newPred;
-    setPreds(upd);
-    // Write FULL preds object to GAS (nested path doesn't work reliably)
-    Store.set('preds', upd);
-    // Audit log (fire-and-forget)
-    var m = MS.find(function(x){return x.id===mId;}) || KO_MS.find(function(x){return x.id===mId;});
-    var logEntry = {
-      ts: newPred.ts, uid: user.id, name: user.name||'',
-      matchId: mId, matchLabel: m?(m.h+' vs '+m.a):mId,
-      action: oldPred?'edit':'new',
-      oldH: oldPred?oldPred.h:null, oldA: oldPred?oldPred.a:null,
-      newH: h, newA: a
-    };
-    fetch(GS_URL+'?action=get&key=wc26_pred_log&_='+Date.now(),{redirect:'follow'})
-    .then(function(r){return r.json();})
+
+    // 1. Show the prediction immediately in the UI
+    var localUpd = Object.assign({}, _cache['wc26_preds']||{}, preds);
+    localUpd[key] = newPred;
+    setPreds(localUpd);
+    _cache['wc26_preds'] = localUpd;
+    _lastWrite['wc26_preds'] = Date.now();
+
+    // 2. Read current state from GAS → merge → write back
+    //    This prevents overwriting other users' predictions
+    fetch(GS_URL + '?action=get&key=wc26_preds&_=' + Date.now(), {redirect:'follow'})
+    .then(function(r){ return r.json(); })
     .then(function(d){
-      var log=Array.isArray(d&&d.value)?d.value:[];
-      log.push(logEntry); if(log.length>500) log=log.slice(-500);
-      fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({action:'set',key:'wc26_pred_log',value:log})}).catch(function(){});
-    }).catch(function(){});
+      var base = (d.ok && d.value && typeof d.value === 'object') ? d.value : {};
+      var merged = Object.assign({}, base, localUpd);
+      merged[key] = newPred; // ensure our prediction wins
+      _cache['wc26_preds'] = merged;
+      _lastWrite['wc26_preds'] = Date.now();
+      setPreds(merged);
+      // Write merged result to GAS
+      return fetch(GS_URL, {
+        method:'POST', redirect:'follow',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'set', key:'wc26_preds', value:merged})
+      });
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(!d.ok) notify('Save error — try again','err'); })
+    .catch(function(){
+      // If GAS read failed, still try to write what we have
+      fetch(GS_URL,{method:'POST',redirect:'follow',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'set',key:'wc26_preds',value:localUpd})
+      }).catch(function(){});
+    });
+
     setModal(null); notify('Prediction saved! ⚽');
   }
   function doPickW(team) {
