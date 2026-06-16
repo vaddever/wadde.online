@@ -2766,6 +2766,8 @@ function WelcomePage(props) {
   var cs = useState(Math.max(0, TARGET - Date.now()));
   var rem = cs[0]; var setRem = cs[1];
   useEffect(function() {
+    // Expose setAnnsByRoom so module-level enterRoom can use it
+    window._setAnnsByRoom = setAnnsByRoom;
     if (rem <= 0) return;
     var tmr = setInterval(function() { setRem(Math.max(0, TARGET - Date.now())); }, 1000);
     return function() { clearInterval(tmr); };
@@ -4643,6 +4645,32 @@ class RoomErrorBoundary extends React.Component {
 var _rankSnap    = {};  // {roomId: {uid: rank}} — for leaderboard position arrows
 var _prevResults = {};  // previous results snapshot — for points-earned toasts
 
+// Module-level subscription handles (survive re-renders)
+var _annUnsub = null;
+
+function enterRoom(roomId) {
+  if (_annUnsub) { _annUnsub(); _annUnsub = null; }
+  try {
+    var la = JSON.parse(localStorage.getItem('wc26_ann_'+roomId)||'[]');
+    if (Array.isArray(la) && la.length > 0) {
+      // Will be set via React state in the Store listener below
+    }
+  } catch(e) {}
+  _annUnsub = Store.listen('ann_'+roomId, function(v) {
+    var anns = Array.isArray(v) && v.length > 0 ? v : [];
+    if (!anns.length) {
+      try { anns = JSON.parse(localStorage.getItem('wc26_ann_'+roomId)||'[]'); } catch(e) { anns=[]; }
+    } else {
+      try { localStorage.setItem('wc26_ann_'+roomId, JSON.stringify(anns)); } catch(e) {}
+    }
+    // Use window._setAnnsByRoom if available (set by App on mount)
+    if (window._setAnnsByRoom) {
+      window._setAnnsByRoom(function(p){ var n=Object.assign({},p); n[roomId]=anns; return n; });
+    }
+  });
+}
+
+
 function App() {
   var s0=useState('loading'); var scr=s0[0]; var setScr=s0[1];
   var s1=useState(null); var user=s1[0]; var setUser=s1[1];
@@ -4759,26 +4787,7 @@ function App() {
       setKoResults(kr);
       localStorage.setItem('wc26_kores', JSON.stringify(kr));
     });
-    // Chat messages — per room, keyed as wc26_chat_{roomId}
-    var chatUnsub = null;
-    var annUnsub  = null;
-
-    function enterRoom(roomId) {
-      if (annUnsub) { annUnsub(); annUnsub = null; }
-      // Restore anns from localStorage instantly
-      try {
-        var la=JSON.parse(localStorage.getItem('wc26_ann_'+roomId)||'[]');
-        if(Array.isArray(la)&&la.length>0)
-          setAnnsByRoom(function(p){var n=Object.assign({},p);n[roomId]=la;return n;});
-      } catch(e){}
-      // Poll GAS for announcements
-      annUnsub = Store.listen('ann_'+roomId, function(v){
-        var anns=Array.isArray(v)&&v.length>0?v:[];
-        if(!anns.length){try{anns=JSON.parse(localStorage.getItem('wc26_ann_'+roomId)||'[]');}catch(e){anns=[];}}
-        else{try{localStorage.setItem('wc26_ann_'+roomId,JSON.stringify(anns));}catch(e){}}
-        setAnnsByRoom(function(p){var n=Object.assign({},p);n[roomId]=anns;return n;});
-      });
-    }
+    // Chat: handled by RoomChat component directly
 
     function runSync(key) {
       if (!key) return;
