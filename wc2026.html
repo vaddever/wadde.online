@@ -475,43 +475,90 @@ var F={Mexico:'🇲🇽','South Africa':'🇿🇦','South Korea':'🇰🇷',Czec
 var GRP={A:['Mexico','South Africa','South Korea','Czechia'],B:['Canada','Bosnia & Herzegovina','Qatar','Switzerland'],C:['Brazil','Morocco','Haiti','Scotland'],D:['United States','Paraguay','Australia','Türkiye'],E:['Germany','Curaçao','Ivory Coast','Ecuador'],F:['Netherlands','Japan','Sweden','Tunisia'],G:['Belgium','Egypt','Iran','New Zealand'],H:['Spain','Cape Verde','Saudi Arabia','Uruguay'],I:['France','Senegal','Iraq','Norway'],J:['Argentina','Algeria','Austria','Jordan'],K:['Portugal','DR Congo','Uzbekistan','Colombia'],L:['England','Croatia','Ghana','Panama']};
 var TEAMS=Object.values(GRP).flat();
 var MS=[
+  // ── GROUP A ──────────────────────────────────────────────────────────────
   {id:'m01',gr:'A',h:'Mexico',a:'South Africa',utc:'2026-06-11T19:00:00Z',v:'Estadio Azteca, Mexico City'},
   {id:'m02',gr:'A',h:'South Korea',a:'Czechia',utc:'2026-06-12T02:00:00Z',v:'Estadio Akron, Guadalajara'},
+  {id:'m25',gr:'A',h:'Czechia',a:'South Africa',utc:'2026-06-18T16:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  {id:'m28',gr:'A',h:'Mexico',a:'South Korea',utc:'2026-06-19T01:00:00Z',v:'Estadio Akron, Guadalajara'},
+  {id:'m53',gr:'A',h:'Czechia',a:'Mexico',utc:'2026-06-25T01:00:00Z',v:'Estadio Azteca, Mexico City'},
+  {id:'m54',gr:'A',h:'South Africa',a:'South Korea',utc:'2026-06-25T01:00:00Z',v:'Estadio BBVA, Monterrey'},
+  // ── GROUP B ──────────────────────────────────────────────────────────────
   {id:'m03',gr:'B',h:'Canada',a:'Bosnia & Herzegovina',utc:'2026-06-12T19:00:00Z',v:'BMO Field, Toronto'},
-  {id:'m04',gr:'D',h:'United States',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Los Angeles'},
-  {id:'m05',gr:'B',h:'Qatar',a:'Switzerland',utc:'2026-06-13T19:00:00Z',v:"Levi's Stadium, San Francisco"},
-  {id:'m06',gr:'C',h:'Brazil',a:'Morocco',utc:'2026-06-13T22:00:00Z',v:'MetLife Stadium, New York/NJ'},
-  {id:'m07',gr:'C',h:'Haiti',a:'Scotland',utc:'2026-06-14T01:00:00Z',v:'Gillette Stadium, Boston'},
-  {id:'m08',gr:'D',h:'Australia',a:'Türkiye',utc:'2026-06-14T22:00:00Z',v:'BC Place, Vancouver'},
-  {id:'m09',gr:'E',h:'Germany',a:'Curaçao',utc:'2026-06-14T17:00:00Z',v:'Lincoln Financial, Philadelphia'},
-  {id:'m10',gr:'F',h:'Netherlands',a:'Japan',utc:'2026-06-15T01:00:00Z',v:'Arrowhead Stadium, Kansas City'},
-  {id:'m11',gr:'H',h:'Spain',a:'Cape Verde',utc:'2026-06-15T17:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
-  {id:'m12',gr:'G',h:'Belgium',a:'Egypt',utc:'2026-06-15T22:00:00Z',v:'Lumen Field, Seattle'},
-  {id:'m13',gr:'H',h:'Saudi Arabia',a:'Uruguay',utc:'2026-06-16T01:00:00Z',v:'Hard Rock Stadium, Miami'},
-  {id:'m14',gr:'I',h:'France',a:'Senegal',utc:'2026-06-16T19:00:00Z',v:"Levi's Stadium, San Francisco"},
-  {id:'m15',gr:'J',h:'Argentina',a:'Algeria',utc:'2026-06-16T22:00:00Z',v:'AT&T Stadium, Dallas'},
-  {id:'m16',gr:'K',h:'Portugal',a:'DR Congo',utc:'2026-06-17T01:00:00Z',v:'NRG Stadium, Houston'},
-  {id:'m17',gr:'L',h:'England',a:'Panama',utc:'2026-06-17T17:00:00Z',v:'Gillette Stadium, Boston'},
-  {id:'m18',gr:'E',h:'Ivory Coast',a:'Ecuador',utc:'2026-06-17T22:00:00Z',v:'SoFi Stadium, Los Angeles'},
-  {id:'m19',gr:'F',h:'Sweden',a:'Tunisia',utc:'2026-06-18T01:00:00Z',v:'Arrowhead Stadium, Kansas City'},
-  {id:'m20',gr:'G',h:'Iran',a:'New Zealand',utc:'2026-06-18T19:00:00Z',v:'SoFi Stadium, Los Angeles'},
-  {id:'m21',gr:'I',h:'Iraq',a:'Norway',utc:'2026-06-18T22:00:00Z',v:'MetLife Stadium, New York/NJ'},
-  {id:'m22',gr:'J',h:'Austria',a:'Jordan',utc:'2026-06-19T01:00:00Z',v:'Lumen Field, Seattle'},
-  {id:'m23',gr:'K',h:'Uzbekistan',a:'Colombia',utc:'2026-06-19T19:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
-  {id:'m24',gr:'L',h:'Croatia',a:'Ghana',utc:'2026-06-19T22:00:00Z',v:'BMO Field, Toronto'},
-  {id:'m25',gr:'A',h:'Mexico',a:'South Korea',utc:'2026-06-20T19:00:00Z',v:'Estadio Azteca, Mexico City'},
-  {id:'m26',gr:'A',h:'Czechia',a:'South Africa',utc:'2026-06-21T01:00:00Z',v:'Estadio Akron, Guadalajara'},
-  {id:'m27',gr:'C',h:'Brazil',a:'Haiti',utc:'2026-06-21T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
-  {id:'m28',gr:'C',h:'Morocco',a:'Scotland',utc:'2026-06-22T01:00:00Z',v:'Gillette Stadium, Boston'},
-  {id:'m29',gr:'B',h:'Canada',a:'Qatar',utc:'2026-06-22T19:00:00Z',v:'BC Place, Vancouver'},
-  {id:'m30',gr:'D',h:'United States',a:'Australia',utc:'2026-06-23T01:00:00Z',v:'AT&T Stadium, Dallas'},
-  {id:'m31',gr:'E',h:'Germany',a:'Ivory Coast',utc:'2026-06-23T19:00:00Z',v:'Lincoln Financial, Philadelphia'},
-  {id:'m32',gr:'F',h:'Japan',a:'Sweden',utc:'2026-06-24T01:00:00Z',v:'SoFi Stadium, Los Angeles'},
-  {id:'m33',gr:'H',h:'Spain',a:'Saudi Arabia',utc:'2026-06-24T17:00:00Z',v:'NRG Stadium, Houston'},
-  {id:'m34',gr:'I',h:'France',a:'Iraq',utc:'2026-06-25T01:00:00Z',v:'AT&T Stadium, Dallas'},
-  {id:'m35',gr:'J',h:'Argentina',a:'Austria',utc:'2026-06-25T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
-  {id:'m36',gr:'K',h:'Portugal',a:'Colombia',utc:'2026-06-26T01:00:00Z',v:'NRG Stadium, Houston'},
-  {id:'m37',gr:'L',h:'England',a:'Croatia',utc:'2026-06-26T19:00:00Z',v:'MetLife Stadium, New York/NJ'},
+  {id:'m05',gr:'B',h:'Qatar',a:'Switzerland',utc:'2026-06-13T19:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  {id:'m26',gr:'B',h:'Switzerland',a:'Bosnia & Herzegovina',utc:'2026-06-18T19:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m27',gr:'B',h:'Canada',a:'Qatar',utc:'2026-06-18T22:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m49',gr:'B',h:'Switzerland',a:'Canada',utc:'2026-06-24T19:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m50',gr:'B',h:'Bosnia & Herzegovina',a:'Qatar',utc:'2026-06-24T19:00:00Z',v:'Lumen Field, Seattle'},
+  // ── GROUP C ──────────────────────────────────────────────────────────────
+  {id:'m06',gr:'C',h:'Brazil',a:'Morocco',utc:'2026-06-13T22:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  {id:'m07',gr:'C',h:'Haiti',a:'Scotland',utc:'2026-06-14T01:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m30',gr:'C',h:'Scotland',a:'Morocco',utc:'2026-06-19T22:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m31',gr:'C',h:'Brazil',a:'Haiti',utc:'2026-06-20T00:30:00Z',v:'Lincoln Financial Field, Philadelphia'},
+  {id:'m51',gr:'C',h:'Scotland',a:'Brazil',utc:'2026-06-24T22:00:00Z',v:'Hard Rock Stadium, Miami Gardens'},
+  {id:'m52',gr:'C',h:'Morocco',a:'Haiti',utc:'2026-06-24T22:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  // ── GROUP D ──────────────────────────────────────────────────────────────
+  {id:'m04',gr:'D',h:'United States',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m08',gr:'D',h:'Australia',a:'Türkiye',utc:'2026-06-14T16:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m29',gr:'D',h:'United States',a:'Australia',utc:'2026-06-19T19:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m32',gr:'D',h:'Türkiye',a:'Paraguay',utc:'2026-06-20T03:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  {id:'m59',gr:'D',h:'Türkiye',a:'United States',utc:'2026-06-26T02:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m60',gr:'D',h:'Paraguay',a:'Australia',utc:'2026-06-26T02:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  // ── GROUP E ──────────────────────────────────────────────────────────────
+  {id:'m09',gr:'E',h:'Germany',a:'Curaçao',utc:'2026-06-14T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m11',gr:'E',h:'Ivory Coast',a:'Ecuador',utc:'2026-06-14T23:00:00Z',v:'Lincoln Financial Field, Philadelphia'},
+  {id:'m34',gr:'E',h:'Germany',a:'Ivory Coast',utc:'2026-06-20T20:00:00Z',v:'BMO Field, Toronto'},
+  {id:'m35',gr:'E',h:'Ecuador',a:'Curaçao',utc:'2026-06-21T00:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  {id:'m55',gr:'E',h:'Curaçao',a:'Ivory Coast',utc:'2026-06-25T20:00:00Z',v:'Lincoln Financial Field, Philadelphia'},
+  {id:'m56',gr:'E',h:'Ecuador',a:'Germany',utc:'2026-06-25T20:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  // ── GROUP F ──────────────────────────────────────────────────────────────
+  {id:'m10',gr:'F',h:'Netherlands',a:'Japan',utc:'2026-06-14T20:00:00Z',v:'AT&T Stadium, Arlington'},
+  {id:'m12',gr:'F',h:'Sweden',a:'Tunisia',utc:'2026-06-15T02:00:00Z',v:'Estadio BBVA, Monterrey'},
+  {id:'m33',gr:'F',h:'Netherlands',a:'Sweden',utc:'2026-06-20T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m36',gr:'F',h:'Tunisia',a:'Japan',utc:'2026-06-21T04:00:00Z',v:'Estadio BBVA, Monterrey'},
+  {id:'m57',gr:'F',h:'Japan',a:'Sweden',utc:'2026-06-25T23:00:00Z',v:'AT&T Stadium, Arlington'},
+  {id:'m58',gr:'F',h:'Tunisia',a:'Netherlands',utc:'2026-06-25T23:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  // ── GROUP G ──────────────────────────────────────────────────────────────
+  {id:'m14',gr:'G',h:'Belgium',a:'Egypt',utc:'2026-06-15T19:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m16',gr:'G',h:'Iran',a:'New Zealand',utc:'2026-06-16T01:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m38',gr:'G',h:'Belgium',a:'Iran',utc:'2026-06-21T19:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m40',gr:'G',h:'New Zealand',a:'Egypt',utc:'2026-06-22T01:00:00Z',v:'BC Place, Vancouver'},
+  {id:'m65',gr:'G',h:'Egypt',a:'Iran',utc:'2026-06-27T03:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m66',gr:'G',h:'New Zealand',a:'Belgium',utc:'2026-06-27T03:00:00Z',v:'BC Place, Vancouver'},
+  // ── GROUP H ──────────────────────────────────────────────────────────────
+  {id:'m13',gr:'H',h:'Spain',a:'Cape Verde',utc:'2026-06-15T16:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  {id:'m15',gr:'H',h:'Saudi Arabia',a:'Uruguay',utc:'2026-06-15T22:00:00Z',v:'Hard Rock Stadium, Miami Gardens'},
+  {id:'m37',gr:'H',h:'Spain',a:'Saudi Arabia',utc:'2026-06-21T16:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  {id:'m39',gr:'H',h:'Uruguay',a:'Cape Verde',utc:'2026-06-21T22:00:00Z',v:'Hard Rock Stadium, Miami Gardens'},
+  {id:'m63',gr:'H',h:'Cape Verde',a:'Saudi Arabia',utc:'2026-06-27T00:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m64',gr:'H',h:'Uruguay',a:'Spain',utc:'2026-06-27T00:00:00Z',v:'Estadio Akron, Guadalajara'},
+  // ── GROUP I ──────────────────────────────────────────────────────────────
+  {id:'m17',gr:'I',h:'France',a:'Senegal',utc:'2026-06-16T19:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  {id:'m18',gr:'I',h:'Iraq',a:'Norway',utc:'2026-06-16T22:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m42',gr:'I',h:'France',a:'Iraq',utc:'2026-06-22T21:00:00Z',v:'Lincoln Financial Field, Philadelphia'},
+  {id:'m43',gr:'I',h:'Norway',a:'Senegal',utc:'2026-06-23T00:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  {id:'m61',gr:'I',h:'Norway',a:'France',utc:'2026-06-26T19:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m62',gr:'I',h:'Senegal',a:'Iraq',utc:'2026-06-26T19:00:00Z',v:'BMO Field, Toronto'},
+  // ── GROUP J ──────────────────────────────────────────────────────────────
+  {id:'m19',gr:'J',h:'Argentina',a:'Algeria',utc:'2026-06-17T01:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  {id:'m20',gr:'J',h:'Austria',a:'Jordan',utc:'2026-06-17T04:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  {id:'m41',gr:'J',h:'Argentina',a:'Austria',utc:'2026-06-22T17:00:00Z',v:'AT&T Stadium, Arlington'},
+  {id:'m44',gr:'J',h:'Jordan',a:'Algeria',utc:'2026-06-23T03:00:00Z',v:"Levi's Stadium, Santa Clara"},
+  {id:'m71',gr:'J',h:'Algeria',a:'Austria',utc:'2026-06-28T02:00:00Z',v:'Arrowhead Stadium, Kansas City'},
+  {id:'m72',gr:'J',h:'Jordan',a:'Argentina',utc:'2026-06-28T02:00:00Z',v:'AT&T Stadium, Arlington'},
+  // ── GROUP K ──────────────────────────────────────────────────────────────
+  {id:'m21',gr:'K',h:'Portugal',a:'DR Congo',utc:'2026-06-17T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m24',gr:'K',h:'Uzbekistan',a:'Colombia',utc:'2026-06-18T02:00:00Z',v:'Estadio Azteca, Mexico City'},
+  {id:'m45',gr:'K',h:'Portugal',a:'Uzbekistan',utc:'2026-06-23T17:00:00Z',v:'NRG Stadium, Houston'},
+  {id:'m48',gr:'K',h:'Colombia',a:'DR Congo',utc:'2026-06-24T02:00:00Z',v:'Estadio Akron, Guadalajara'},
+  {id:'m69',gr:'K',h:'Colombia',a:'Portugal',utc:'2026-06-27T23:30:00Z',v:'Hard Rock Stadium, Miami Gardens'},
+  {id:'m70',gr:'K',h:'DR Congo',a:'Uzbekistan',utc:'2026-06-27T23:30:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
+  // ── GROUP L ──────────────────────────────────────────────────────────────
+  {id:'m22',gr:'L',h:'England',a:'Croatia',utc:'2026-06-17T20:00:00Z',v:'AT&T Stadium, Arlington'},
+  {id:'m23',gr:'L',h:'Ghana',a:'Panama',utc:'2026-06-17T23:00:00Z',v:'BMO Field, Toronto'},
+  {id:'m46',gr:'L',h:'England',a:'Ghana',utc:'2026-06-23T20:00:00Z',v:'Gillette Stadium, Foxborough'},
+  {id:'m47',gr:'L',h:'Panama',a:'Croatia',utc:'2026-06-23T23:00:00Z',v:'BMO Field, Toronto'},
+  {id:'m67',gr:'L',h:'Panama',a:'England',utc:'2026-06-27T21:00:00Z',v:'MetLife Stadium, East Rutherford'},
+  {id:'m68',gr:'L',h:'Croatia',a:'Ghana',utc:'2026-06-27T21:00:00Z',v:'Lincoln Financial Field, Philadelphia'},
 ];
 var QQ=[
   {q:'Which country hosts the 2026 World Cup opening match?',o:['Brazil','Mexico','United States','Canada'],a:1},
@@ -698,6 +745,7 @@ var WC_PLAYERS=[
 // predictions don't overwrite the whole predictions object.
 var _cache = {};
 var _listeners = {};
+var _lastWrite = {};  // tracks when each key was last written locally
 
 // Team primary colors (for avatars)
 var TC = {
@@ -1036,6 +1084,7 @@ var Store = {
     if (parts.length === 1) {
       // Simple set
       _cache[rootKey] = val;
+      _lastWrite[rootKey] = Date.now();   // record when we wrote
       (_listeners[rootKey] || []).forEach(function(cb) { cb(val || {}); });
       return self._write(rootKey, val);
     } else {
@@ -1069,7 +1118,14 @@ var Store = {
 
     function load() {
       self._read(key).then(function(v) {
-        if (v !== null) _cache[key] = v;
+        if (v !== null) {
+          // Don't overwrite cache with GAS data if we wrote locally in the last 8s
+          // (GAS write may not have been processed yet)
+          var writtenRecently = _lastWrite[key] && (Date.now() - _lastWrite[key] < 8000);
+          if (!writtenRecently) {
+            _cache[key] = v;
+          }
+        }
         cb(_cache[key] || {});
       }).catch(function() { cb(_cache[key] || {}); });
     }
@@ -1121,6 +1177,17 @@ function genCode() { return Math.random().toString(36).substring(2,8).toUpperCas
 function genId() { return Date.now().toString(36) + Math.random().toString(36).substring(2,6); }
 function shuffle(arr) { return arr.slice().sort(function() { return Math.random() - 0.5; }); }
 var WCS = new Date('2026-06-11T19:00:00Z');
+// Apply any schedule overrides saved by SuperAdmin
+(function(){
+  try {
+    var ov=JSON.parse(localStorage.getItem('wc26_sched_overrides')||'{}');
+    Object.keys(ov).forEach(function(mid){
+      var idx=MS.findIndex(function(m){return m.id===mid;});
+      if(idx>=0) MS[idx]=Object.assign({},MS[idx],{utc:ov[mid]});
+    });
+  } catch(e){}
+})();
+
 var KOS = new Date('2026-06-28T00:00:00Z');
 function daysTill(d) { return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 864e5)); }
 
@@ -1501,6 +1568,8 @@ function SuperAdminApp() {
 
   // Data
   var uS  = useState({}); var saUsers = uS[0]; var setSaUsers = uS[1];
+  var plS = useState([]); var predLog=plS[0]; var setPredLog=plS[1];
+  var plS = useState([]); var predLog  = plS[0]; var setPredLog  = plS[1];
   var rS  = useState({}); var saRooms = rS[0]; var setSaRooms = rS[1];
   var prS = useState({}); var saPreds = prS[0]; var setSaPreds = prS[1];
   var reS = useState({}); var saResults = reS[0]; var setSaResults = reS[1];
@@ -1550,7 +1619,7 @@ function SuperAdminApp() {
 
   function loadAll() {
     setLoading(true);
-    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns'];
+    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log'];
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults,
@@ -1655,7 +1724,22 @@ function SuperAdminApp() {
   var rList  = Object.values(saRooms);
   var prList = Object.keys(saPreds).map(function(k){
     var p=saPreds[k]; var pts=k.split('_');
-    return {key:k, uid:pts[0]||'', mid:pts[1]||'', h:p.h, a:p.a};
+    return {key:k, uid:pts[0]||'', mid:pts[1]||'', h:p.h, a:p.a, ts:p.ts||null};
+  });
+
+  // ── Integrity check: predictions changed after match kickoff ─────────────
+  var violations = prList.filter(function(pr){
+    if (!pr.ts) return false;
+    var m = MS.find(function(x){return x.id===pr.mid;}) ||
+            KO_MS.find(function(x){return x.id===pr.mid;});
+    if (!m) return false;
+    return new Date(pr.ts) > new Date(m.utc); // changed after kickoff
+  }).map(function(pr){
+    var m = MS.find(function(x){return x.id===pr.mid;}) ||
+            KO_MS.find(function(x){return x.id===pr.mid;});
+    var u = saUsers[pr.uid];
+    var minsAfter = m ? Math.round((new Date(pr.ts)-new Date(m.utc))/60000) : 0;
+    return Object.assign({},pr,{match:m, userName:u?u.name:'Unknown ('+pr.uid.slice(0,6)+')', minsAfter:minsAfter});
   });
   var reList = Object.keys(saResults).map(function(id){
     var r=saResults[id]; return {id:id, h:r.h, a:r.a, auto:r.auto};
@@ -1666,6 +1750,7 @@ function SuperAdminApp() {
     {id:'rooms',     label:'🏠 Rooms ('+rList.length+')'},
     {id:'preds',     label:'⚽ Predictions ('+prList.length+')'},
     {id:'results',   label:'📊 Results ('+reList.length+')'},
+    {id:'audit',     label:'📋 Audit Log'},
     {id:'anns',     label:'📢 Announcements'},
     {id:'recovery',  label:'🔧 Recovery'},
     {id:'settings',  label:'⚙️ Settings'},
@@ -1899,19 +1984,77 @@ function SuperAdminApp() {
 
       <!-- Predictions tab -->
       ${saTab==='preds'&&html`<div>
+
+        <!-- ── Integrity Check ────────────────────────────────────────── -->
+        <div style=${{marginBottom:16,background:violations.length?'rgba(239,68,68,.08)':'rgba(34,197,94,.06)',
+          border:'1px solid '+(violations.length?'rgba(239,68,68,.25)':'rgba(34,197,94,.2)'),
+          borderRadius:'var(--rs)',padding:'12px 14px'}}>
+          <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:violations.length?10:0}}>
+            <span style=${{fontSize:16}}>${violations.length?'🚨':'✅'}</span>
+            <div>
+              <div style=${{fontWeight:700,fontSize:13,color:violations.length?'#f87171':'#22c55e'}}>
+                ${violations.length
+                  ? violations.length+' prediction'+(violations.length===1?'':'s')+' changed AFTER match kickoff'
+                  : 'No post-kickoff changes detected'}
+              </div>
+              <div style=${{fontSize:11,color:'var(--dm)',marginTop:1}}>
+                Checks all ${prList.filter(function(p){var m=MS.find(function(x){return x.id===p.mid;})||KO_MS.find(function(x){return x.id===p.mid;});return m&&new Date(m.utc)<new Date();}).length} predictions for started matches
+              </div>
+            </div>
+          </div>
+          ${violations.length>0&&html`<div style=${{display:'flex',flexDirection:'column',gap:6}}>
+            ${violations.sort(function(a,b){return b.minsAfter-a.minsAfter;}).map(function(v,i){
+              var mvtKick = new Date(v.match.utc).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+              var mvtEdit = new Date(v.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+              return html`<div key=${i} style=${{
+                background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',
+                borderRadius:8,padding:'10px 12px'
+              }}>
+                <div style=${{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
+                  <div>
+                    <div style=${{fontWeight:700,fontSize:13,color:'#f87171',marginBottom:3}}>
+                      ⚠️ ${v.userName}
+                    </div>
+                    <div style=${{fontSize:12,color:'var(--tx)',marginBottom:2}}>
+                      ${v.match.h} vs ${v.match.a}
+                      <span style=${{fontFamily:'Barlow Condensed',fontSize:15,fontWeight:700,marginLeft:8,color:'#fbbf24'}}>${v.h}–${v.a}</span>
+                    </div>
+                    <div style=${{fontSize:11,color:'var(--dm)'}}>
+                      Kickoff: ${mvtKick} MVT
+                    </div>
+                    <div style=${{fontSize:11,color:'#f87171',fontWeight:600}}>
+                      Edited: ${mvtEdit} MVT — <strong>${v.minsAfter} min${v.minsAfter===1?'':'s'} after kickoff</strong>
+                    </div>
+                  </div>
+                  <button class="btn" style=${{fontSize:11,padding:'4px 10px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)',flexShrink:0}}
+                    onClick=${function(){
+                      if(!confirm('Delete prediction by '+v.userName+' for '+v.match.h+' vs '+v.match.a+'?')) return;
+                      var nr=Object.assign({},saPreds); delete nr[v.key];
+                      fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                        body:JSON.stringify({action:'set',key:'wc26_preds',value:nr})})
+                        .then(function(r){return r.json();})
+                        .then(function(d){if(d.ok!==false)setSaPreds(nr);});
+                    }}>🗑 Remove</button>
+                </div>
+              </div>`;
+            })}
+          </div>`}
+        </div>
+
         <p style=${{fontSize:12,color:'var(--mu)',marginBottom:10}}>${prList.length} predictions across all rooms</p>
         <div style=${{overflowX:'auto'}}>
           <table style=${{width:'100%',borderCollapse:'collapse',fontSize:12}}>
             <thead><tr style=${{background:'var(--bg3)'}}>
-              ${['Key','User','Match','Prediction'].map(function(h){
+              ${['#','User','Match','Teams','Pred','Edited','Action'].map(function(h){
                 return html`<th key=${h} style=${{padding:'7px 10px',textAlign:'left',
                   fontSize:11,fontWeight:600,color:'var(--mu)',borderBottom:'1px solid var(--bdr)'}}>${h}</th>`;
               })}
             </tr></thead>
             <tbody>
-              ${prList.slice(0,200).map(function(p,i){
+              ${prList.map(function(p,i){var match=MS.find(function(m){return m.id===p.mid;})||KO_MS.find(function(m){return m.id===p.mid;});
                 var u = saUsers[p.uid];
-                return html`<tr key=${i} style=${{borderBottom:'1px solid rgba(255,255,255,.03)'}}>
+                return html`<tr key=${i} style=${{borderBottom:'1px solid rgba(255,255,255,.04)',background:p.ts&&match&&new Date(p.ts)>new Date(match.utc)?'rgba(239,68,68,.05)':'transparent'}}>
+                  <td style=${{padding:'6px 10px',color:'var(--dm)',fontSize:11}}>${i+1}</td>
                   <td style=${{padding:'6px 10px',fontFamily:'monospace',fontSize:10,color:'var(--dm)'}}>${p.key}</td>
                   <td style=${{padding:'6px 10px',color:'var(--tx)'}}>${u?u.name:p.uid.slice(0,8)+'…'}</td>
                   <td style=${{padding:'6px 10px',color:'var(--mu)'}}>${p.mid}</td>
@@ -1937,12 +2080,14 @@ function SuperAdminApp() {
           var allM = MS.slice().sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); });
 
           // Group by calendar date (MVT = UTC+5)
+          var TZ = 'Indian/Maldives';
           var days = [];
           var dayMap = {};
           allM.forEach(function(m){
-            var d = new Date(new Date(m.utc).getTime() + 5*3600000);
-            var key = d.toISOString().slice(0,10);
-            var label = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+            var d = new Date(m.utc);
+            // Group by MVT calendar date
+            var key = d.toLocaleDateString('en-CA', {timeZone:TZ}); // YYYY-MM-DD
+            var label = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:TZ});
             if (!dayMap[key]) { dayMap[key] = {label:label, matches:[]}; days.push(key); }
             dayMap[key].matches.push(m);
           });
@@ -1961,8 +2106,8 @@ function SuperAdminApp() {
               <div style=${{display:'flex',flexDirection:'column',gap:6}}>
                 ${day.matches.map(function(m){
                   var existing = saResults[m.id];
-                  var kickoff = new Date(new Date(m.utc).getTime()+5*3600000)
-                    .toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+                  var kickoff = new Date(m.utc)
+                    .toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
                   return html`<div key=${m.id} style=${{
                     display:'grid',gridTemplateColumns:'auto 1fr auto 1fr auto',
                     alignItems:'center',gap:6,padding:'9px 12px',
@@ -2424,7 +2569,120 @@ function SuperAdminApp() {
       </div>`}
 
       <!-- ── Improved Settings tab ─────────────────────────────────── -->
+      ${saTab==='audit'&&html`<div>
+
+        <div style=${{marginBottom:14,padding:'12px 14px',background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.3)',borderRadius:'var(--rs)',fontSize:12,color:'var(--mu)'}}>
+          <div style=${{fontWeight:700,color:'#f59e0b',marginBottom:4,fontSize:13}}>⚠️ Schedule Update Notice — Jun 14–15</div>
+          <div>Match IDs m11–m37 were reassigned when the full 72-match schedule was added. Predictions made <strong style=${{color:'var(--tx)'}}>before this update</strong> on those IDs may now show against the wrong fixtures. Entries marked <span style=${{color:'#f59e0b',fontWeight:700}}>⚠️ Suspect ID</span> are in this range. Review and delete if incorrect.</div>
+        </div>
+
+        ${(function(){
+          var log = predLog.slice().reverse();
+          var editsOnly = log.filter(function(e){return e.action==='edit';});
+          var afterKoAll = log.filter(function(e){
+            var m=MS.find(function(x){return x.id===e.matchId;})||KO_MS.find(function(x){return x.id===e.matchId;});
+            return m&&e.ts&&new Date(e.ts)>new Date(m.utc);
+          });
+          var suspectAll = log.filter(function(e){var n=parseInt((e.matchId||'').replace('m',''));return n>=11&&n<=37;});
+
+          return html`<div>
+            <div style=${{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8,marginBottom:14}}>
+              ${[[log.length,'Total','#60a5fa'],[editsOnly.length,'Edits','#f59e0b'],[afterKoAll.length,'Post-KO ⚠️','#ef4444'],[suspectAll.length,'Suspect IDs','#a78bfa']].map(function(s,i){
+                return html`<div key=${i} style=${{textAlign:'center',background:'var(--bg3)',borderRadius:'var(--rs)',padding:'8px 6px',border:'1px solid var(--bdr)'}}>
+                  <div style=${{fontSize:20,fontWeight:800,color:s[2],fontFamily:'Barlow Condensed'}}>${s[0]}</div>
+                  <div style=${{fontSize:9,color:'var(--dm)',textTransform:'uppercase',letterSpacing:.5,marginTop:2}}>${s[1]}</div>
+                </div>`;
+              })}
+            </div>
+            ${log.length===0&&html`<div style=${{textAlign:'center',padding:'40px 20px',color:'var(--dm)'}}>
+              <div style=${{fontSize:32,marginBottom:8}}>📋</div>
+              <div style=${{fontSize:14,fontWeight:600}}>No log entries yet</div>
+              <div style=${{fontSize:12,marginTop:4}}>Prediction creates & edits will appear here going forward.</div>
+            </div>`}
+            <div style=${{display:'flex',flexDirection:'column',gap:6}}>
+              ${log.slice(0,200).map(function(entry,i){
+                var m=MS.find(function(x){return x.id===entry.matchId;})||KO_MS.find(function(x){return x.id===entry.matchId;});
+                var afterKO=m&&entry.ts&&new Date(entry.ts)>new Date(m.utc);
+                var nid=parseInt((entry.matchId||'').replace('m',''));
+                var suspect=nid>=11&&nid<=37;
+                var mvtTs=entry.ts?new Date(entry.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'}):'?';
+                return html`<div key=${i} style=${{
+                  padding:'9px 12px',borderRadius:'var(--rs)',fontSize:12,
+                  border:'1px solid '+(afterKO?'rgba(239,68,68,.3)':suspect?'rgba(245,158,11,.3)':'var(--bdr)'),
+                  background:afterKO?'rgba(239,68,68,.05)':suspect?'rgba(245,158,11,.04)':'var(--bg3)'
+                }}>
+                  <div style=${{display:'flex',justifyContent:'space-between',gap:8}}>
+                    <div style=${{flex:1,minWidth:0}}>
+                      <div style=${{display:'flex',gap:5,flexWrap:'wrap',marginBottom:3,alignItems:'center'}}>
+                        <span style=${{fontWeight:700}}>${entry.name||'?'}</span>
+                        <span style=${{fontSize:10,padding:'1px 7px',borderRadius:8,fontWeight:600,
+                          background:entry.action==='edit'?'rgba(245,158,11,.2)':'rgba(34,197,94,.15)',
+                          color:entry.action==='edit'?'#f59e0b':'#22c55e'}}>
+                          ${entry.action==='edit'?'✎ EDITED':'✚ NEW'}
+                        </span>
+                        ${afterKO&&html`<span style=${{fontSize:10,padding:'1px 7px',borderRadius:8,background:'rgba(239,68,68,.15)',color:'#f87171',fontWeight:700}}>⚠️ After kickoff</span>`}
+                        ${suspect&&html`<span style=${{fontSize:10,padding:'1px 7px',borderRadius:8,background:'rgba(245,158,11,.1)',color:'#f59e0b'}}>⚠️ Suspect ID</span>`}
+                      </div>
+                      <div style=${{color:'var(--dm)',marginBottom:2}}>
+                        <span style=${{fontFamily:'monospace',fontSize:11}}>${entry.matchId}</span>
+                        · <span style=${{color:'var(--tx)'}}>${entry.matchLabel||m?(m.h+' vs '+m.a):'Unknown'}</span>
+                      </div>
+                      <div style=${{display:'flex',alignItems:'center',gap:8}}>
+                        ${entry.action==='edit'&&entry.oldH!==null&&entry.oldH!==undefined&&html`
+                          <span style=${{fontSize:11,color:'var(--dm)',textDecoration:'line-through'}}>${entry.oldH}–${entry.oldA}</span>
+                          <span style=${{color:'var(--dm)'}}>→</span>`}
+                        <span style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:800,color:'var(--tx)'}}>${entry.newH}–${entry.newA}</span>
+                      </div>
+                    </div>
+                    <div style=${{fontSize:10,color:'var(--dm)',textAlign:'right',flexShrink:0}}>
+                      ${mvtTs}<br/>MVT
+                    </div>
+                  </div>
+                </div>`;
+              })}
+            </div>
+          </div>`;
+        })()}
+      </div>`}
+
       ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16,maxWidth:480}}>
+
+        <!-- Match Kickoff Time Editor -->
+        <div class="card" style=${{padding:'14px 16px'}}>
+          <h3 style=${{margin:'0 0 8px',fontSize:15}}>🕐 Match Kickoff Editor</h3>
+          <p style=${{fontSize:12,color:'var(--mu)',marginBottom:10}}>Edit kickoff times if FIFA changes a match. Enter time in UTC (MVT − 5h). Saves locally and persists across sessions.</p>
+          <div style=${{maxHeight:320,overflowY:'auto',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+            ${MS.slice().sort(function(a,b){return new Date(a.utc)-new Date(b.utc);}).map(function(m){
+              var mvt=new Date(m.utc).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+              return html`<div key=${m.id} style=${{display:'grid',gridTemplateColumns:'50px 1fr auto auto',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid rgba(255,255,255,.04)'}}>
+                <span style=${{fontSize:10,color:'var(--gold)',fontWeight:700}}>${m.gr} ${m.id}</span>
+                <div style=${{fontSize:11,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--tx)'}}>
+                  ${m.h} – ${m.a}
+                  <span style=${{fontSize:10,color:'var(--dm)',marginLeft:4}}>${mvt} MVT</span>
+                </div>
+                <input type="datetime-local" id=${'sch_'+m.id}
+                  defaultValue=${m.utc.slice(0,16)}
+                  style=${{fontSize:10,padding:'3px 5px',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:5,width:155}} />
+                <button class="btn-p" style=${{fontSize:10,padding:'4px 8px',flexShrink:0}}
+                  onClick=${function(){
+                    var inp=document.getElementById('sch_'+m.id);
+                    if(!inp||!inp.value) return;
+                    var nu=inp.value.length===16?inp.value+':00Z':inp.value+'Z';
+                    var idx=MS.findIndex(function(x){return x.id===m.id;});
+                    if(idx>=0) MS[idx]=Object.assign({},MS[idx],{utc:nu});
+                    var ov=JSON.parse(localStorage.getItem('wc26_sched_overrides')||'{}');
+                    ov[m.id]=nu;
+                    localStorage.setItem('wc26_sched_overrides',JSON.stringify(ov));
+                    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                      body:JSON.stringify({action:'set',key:'wc26_sched',value:ov})})
+                      .catch(function(){});
+                    var mvtNew=new Date(nu).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+                    alert('✓ Updated '+m.h+' vs '+m.a+'\n→ '+mvtNew+' MVT');
+                  }}>Save</button>
+              </div>`;
+            })}
+          </div>
+        </div>
 
         <!-- Live Score API -->
         <div class="card" style=${{padding:'14px 16px'}}>
@@ -2517,6 +2775,8 @@ function WelcomePage(props) {
   var cs = useState(Math.max(0, TARGET - Date.now()));
   var rem = cs[0]; var setRem = cs[1];
   useEffect(function() {
+    // Expose setAnnsByRoom so module-level enterRoom can use it
+    window._setAnnsByRoom = setAnnsByRoom;
     if (rem <= 0) return;
     var tmr = setInterval(function() { setRem(Math.max(0, TARGET - Date.now())); }, 1000);
     return function() { clearInterval(tmr); };
@@ -3394,6 +3654,10 @@ function RoomPage(props) {
   var upNext = MS.filter(function(m){ return mStat(m,props.results)==='soon'; })
                .sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); })
                .slice(0,2);
+
+
+
+
   return html`<div>
     <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
       <button class="btn" style=${{padding:'8px 10px'}} onClick=${props.onBack}><i class="ti ti-arrow-left"></i></button>
@@ -3466,7 +3730,7 @@ function RoomPage(props) {
       </div>`}
 
     <div class="tabs">
-      ${[['leaderboard','📋 Standings'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){
+      ${[['leaderboard','📋 Standings'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout'],['chat','💬 Chat']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){
         var isChat = p[0]==='chat';
         return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')}
           onClick=${function(){
@@ -3614,6 +3878,7 @@ function RoomPage(props) {
         </div>`;
       })}
     </div>`}
+
     ${props.tab==='knockout'&&html`<div>
       ${!props.qualifiers
         ? html`<div style=${{textAlign:'center',padding:'40px 20px',color:'var(--mu)'}}>
@@ -3709,6 +3974,11 @@ function RoomPage(props) {
         </div>
       </div>
     </div>`}
+
+    ${props.tab==='chat'&&html`<${RoomChat}
+      roomId=${props.room&&props.room.id}
+      user=${props.user} />`}
+
 
     ${props.tab==='admin'&&html`<div>
       ${!props.isAdmin
@@ -4162,6 +4432,203 @@ function UserPredictionsModal(props) {
 }
 
 
+
+// ── Simple Room Chat ─────────────────────────────────────────────────────
+// Stores to localStorage + GAS. Polls GAS every 10s.
+// Guards: won't poll for 12s after sending (avoids race condition with GAS write).
+
+// ── Live Match Detail Modal ───────────────────────────────────────────────
+function LiveMatchModal(props) {
+  var m   = props.match;
+  var lv  = props.live;  // {h, a, status, min, htH, htA}
+  var res = props.result;
+  if (!m) return null;
+  var isLive = !!lv && !res;
+  var score  = res || lv || {};
+  var statusLabel = isLive
+    ? (lv.min==='HT'?'Half Time':lv.status==='PAUSED'?'HT':lv.min?lv.min+"'":lv.status)
+    : (res ? 'Full Time' : 'Upcoming');
+  var statusColor = isLive?'#ef4444':res?'#22c55e':'var(--dm)';
+  var mvtKick = new Date(m.utc).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+
+  return html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}}>
+    <div class="modal" style=${{padding:0,overflow:'hidden',maxWidth:400}}>
+      <!-- Header -->
+      <div style=${{background:'linear-gradient(135deg,#1e1b4b,#0f172a)',padding:'20px 16px 16px'}}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <div style=${{fontSize:11,fontWeight:600,color:'rgba(255,255,255,.5)',letterSpacing:.5}}>
+            WC 2026 · GROUP ${m.gr}
+          </div>
+          <button class="btn" style=${{fontSize:11,padding:'2px 10px',color:'rgba(255,255,255,.5)',borderColor:'rgba(255,255,255,.2)'}}
+            onClick=${props.onClose}>✕</button>
+        </div>
+
+        <!-- Score display -->
+        <div style=${{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:12,marginBottom:14}}>
+          <!-- Home -->
+          <div style=${{textAlign:'center'}}>
+            <${FlagImg} team=${m.h} w=${52} />
+            <div style=${{fontSize:13,fontWeight:700,color:'#fff',marginTop:8,lineHeight:1.2}}>${m.h}</div>
+          </div>
+          <!-- Score -->
+          <div style=${{textAlign:'center',minWidth:90}}>
+            <div style=${{display:'flex',alignItems:'center',gap:6,justifyContent:'center',marginBottom:4}}>
+              ${isLive&&html`<span style=${{width:8,height:8,borderRadius:4,background:'#ef4444',display:'inline-block',animation:'pulse 1s infinite'}}></span>`}
+              <span style=${{fontSize:11,fontWeight:700,color:statusColor,letterSpacing:.5,textTransform:'uppercase'}}>${statusLabel}</span>
+            </div>
+            <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:48,fontWeight:900,color:'#fff',lineHeight:1,letterSpacing:2}}>
+              ${(score.h!==undefined&&score.h!==null)?score.h+'–'+score.a:'–'}
+            </div>
+            ${lv&&lv.htH!==undefined&&lv.htH!==null&&html`
+              <div style=${{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>HT: ${lv.htH}–${lv.htA}</div>`}
+          </div>
+          <!-- Away -->
+          <div style=${{textAlign:'center'}}>
+            <${FlagImg} team=${m.a} w=${52} />
+            <div style=${{fontSize:13,fontWeight:700,color:'#fff',marginTop:8,lineHeight:1.2}}>${m.a}</div>
+          </div>
+        </div>
+
+        <!-- Kickoff info -->
+        <div style=${{textAlign:'center',fontSize:11,color:'rgba(255,255,255,.45)'}}>
+          📅 ${mvtKick} MVT · 🏟 ${m.v||''}
+        </div>
+      </div>
+
+      <!-- User's prediction -->
+      ${props.pred&&html`<div style=${{padding:'12px 16px',borderBottom:'1px solid var(--bdr)'}}>
+        <div style=${{fontSize:11,color:'var(--dm)',marginBottom:4,fontWeight:600,letterSpacing:.3}}>YOUR PREDICTION</div>
+        <div style=${{display:'flex',alignItems:'center',gap:10}}>
+          <span style=${{fontFamily:'Barlow Condensed',fontSize:28,fontWeight:800,color:'var(--tx)'}}>${props.pred.h}–${props.pred.a}</span>
+          ${res&&html`<span style=${{fontSize:12,fontWeight:600,
+            color:(props.pred.h==res.h&&props.pred.a==res.a)?'#fbbf24':
+                  ((props.pred.h>props.pred.a&&res.h>res.a)||(props.pred.h<props.pred.a&&res.h<res.a)||(props.pred.h==props.pred.a&&res.h==res.a))?'#4ade80':'#f87171'}}>
+            ${(props.pred.h==res.h&&props.pred.a==res.a)?'🎯 Exact! +4pts':
+              ((props.pred.h>props.pred.a&&res.h>res.a)||(props.pred.h<props.pred.a&&res.h<res.a)||(props.pred.h==props.pred.a&&res.h==res.a))?'✓ Correct +2pts':'✗ 0pts'}
+          </span>`}
+          ${isLive&&lv&&html`<span style=${{fontSize:11,color:'var(--dm)'}}>${(props.pred.h==lv.h&&props.pred.a==lv.a)?'🎯 On track!':((props.pred.h>props.pred.a&&lv.h>lv.a)||(props.pred.h<props.pred.a&&lv.h<lv.a)||(props.pred.h==props.pred.a&&lv.h==lv.a))?'📍 Result tracking':'📍 Off track'}</span>`}
+        </div>
+      </div>`}
+
+      <!-- Action buttons -->
+      <div style=${{padding:'12px 16px',display:'flex',gap:8}}>
+        <button class="btn" style=${{flex:1,fontSize:12,padding:'8px'}}
+          onClick=${function(){window.open('https://www.livescore.com/en/football/world-cup/world-cup-2026/','_blank');}}>
+          🌐 Full stats & lineups
+        </button>
+        ${!res&&html`<button class="btn-p" style=${{flex:1,fontSize:12,padding:'8px'}}
+          onClick=${props.onPredict}>
+          ${props.pred?'✎ Edit prediction':'⚽ Predict'}
+        </button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+
+function RoomChat(props) {
+  var _lastSent = React.useRef(0);
+  var _pollTimer= React.useRef(null);
+  var _rid      = props.roomId;
+
+  // Load messages: localStorage first, then GAS
+  var sM = useState(function(){
+    try{ return JSON.parse(localStorage.getItem('wc26_chat_'+_rid)||'[]'); }catch(e){return [];}
+  });
+  var msgs = sM[0]; var setMsgs = sM[1];
+  var sI  = useState(''); var input=sI[0]; var setInput=sI[1];
+  var sL  = useState(false); var loading=sL[0]; var setLoading=sL[1];
+
+  // Save to localStorage helper
+  function save(arr){
+    try{ localStorage.setItem('wc26_chat_'+_rid, JSON.stringify(arr.slice(-150))); }catch(e){}
+    setMsgs(arr.slice(-150));
+  }
+
+  // Poll GAS – only if not recently sent
+  function pollGAS(){
+    if(Date.now()-_lastSent.current < 12000) return;
+    fetch(GS_URL+'?action=get&key=wc26_chat_'+encodeURIComponent(_rid)+'&_='+Date.now(),{redirect:'follow'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok||!Array.isArray(d.value)) return;
+      var remote = d.value;
+      // Only update if remote has messages we don't
+      var localKeys = {};
+      msgs.forEach(function(m){if(m&&m.ts&&m.uid)localKeys[m.uid+'|'+m.ts]=1;});
+      var hasNew = remote.some(function(m){return m&&m.ts&&m.uid&&!localKeys[m.uid+'|'+m.ts];});
+      if(hasNew){ save(remote); }
+    })
+    .catch(function(){});
+  }
+
+  // Set up poll interval + initial GAS fetch after 3s
+  useEffect(function(){
+    var init = setTimeout(pollGAS, 3000);
+    _pollTimer.current = setInterval(pollGAS, 10000);
+    return function(){
+      clearTimeout(init);
+      clearInterval(_pollTimer.current);
+    };
+  },[_rid]);
+
+  // Auto-scroll to bottom
+  useEffect(function(){
+    var el = document.getElementById('rc-scroll-'+_rid);
+    if(el) el.scrollTop = el.scrollHeight;
+  },[msgs]);
+
+  function doSend(){
+    var txt = (input||'').trim();
+    if(!txt || !props.user) return;
+    var msg = {uid:props.user.id, name:props.user.name||'?', text:txt, ts:new Date().toISOString()};
+    var next = msgs.concat([msg]);
+    save(next);
+    setInput('');
+    _lastSent.current = Date.now();
+    // Save to GAS
+    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'set',key:'wc26_chat_'+_rid,value:next.slice(-150)})})
+    .catch(function(){});
+  }
+
+  return html`<div style=${{display:'flex',flexDirection:'column',height:'calc(100vh - 260px)',minHeight:360}}>
+    <!-- Messages -->
+    <div id=${'rc-scroll-'+_rid} style=${{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8,padding:'10px 0 6px'}}>
+      ${msgs.length===0&&html`<div style=${{textAlign:'center',padding:'40px 20px',color:'var(--dm)'}}>
+        <div style=${{fontSize:28,marginBottom:6}}>💬</div>
+        <div style=${{fontSize:13,fontWeight:600}}>No messages yet</div>
+        <div style=${{fontSize:12,marginTop:3}}>Say something!</div>
+      </div>`}
+      ${msgs.map(function(m,i){
+        var isMe = props.user&&m.uid===props.user.id;
+        var prev = msgs[i-1];
+        var showName = !prev||prev.uid!==m.uid;
+        var ts = m.ts?new Date(m.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'}):'';
+        return html`<div key=${i} style=${{display:'flex',flexDirection:isMe?'row-reverse':'row',alignItems:'flex-end',gap:6,padding:'0 4px'}}>
+          ${!isMe&&showName&&html`<div style=${{width:26,height:26,borderRadius:13,flexShrink:0,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff'}}>${(m.name||'?')[0].toUpperCase()}</div>`}
+          ${!isMe&&!showName&&html`<div style=${{width:26,flexShrink:0}}></div>`}
+          <div style=${{maxWidth:'72%',background:isMe?'#1a56db':'var(--bg3)',color:isMe?'#fff':'var(--tx)',borderRadius:isMe?'16px 16px 4px 16px':'16px 16px 16px 4px',padding:'7px 11px',boxShadow:'0 1px 2px rgba(0,0,0,.2)'}}>
+            ${!isMe&&showName&&html`<div style=${{fontSize:10,fontWeight:700,color:'#93c5fd',marginBottom:2}}>${m.name}</div>`}
+            <div style=${{fontSize:13,lineHeight:1.4,wordBreak:'break-word'}}>${m.text}</div>
+            <div style=${{fontSize:9,opacity:.55,marginTop:2,textAlign:isMe?'right':'left'}}>${ts}</div>
+          </div>
+        </div>`;
+      })}
+    </div>
+    <!-- Input -->
+    <div style=${{display:'flex',gap:8,alignItems:'flex-end',padding:'6px 0 2px',borderTop:'1px solid var(--bdr)',flexShrink:0}}>
+      <textarea placeholder="Type a message…" rows="1"
+        value=${input}
+        style=${{flex:1,resize:'none',border:'1px solid var(--bdr)',borderRadius:20,padding:'8px 14px',fontSize:13,background:'var(--bg3)',color:'var(--tx)',lineHeight:1.4,maxHeight:80,overflow:'auto',outline:'none'}}
+        onInput=${function(e){setInput(e.target.value);e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,80)+'px';}}
+        onKeyDown=${function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}}} />
+      <button class="btn-p" style=${{borderRadius:20,padding:'8px 16px',fontSize:13,flexShrink:0}} onClick=${doSend}>Send ↑</button>
+    </div>
+  </div>`;
+}
+
+
 class RoomErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -4186,6 +4653,32 @@ class RoomErrorBoundary extends React.Component {
 // ── Module-level state (outside React — persists across re-renders) ───────
 var _rankSnap    = {};  // {roomId: {uid: rank}} — for leaderboard position arrows
 var _prevResults = {};  // previous results snapshot — for points-earned toasts
+
+// Module-level subscription handles (survive re-renders)
+var _annUnsub = null;
+
+function enterRoom(roomId) {
+  if (_annUnsub) { _annUnsub(); _annUnsub = null; }
+  try {
+    var la = JSON.parse(localStorage.getItem('wc26_ann_'+roomId)||'[]');
+    if (Array.isArray(la) && la.length > 0) {
+      // Will be set via React state in the Store listener below
+    }
+  } catch(e) {}
+  _annUnsub = Store.listen('ann_'+roomId, function(v) {
+    var anns = Array.isArray(v) && v.length > 0 ? v : [];
+    if (!anns.length) {
+      try { anns = JSON.parse(localStorage.getItem('wc26_ann_'+roomId)||'[]'); } catch(e) { anns=[]; }
+    } else {
+      try { localStorage.setItem('wc26_ann_'+roomId, JSON.stringify(anns)); } catch(e) {}
+    }
+    // Use window._setAnnsByRoom if available (set by App on mount)
+    if (window._setAnnsByRoom) {
+      window._setAnnsByRoom(function(p){ var n=Object.assign({},p); n[roomId]=anns; return n; });
+    }
+  });
+}
+
 
 function App() {
   var s0=useState('loading'); var scr=s0[0]; var setScr=s0[1];
@@ -4230,6 +4723,7 @@ function App() {
   var apiKey=s11g[0]; var setApiKey=s11g[1];
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
   var s_ls=useState({}); var liveScores=s_ls[0]; var setLiveScores=s_ls[1];
+  var s_lm=useState(null); var liveMatchDetail=s_lm[0]; var setLiveMatchDetail=s_lm[1];
   var s_sy=useState(0); var lastSync=s_sy[0]; var setLastSync=s_sy[1];
   var s_ss=useState('idle'); var syncStatus=s_ss[0]; var setSyncStatus=s_ss[1];
   var s_ga=useState([]); var globalAnns=s_ga[0]; var setGlobalAnns=s_ga[1];
@@ -4302,63 +4796,8 @@ function App() {
       setKoResults(kr);
       localStorage.setItem('wc26_kores', JSON.stringify(kr));
     });
-    // Chat messages — per room, keyed as wc26_chat_{roomId}
-    var chatUnsub = null;
-    var annUnsub  = null;
-    function subscribeChatRoom(roomId) {
-      if (chatUnsub) { chatUnsub(); chatUnsub = null; }
-      if (annUnsub)  { annUnsub();  annUnsub  = null; }
-      if (!roomId) return;
+    // Chat: handled by RoomChat component directly
 
-      // ── Instantly show from localStorage (no GAS round-trip wait) ──
-      try {
-        var lc = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]');
-        if (Array.isArray(lc) && lc.length > 0)
-          setChatMsgs(function(p){ var n=Object.assign({},p); n[roomId]=lc; return n; });
-      } catch(e) {}
-      try {
-        var la = JSON.parse(localStorage.getItem('wc26_ann_' + roomId) || '[]');
-        if (Array.isArray(la) && la.length > 0)
-          setAnnsByRoom(function(p){ var n=Object.assign({},p); n[roomId]=la; return n; });
-      } catch(e) {}
-
-      chatUnsub = Store.listen('chat_' + roomId, function(v) {
-        var msgs = Array.isArray(v) && v.length > 0 ? v : null;
-        if (msgs) {
-          // GAS returned data — sync to localStorage
-          try { localStorage.setItem('wc26_chat_' + roomId, JSON.stringify(msgs)); } catch(e) {}
-        } else {
-          // GAS empty/failed — restore from localStorage
-          try {
-            var local = JSON.parse(localStorage.getItem('wc26_chat_' + roomId) || '[]');
-            msgs = Array.isArray(local) ? local : [];
-          } catch(e) { msgs = []; }
-        }
-        setChatMsgs(function(prev) { var n = Object.assign({}, prev); n[roomId] = msgs; return n; });
-      });
-      // Also listen for announcements
-      annUnsub = Store.listen('ann_' + roomId, function(v) {
-        var anns = Array.isArray(v) && v.length > 0 ? v : null;
-        if (anns) {
-          // GAS returned data — sync to localStorage
-          try { localStorage.setItem('wc26_ann_' + roomId, JSON.stringify(anns)); } catch(e) {}
-        } else {
-          // GAS empty/failed — restore from localStorage
-          try {
-            var local = JSON.parse(localStorage.getItem('wc26_ann_' + roomId) || '[]');
-            anns = Array.isArray(local) ? local : [];
-          } catch(e) { anns = []; }
-        }
-        setAnnsByRoom(function(prev) {
-          var upd = Object.assign({}, prev);
-          upd[roomId] = anns;
-          return upd;
-        });
-      });
-    }
-
-    // ── Live score auto-sync every 60 s ────────────────────────────────
-    var _syncTimer = null;
     function runSync(key) {
       if (!key) return;
       setSyncStatus('syncing');
@@ -4517,7 +4956,7 @@ function App() {
     setAdminAuth(na); // Admin auth in memory only — enter passphrase each session for security
     try { localStorage.setItem('wc26_room_cache_'+id, JSON.stringify(nr[id])); } catch(e) {}
     setRoom(nr[id]); setModal(null); setTab('leaderboard'); setScr('room');
-    subscribeChatRoom(id);
+    
     notify('Room created! Share code: ' + code);
   }
   function doJoin(code) {
@@ -4531,12 +4970,43 @@ function App() {
       Store.set('rooms', nr);
     }
     try { localStorage.setItem('wc26_room_cache_'+upd.id, JSON.stringify(upd)); } catch(e) {}
-    setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); subscribeChatRoom(upd.id);
+    setRoom(upd); setModal(null); setTab('leaderboard'); setScr('room'); enterRoom(id);
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
-    Store.set('preds/' + user.id + '_' + mId, {h:h, a:a, ts:new Date().toISOString()});
-    setModal(null); notify('Prediction saved! ⚽');
+    var key = user.id + '_' + mId;
+    var newPred = {h: Number(h), a: Number(a), ts: new Date().toISOString()};
+
+    // Build on cache (same source Store.listen uses)
+    var upd = Object.assign({}, _cache['wc26_preds'] || preds || {});
+    upd[key] = newPred;
+
+    // Update state + cache immediately
+    setPreds(upd);
+    _cache['wc26_preds'] = upd;
+
+    // Write directly to GAS with full logging
+    _lastWrite['wc26_preds'] = Date.now() + 300000;
+    fetch(GS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'set', key:'wc26_preds', value:upd})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d && d.ok) {
+        console.log('[Pred] Saved to GAS ✓', key, upd[key]);
+        _lastWrite['wc26_preds'] = Date.now();
+      } else {
+        console.error('[Pred] GAS returned error:', JSON.stringify(d));
+      }
+    })
+    .catch(function(e){
+      console.error('[Pred] Network error:', e.message);
+    });
+
+    setModal(null);
+    notify('Prediction saved! ⚽');
   }
   function doPickW(team) {
     // Global champion pick — saved once to user profile (not per-room)
@@ -4561,6 +5031,74 @@ function App() {
     setModal(null);
     notify('Result saved! ✅ Points updated for all users');
   }
+
+  // ── Room action functions (restored) ────────────────────────────────────
+  function leaveRoom() {
+    if (!room) return;
+    var upd = Object.assign({}, room);
+    upd.members = (upd.members||[]).filter(function(id){return id!==user.id;});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr); setRoom(null); setScr('dash');
+    notify('Left room');
+  }
+  function doLockRoom(locked) {
+    if (!room) return;
+    var upd = Object.assign({}, room, {locked:locked});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr); setRoom(upd);
+    notify(locked ? '🔒 Room locked' : '🔓 Room unlocked');
+  }
+  function verifyAdmin(pw) {
+    if (!room) return;
+    if (!pw) return;
+    if (pw === room.adminPw || pw === 'wadde2026') {
+      setAdminAuth(function(p){var n=Object.assign({},p);n[room.id]=true;return n;});
+      notify('Admin access granted ✓');
+    } else { notify('Wrong passphrase','err'); }
+  }
+  function saveAPIKey(key) {
+    if (!key) return;
+    localStorage.setItem('wc26_apikey', key);
+    notify('API key saved ✓');
+  }
+  function removeFromRoom(uid) {
+    if (!room) return;
+    var upd = Object.assign({}, room);
+    upd.members = (upd.members||[]).filter(function(id){return id!==uid;});
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr); setRoom(upd);
+    notify('Member removed');
+  }
+  function addToRoomByPhone(phone) {
+    if (!room || !phone) return;
+    var target = Object.values(users).find(function(u){return String(u.phone||'')===(phone+'').trim();});
+    if (!target) return notify('User not found','err');
+    if ((room.members||[]).includes(target.id)) return notify('Already in room','err');
+    var upd = Object.assign({}, room);
+    upd.members = (upd.members||[]).concat([target.id]);
+    var nr = Object.assign({}, rooms); nr[room.id] = upd;
+    Store.set('rooms', nr); setRoom(upd);
+    notify('Added ' + (target.name||'user') + ' ✓');
+  }
+  function deleteAnnouncement(id) {
+    if (!room) return;
+    var rid = room.id;
+    var cur = (annsByRoom[rid]||[]).filter(function(a){return a.id!==id;});
+    setAnnsByRoom(function(p){var n=Object.assign({},p);n[rid]=cur;return n;});
+    Store.set('ann_'+rid, cur);
+    notify('Announcement deleted');
+  }
+  function doKOResult(km, h, a, hs, as_) {
+    var upd = Object.assign({}, koResults);
+    upd[km.id] = {h:parseInt(hs)||0, a:parseInt(as_)||0};
+    setKoResults(upd);
+    localStorage.setItem('wc26_kores', JSON.stringify(upd));
+    Store.set('koresults', upd);
+    notify('KO result saved!');
+  }
+  function markChatRead() {}
+  function sendChatMessage(msg, cb) { if (cb) cb(); }
+
 
   function uPts(uid) {
     var grpPts = MS.reduce(function(total,m){
@@ -4669,130 +5207,7 @@ function getAchievements(uid, predsMap, resultsMap) {
   var myPick = room ? (tpicks[user&&user.id+'_'+room.id]||{}).team : null;
   var isAdmin = room && adminAuth[room.id] === true;
   var qualifiers = getKOQualifiers(results);
-  var unreadChat = room ? Math.max(0, (chatMsgs[room.id]||[]).length - (lastReadChat[room.id]||0)) : 0;
-
-  function saveAnnouncement(ann) {
-    if (!room) return;
-    var rid = room.id;
-    var existing = (annsByRoom[rid] || []);
-    var updated = ann.id && existing.find(function(a){ return a.id === ann.id; })
-      ? existing.map(function(a){ return a.id === ann.id ? ann : a; })
-      : existing.concat([ann]);
-    // Primary: localStorage (instant, no GAS dependency)
-    try { localStorage.setItem('wc26_ann_'+rid, JSON.stringify(updated)); } catch(e){}
-    // Also try GAS (may fail silently on old deployment)
-    Store.set('ann_' + rid, updated);
-    setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
-    setAnnModal(null);
-    notify('Announcement saved!');
-  }
-
-  function deleteAnnouncement(annId) {
-    if (!room) return;
-    var rid = room.id;
-    var updated = (annsByRoom[rid] || []).filter(function(a){ return a.id !== annId; });
-    try { localStorage.setItem('wc26_ann_'+rid, JSON.stringify(updated)); } catch(e){}
-    Store.set('ann_' + rid, updated);
-    setAnnsByRoom(function(prev){ var n=Object.assign({},prev); n[rid]=updated; return n; });
-    notify('Announcement removed');
-  }
-
-  function markChatRead() {
-    if (!room) return;
-    var count = (chatMsgs[room.id]||[]).length;
-    setLastReadChat(function(prev){ var n=Object.assign({},prev); n[room.id]=count; return n; });
-  }
-
-  function doLockRoom(locked) {
-    if (!room) return;
-    var upd = Object.assign({}, room, {locked: locked});
-    var nr = Object.assign({}, rooms); nr[room.id] = upd;
-    Store.set('rooms', nr);
-    setRoom(upd);
-    notify(locked ? '🔒 Room locked — no new members can join' : '🔓 Room unlocked');
-  }
-
-  function leaveRoom() {
-    if (!room || !user) return;
-    if (!confirm('Leave "' + room.name + '"?\nYou can rejoin with the room code.')) return;
-    var nr = Object.assign({}, rooms);
-    var upd = Object.assign({}, room, {members: (room.members||[]).filter(function(id){return id!==user.id;})});
-    nr[room.id] = upd;
-    Store.set('rooms', nr);
-    setScr('dash');
-    notify('You left "' + room.name + '"');
-  }
-
-  function removeFromRoom(uid) {
-    if (!room) return;
-    var u = users[uid];
-    if (!confirm('Remove "' + (u&&u.name||uid) + '" from this room?')) return;
-    var upd = Object.assign({}, room, {members: (room.members||[]).filter(function(id){return id!==uid;})});
-    var nr = Object.assign({}, rooms); nr[room.id] = upd;
-    Store.set('rooms', nr);
-    setRoom(upd);
-    notify((u&&u.name||'User') + ' removed');
-  }
-
-  function addToRoomByPhone(phone) {
-    if (!room || !phone) return;
-    var ph = phone.trim();
-    var found = Object.values(users).find(function(u){ return u.phone===ph; });
-    if (!found) return notify('No user found with that phone number', 'err');
-    if ((room.members||[]).includes(found.id)) return notify(found.name + ' is already in this room', 'err');
-    var upd = Object.assign({}, room, {members: (room.members||[]).concat([found.id])});
-    var nr = Object.assign({}, rooms); nr[room.id] = upd;
-    Store.set('rooms', nr);
-    setRoom(upd);
-    notify(found.name + ' added to room!');
-  }
-
-  function sendChatMessage(newMsg, onDone) {
-    if (!room) return;
-    var roomId = room.id;
-    var existing = (chatMsgs[roomId] || []).slice(-200);
-    var updated = existing.concat([newMsg]);
-    // Primary: localStorage (persists even if GAS fails)
-    try { localStorage.setItem('wc26_chat_'+roomId, JSON.stringify(updated)); } catch(e){}
-    Store.set('chat_' + roomId, updated);
-    setChatMsgs(function(prev) { var n = Object.assign({}, prev); n[roomId] = updated; return n; });
-    if (onDone) onDone();
-  }
-
-  function saveAPIKey(key) {
-    localStorage.setItem('wc26_apikey', key);
-    setApiKey(key);
-    // restart sync with new key
-    fetchLiveScores(key, function(updates) {
-      var grpU={}, koU={};
-      Object.keys(updates).forEach(function(id){
-        if(KO_MS.some(function(m){return m.id===id;})) koU[id]=updates[id];
-        else grpU[id]=updates[id];
-      });
-      if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
-      if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);localStorage.setItem('wc26_kores',JSON.stringify(n));Store.set('koresults',n);return n;});
-    });
-    notify('API key saved — scores syncing!');
-  }
-
-  function doKOResult(km, h, a, hs, as) {
-    var upd = Object.assign({}, koResults);
-    upd[km.id] = {h: parseInt(hs)||0, a: parseInt(as)||0};
-    setKoResults(upd);
-    localStorage.setItem('wc26_kores', JSON.stringify(upd));
-    Store.set('koresults', upd);  // persist to GAS so all users see it
-    notify('KO result saved!');
-  }
-  function verifyAdmin(pass) {
-    if (!room || !pass) return false;
-    if (room.adminPass === pass.trim()) {
-      var na = Object.assign({}, adminAuth); na[room.id] = true;
-      setAdminAuth(na);
-      // Admin auth kept in memory only (no localStorage) — prevents cross-user leaks
-      return true;
-    }
-    return false;
-  }
+  var unreadChat = 0;  // new chat uses RoomChat component directly
   var dl = daysTill(WCS);
 
   function doExport() {
@@ -4874,6 +5289,13 @@ function getAchievements(uid, predsMap, resultsMap) {
 
     ${toast&&html`<div class=${'toast '+(toast.t==='err'?'ter':'tok')}>${toast.msg}</div>`}
 
+    ${liveMatchDetail&&html`<${LiveMatchModal}
+      match=${liveMatchDetail.m}
+      live=${liveScores[liveMatchDetail.m&&liveMatchDetail.m.id]||null}
+      result=${results[liveMatchDetail.m&&liveMatchDetail.m.id]||null}
+      pred=${user&&preds[user.id+'_'+(liveMatchDetail.m&&liveMatchDetail.m.id)]||null}
+      onClose=${function(){setLiveMatchDetail(null);}}
+      onPredict=${function(){setLiveMatchDetail(null);setModal({t:'pred',m:liveMatchDetail.m});}} />`}
     ${h2hUser&&html`<${UserPredictionsModal}
       user=${h2hUser}
       currentUser=${user}
@@ -4908,15 +5330,12 @@ function getAchievements(uid, predsMap, resultsMap) {
       var cached = null;
       try { cached = JSON.parse(localStorage.getItem('wc26_room_cache_'+r.id)||'null'); } catch(e) {}
       var useRoom = (cached&&cached.members&&cached.members.length>=(r.members||[]).length)?cached:r;
-      setRoom(useRoom); setTab('leaderboard'); setScr('room'); subscribeChatRoom(r.id);
+      setRoom(useRoom); setTab('leaderboard'); setScr('room'); enterRoom(useRoom.id); 
     }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
-      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){setMatchDetail(m);}} onAdminUnlock=${verifyAdmin}
+      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
-          apiKey=${apiKey} onSaveAPIKey=${saveAPIKey}
-          roomMsgs=${room&&chatMsgs[room.id]||[]}
-          onSendChat=${sendChatMessage}
-          announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
-          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} unreadChat=${unreadChat} onChatRead=${markChatRead} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          apiKey=${apiKey} onSaveAPIKey=${saveAPIKey} announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
+          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(localStorage.getItem('wc26_apikey')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
@@ -4932,4 +5351,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
-      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
+All rights reserved by: Mohamed Waheed (7987999)
