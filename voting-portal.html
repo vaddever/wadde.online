@@ -166,6 +166,19 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .nom-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
 .nom-name{font-size:13px;font-weight:500;flex:1;}
 .nom-info{font-size:11px;color:var(--text2);margin-left:auto;white-space:nowrap;}
+/* VOTING PERIOD BANNER */
+.voting-period-banner{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:18px;}
+.voting-period-banner.open{border-color:rgba(76,175,125,.3);background:var(--green-dim);}
+.voting-period-banner.closed{border-color:rgba(224,85,85,.2);background:var(--red-dim);}
+.voting-period-title{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);margin-bottom:6px;}
+.voting-period-row{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:3px;}
+.voting-period-icon{font-size:14px;flex-shrink:0;}
+.voting-period-dates{color:var(--text);font-weight:500;}
+.voting-period-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.countdown-wrap{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+.countdown-box{background:var(--bg);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 12px;text-align:center;min-width:60px;}
+.countdown-num{font-family:'DM Serif Display',serif;font-size:26px;color:var(--gold);line-height:1;}
+.countdown-lbl{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-top:3px;}
 /* VOTER STATS DASHBOARD */
 .vstats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px;}
 .vstat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 12px;text-align:center;cursor:pointer;transition:all .2s;user-select:none;}
@@ -564,6 +577,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
     <!-- Overview -->
     <div class="tab-panel on" id="admin-overview">
+      <div id="admin-voting-period-banner"></div>
       <div class="stats-row" id="admin-stats"></div>
       <!-- Voter stats dashboard (shown if enabled in settings) -->
       <div id="admin-vstats-wrap" style="display:none;">
@@ -706,6 +720,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     </div>
 
     <div class="tab-panel on" id="superadmin-overview">
+      <div id="sa-voting-period-banner"></div>
       <div class="stats-row" id="sa-stats"></div>
       <!-- Voter stats dashboard (shown if enabled in settings) -->
       <div id="sa-vstats-wrap" style="display:none;">
@@ -915,6 +930,30 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       </div>
 
       <div class="ss-section">
+        <div class="ss-title">Voting Period &amp; Schedule</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;">
+          <p style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6;">
+            Set optional start and end dates. The voting period info and a countdown will be visible to voters, admins, and superadmins.
+            The manual Open / Close buttons below still take priority.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);display:block;margin-bottom:5px;">Voting Opens</label>
+              <input type="datetime-local" id="vp-start" class="gs-inp" style="width:100%;" onchange="saveVotingPeriod()">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);display:block;margin-bottom:5px;">Voting Closes</label>
+              <input type="datetime-local" id="vp-end" class="gs-inp" style="width:100%;" onchange="saveVotingPeriod()">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+            <button class="btn-sm red" onclick="clearVotingPeriod()">✕ Clear schedule</button>
+          </div>
+          <div id="vp-preview" style="margin-top:10px;font-size:12px;color:var(--text3);"></div>
+        </div>
+      </div>
+
+      <div class="ss-section">
         <div class="ss-title">Voting Control</div>
         <div class="cfg-grid">
           <div class="cfg-card">
@@ -980,7 +1019,11 @@ const CFG = {
   get sheetId()    { return LS.get('cfg_sheet_id')    || DEFAULT_SHEET_ID; },
   get apiKey()     { return LS.get('cfg_api_key')     || DEFAULT_API_KEY;  },
   get scriptUrl()  { return LS.get('cfg_script_url')  || ''; },
-  get votingOpen() { return LS.get('cfg_voting_open') !== false; },
+  get votingOpen()  { return LS.get('cfg_voting_open') !== false; },
+  get votingStart() { return LS.get('cfg_voting_start') || ''; },
+  get votingEnd()   { return LS.get('cfg_voting_end')   || ''; },
+  set votingStart(v){ LS.set('cfg_voting_start', v); },
+  set votingEnd(v)  { LS.set('cfg_voting_end', v);   },
   get orgName()    { return LS.get('cfg_org_name')    || ''; },
   set sheetId(v)   { LS.set('cfg_sheet_id', v);    },
   set apiKey(v)    { LS.set('cfg_api_key', v);     },
@@ -1275,9 +1318,11 @@ async function fetchFromSheets() {
     cfgD.forEach(r=>{
       const key=(r[0]||'').trim().toLowerCase();
       const val=(r[1]||'').trim();
-      if (key==='votingopen')       CFG.votingOpen = (val.toUpperCase()!=='FALSE');
-      if (key==='orgname'   && val) CFG.orgName    = val;
-      if (key==='scripturl' && val) CFG.scriptUrl  = val;
+      if (key==='votingopen')        CFG.votingOpen  = (val.toUpperCase()!=='FALSE');
+      if (key==='orgname'   && val)  CFG.orgName    = val;
+      if (key==='scripturl' && val)  CFG.scriptUrl  = val;
+      if (key==='votingstart'&& val) CFG.votingStart= val;
+      if (key==='votingend'  && val) CFG.votingEnd  = val;
     });
   }
 
@@ -1690,9 +1735,7 @@ function initVoter(){
     <span class="meta-chip">📍 ${unitName}</span>`;
   // Populate stats dashboard
   renderVoterStats();
-  const bar=document.getElementById('voter-status-bar');
-  bar.className=`status-bar ${CFG.votingOpen?'status-open':'status-closed'}`;
-  bar.textContent=CFG.votingOpen?'✓ Voting is open':'✗ Voting is closed';
+  renderVotingPeriodBanner('voter-status-bar', true);
 
   const container=document.getElementById('cats-container');
   container.innerHTML='';
@@ -2278,6 +2321,7 @@ function initAdmin(){
   renderUnitBars('admin-unit-bars');
   renderVoterStats();
   applyAdminPageVisibility();
+  renderVotingPeriodBanner('admin-voting-period-banner', false);
   applyOrgName();
 }
 
@@ -2995,6 +3039,8 @@ function initSA(){
   if(DATA.staff.length) renderStaff();
   renderDeptUnitManager();
   document.getElementById('sa-voting-val').textContent=CFG.votingOpen?'Open':'Closed';
+  loadVotingPeriodInputs();
+  renderVotingPeriodBanner('sa-voting-period-banner', false);
   document.getElementById('sa-dept-count').textContent=DATA.departments.length;
   const gsId=document.getElementById('gs-id-inp');
   const gsKey=document.getElementById('gs-key-inp');
@@ -3714,9 +3760,171 @@ function saveOrgName(){
   applyOrgName();
   showToast('Organisation name saved','ok');
 }
+// ── Voting period helpers ──────────────────────────────
+
+function fmtDateTime(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  return d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})
+    +' at '
+    +d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+}
+
+function votingIsLive(){
+  // Returns true if voting should currently be open based on period + manual flag
+  const now=Date.now();
+  const start=CFG.votingStart ? new Date(CFG.votingStart).getTime() : null;
+  const end=CFG.votingEnd   ? new Date(CFG.votingEnd).getTime()   : null;
+  if(start && now < start) return false; // not started yet
+  if(end   && now > end)   return false; // already ended
+  return CFG.votingOpen;
+}
+
+function saveVotingPeriod(){
+  const start=document.getElementById('vp-start')?.value||'';
+  const end=document.getElementById('vp-end')?.value||'';
+  CFG.votingStart=start;
+  CFG.votingEnd=end;
+  updateVotingPeriodPreview();
+  renderAllVotingPeriodBanners();
+  // Save to Config sheet
+  if(start) writeToSheets('setConfig',{key:'votingStart',value:start});
+  if(end)   writeToSheets('setConfig',{key:'votingEnd',  value:end});
+  showToast('Voting schedule saved','ok');
+}
+
+function clearVotingPeriod(){
+  CFG.votingStart=''; CFG.votingEnd='';
+  const s=document.getElementById('vp-start'); if(s) s.value='';
+  const e=document.getElementById('vp-end');   if(e) e.value='';
+  updateVotingPeriodPreview();
+  renderAllVotingPeriodBanners();
+  writeToSheets('setConfig',{key:'votingStart',value:''});
+  writeToSheets('setConfig',{key:'votingEnd',  value:''});
+  showToast('Schedule cleared','ok');
+}
+
+function updateVotingPeriodPreview(){
+  const el=document.getElementById('vp-preview');
+  if(!el) return;
+  const s=CFG.votingStart, e=CFG.votingEnd;
+  if(!s&&!e){ el.textContent='No schedule set — using manual open/close.'; return; }
+  let txt='';
+  if(s) txt+=`Opens: ${fmtDateTime(s)}`;
+  if(s&&e) txt+='  →  ';
+  if(e) txt+=`Closes: ${fmtDateTime(e)}`;
+  el.textContent=txt;
+}
+
+function loadVotingPeriodInputs(){
+  const s=document.getElementById('vp-start');
+  const e=document.getElementById('vp-end');
+  // datetime-local needs format YYYY-MM-DDTHH:MM
+  if(s && CFG.votingStart) s.value = CFG.votingStart.slice(0,16);
+  if(e && CFG.votingEnd)   e.value = CFG.votingEnd.slice(0,16);
+  updateVotingPeriodPreview();
+}
+
+// ── Render the voting period banner in a container ──
+let _countdownInterval=null;
+
+function renderVotingPeriodBanner(containerId, showCountdown){
+  const el=document.getElementById(containerId);
+  if(!el) return;
+  const start=CFG.votingStart;
+  const end=CFG.votingEnd;
+  const now=new Date();
+  const startDt=start?new Date(start):null;
+  const endDt=end?new Date(end):null;
+  const isOpen=votingIsLive();
+
+  // Determine state
+  let state='manual', label='', subLabel='', targetDt=null, targetLabel='';
+  if(startDt||endDt){
+    if(startDt && now < startDt){
+      state='upcoming';
+      label='Voting Opens Soon';
+      subLabel=`${fmtDateTime(start)}`;
+      if(endDt) subLabel+=` → ${fmtDateTime(end)}`;
+      targetDt=startDt; targetLabel='Voting opens in';
+    } else if(endDt && now < endDt){
+      state='open';
+      label='Voting is Open';
+      subLabel=`Closes ${fmtDateTime(end)}`;
+      targetDt=endDt; targetLabel='Voting closes in';
+    } else if(endDt && now >= endDt){
+      state='ended';
+      label='Voting has ended';
+      if(startDt) subLabel=`${fmtDateTime(start)} → ${fmtDateTime(end)}`;
+    } else {
+      state=isOpen?'open':'closed';
+      label=isOpen?'Voting is Open':'Voting is Closed';
+      if(startDt) subLabel=`Started ${fmtDateTime(start)}`;
+    }
+  } else {
+    state=isOpen?'open':'closed';
+    label=isOpen?'Voting is Open':'Voting is Closed';
+  }
+
+  const stateIcon={open:'🟢',upcoming:'🕐',ended:'🔴',closed:'🔴',manual:isOpen?'🟢':'🔴'};
+  const stateClass={open:'open',upcoming:'',ended:'closed',closed:'closed',manual:isOpen?'open':'closed'};
+
+  el.innerHTML=`<div class="voting-period-banner ${stateClass[state]}" style="margin-bottom:16px;">
+    <div class="voting-period-title">Voting Period</div>
+    <div class="voting-period-row">
+      <span class="voting-period-icon">${stateIcon[state]}</span>
+      <span class="voting-period-dates">${label}</span>
+    </div>
+    ${subLabel?`<div class="voting-period-sub">${subLabel}</div>`:''}
+    ${showCountdown&&targetDt?`
+    <div style="margin-top:10px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);">${targetLabel}</div>
+    <div class="countdown-wrap" id="countdown-${containerId}">
+      <div class="countdown-box"><div class="countdown-num" id="cd-d-${containerId}">--</div><div class="countdown-lbl">Days</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-h-${containerId}">--</div><div class="countdown-lbl">Hours</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-m-${containerId}">--</div><div class="countdown-lbl">Mins</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-s-${containerId}">--</div><div class="countdown-lbl">Secs</div></div>
+    </div>`:''
+  }
+  </div>`;
+
+  // Start countdown tick for this element
+  if(showCountdown && targetDt){
+    if(_countdownInterval) clearInterval(_countdownInterval);
+    _countdownInterval = setInterval(()=>tickCountdown(containerId, targetDt), 1000);
+    tickCountdown(containerId, targetDt);
+  }
+}
+
+function tickCountdown(containerId, targetDt){
+  const diff = targetDt - new Date();
+  if(diff <= 0){
+    clearInterval(_countdownInterval);
+    // Re-render when target is reached
+    renderAllVotingPeriodBanners();
+    return;
+  }
+  const d=Math.floor(diff/86400000);
+  const h=Math.floor((diff%86400000)/3600000);
+  const m=Math.floor((diff%3600000)/60000);
+  const s=Math.floor((diff%60000)/1000);
+  const pad=n=>String(n).padStart(2,'0');
+  const setEl=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  setEl(`cd-d-${containerId}`, pad(d));
+  setEl(`cd-h-${containerId}`, pad(h));
+  setEl(`cd-m-${containerId}`, pad(m));
+  setEl(`cd-s-${containerId}`, pad(s));
+}
+
+function renderAllVotingPeriodBanners(){
+  renderVotingPeriodBanner('voter-status-bar', true);
+  renderVotingPeriodBanner('admin-voting-period-banner', false);
+  renderVotingPeriodBanner('sa-voting-period-banner', false);
+}
+
 async function setVoting(open){
   CFG.votingOpen=open;
   document.getElementById('sa-voting-val').textContent=open?'Open':'Closed';
+  renderAllVotingPeriodBanners();
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
@@ -4600,8 +4808,8 @@ function switchTab(scope,tab,btn){
   if(btn)btn.classList.add('on');
   document.querySelectorAll(`#screen-${scope} .tab-panel`).forEach(p=>p.classList.remove('on'));
   document.getElementById(`${scope}-${tab}`)?.classList.add('on');
-  if(tab==='overview'&&scope==='admin'){renderStats('admin');renderDeptBars('admin-dept-bars');renderUnitBars('admin-unit-bars');renderVoterStats();}
-  if(tab==='overview'&&scope==='superadmin'){renderStats('sa');renderDeptBars('sa-dept-bars');renderUnitBars('sa-unit-bars');renderVoterStats();}
+  if(tab==='overview'&&scope==='admin'){renderStats('admin');renderDeptBars('admin-dept-bars');renderUnitBars('admin-unit-bars');renderVoterStats();renderVotingPeriodBanner('admin-voting-period-banner',false);}
+  if(tab==='overview'&&scope==='superadmin'){renderStats('sa');renderDeptBars('sa-dept-bars');renderUnitBars('sa-unit-bars');renderVoterStats();renderVotingPeriodBanner('sa-voting-period-banner',false);}
   if(tab==='results'&&scope==='admin') renderAdminResults();
   if(tab==='voters'&&scope==='admin') renderAdminVoterList();
   if(tab==='staff'&&scope==='admin') renderAdminStaff();
@@ -4615,7 +4823,7 @@ function switchTab(scope,tab,btn){
   if(tab==='nominees'){ populateNomFilters(); renderNominees(); }
   if(tab==='staff') renderStaff();
   if(tab==='categories'){ populateCatFilters(); renderCatList(); }
-  if(tab==='settings'){ initSA(); loadDisplaySettings(); loadAdminPageSettings(); }
+  if(tab==='settings'){ initSA(); loadDisplaySettings(); loadAdminPageSettings(); loadVotingPeriodInputs(); }
 }
 
 // ═══════════════════════════════════════════════════════════
