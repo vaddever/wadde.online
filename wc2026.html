@@ -4985,11 +4985,25 @@ function App() {
     setPreds(upd);
     _cache['wc26_preds'] = upd;
 
-    // Use Store.set — IDENTICAL to how doResult saves (Store.set('results', upd))
-    Store.set('preds', upd);
-
-    // Extend write guard to 5 min so polling doesn't revert before GAS confirms
+    // Write directly to GAS with full logging
     _lastWrite['wc26_preds'] = Date.now() + 300000;
+    fetch(GS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'set', key:'wc26_preds', value:upd})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d && d.ok) {
+        console.log('[Pred] Saved to GAS ✓', key, upd[key]);
+        _lastWrite['wc26_preds'] = Date.now();
+      } else {
+        console.error('[Pred] GAS returned error:', JSON.stringify(d));
+      }
+    })
+    .catch(function(e){
+      console.error('[Pred] Network error:', e.message);
+    });
 
     setModal(null);
     notify('Prediction saved! ⚽');
@@ -5337,3 +5351,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>
 </body>
 </html>
+All rights reserved by: Mohamed Waheed (7987999)
