@@ -4,10 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WC 2026 Predictions — wadde.online</title>
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+  <meta name="version" content="2026-06-17">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 64'><rect width='56' height='64' rx='8' fill='%230a1628'/><path d='M10 8 H46 L42 38 Q39 47 28 50 Q17 47 14 38 Z' fill='%23f0b429'/><path d='M14 13 Q4 13 4 23 Q4 33 14 33' fill='none' stroke='%23f0b429' stroke-width='5' stroke-linecap='round'/><path d='M42 13 Q52 13 52 23 Q52 33 42 33' fill='none' stroke='%23f0b429' stroke-width='5' stroke-linecap='round'/><rect x='25' y='50' width='6' height='8' fill='%23f0b429'/><rect x='16' y='58' width='24' height='6' rx='3' fill='%23f0b429'/><text x='28' y='37' text-anchor='middle' fill='%230a1628' font-size='13' font-weight='900' font-family='Arial Black'>26</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <!-- Non-blocking font load — won't delay page render -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap">
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap"></noscript>
   <style>
   /* Tabler-icons replacement — no external CDN needed */
   .ti { font-style:normal; font-family:Arial,sans-serif; line-height:1; display:inline-flex; align-items:center; justify-content:center; }
@@ -136,7 +141,7 @@
   </style>
 </head>
 <body>
-<div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px"><div style="font-size:60px">⚽</div><p style="color:#5b8bb8;font-family:sans-serif">Loading...</p></div></div>
+<div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;background:#0a1628"><div style="font-size:60px">⚽</div><p style="color:#5b8bb8;font-family:sans-serif;font-size:14px;margin:0">Loading WC 2026…</p><div style="width:40px;height:40px;border:3px solid #1a3a5c;border-top-color:#f0b429;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div><p style="color:#5b8bb8;font-family:sans-serif">Loading...</p></div></div>
 
 <!--
 SETUP INSTRUCTIONS
@@ -5422,7 +5427,19 @@ function getAchievements(uid, predsMap, resultsMap) {
   </div>`;
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+try {
+  ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+} catch(e) {
+  document.getElementById('root').innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;background:#0a1628;color:#fff;font-family:sans-serif;padding:20px;text-align:center">' +
+    '<div style="font-size:48px">⚠️</div>' +
+    '<h2 style="margin:0;color:#f0b429">App failed to load</h2>' +
+    '<p style="color:#5b8bb8;margin:0;font-size:14px">Try a hard refresh: hold Shift and press F5 (or Ctrl+Shift+R)</p>' +
+    '<button onclick="location.reload(true)" style="padding:10px 24px;background:#f0b429;color:#0a1628;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px">Reload</button>' +
+    '<p style="color:#5b8bb8;margin:0;font-size:11px">Error: ' + (e&&e.message||'Unknown') + '</p>' +
+    '</div>';
+  console.error('App init error:', e);
+}
 </script>
 </body>
 </html>
