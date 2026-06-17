@@ -1796,7 +1796,7 @@ function initVoter(){
       <div class="cat-num">${idx}</div>
       <div style="flex:1;">
         <div class="cat-title">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px;">(${voterScopeTxt}${voterLinked})</div>
+        <div style="font-size:12px;color:var(--text2);font-weight:500;margin-top:3px;">(${voterScopeTxt}${voterLinked})</div>
       </div>
       <div class="cat-count">${noms.length} nominee${noms.length!==1?'s':''}</div>
     </div>
@@ -2134,7 +2134,7 @@ function renderAdminNominees(){
       <div class="nom-cat-group-hdr">
         <div style="flex:1;">
           <span class="nom-cat-group-title">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></span>
-          <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;">(${scopeTag[cat.scope]||cat.scope})</span>
+          <span style="font-size:12px;color:var(--text2);font-weight:500;margin-left:6px;">(${scopeTag[cat.scope]||cat.scope})</span>
         </div>
         <span class="nom-cat-group-count">${noms.length} nominee${noms.length!==1?'s':''}</span>
       </div>${rows}
@@ -2518,7 +2518,7 @@ function renderAdminResults(){
           <div style="width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0;"></div>
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px;">${scopeTxt}${linkedTxt} · ${noms.length} nominee${noms.length!==1?'s':''} · ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
+            <div style="font-size:12px;color:var(--text2);font-weight:500;margin-top:3px;">${scopeTxt}${linkedTxt} · ${noms.length} nominee${noms.length!==1?'s':''} · ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
           </div>
         </div>
         ${noms.map(n=>buildNomRow(n,c,true)).join('')}
@@ -2828,7 +2828,7 @@ function renderSAResults(){
           <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0;"></div>
           <div style="flex:1;">
             <div style="font-size:14px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px;">${scopeTxt}${linkedTxt} · ${noms.length} nominee${noms.length!==1?'s':''} · ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
+            <div style="font-size:12px;color:var(--text2);font-weight:500;margin-top:3px;">${scopeTxt}${linkedTxt} · ${noms.length} nominee${noms.length!==1?'s':''} · ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
           </div>
         </div>
         <!-- Column labels -->
@@ -3039,7 +3039,7 @@ function renderCategoryDetail(containerId){
       <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:flex-start;gap:10px;">
         <div style="flex:1;">
           <div style="font-size:14px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px;">(${scopeTxt}${linkedTxt}) · ${noms.length} nominees · ${totalVotes} votes cast</div>
+          <div style="font-size:12px;color:var(--text2);font-weight:500;margin-top:3px;">(${scopeTxt}${linkedTxt}) · ${noms.length} nominees · ${totalVotes} votes cast</div>
         </div>
       </div>
       ${noms.length?nomRows:`<div style="padding:16px;font-size:12px;color:var(--text3);">No nominees in this category</div>`}
@@ -3331,7 +3331,7 @@ function renderNominees(){
       <div class="nom-cat-group-hdr">
         <div style="flex:1;">
           <span class="nom-cat-group-title">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></span>
-          <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;">(${nomScopeTxt}${nomLinkedTxt})</span>
+          <span style="font-size:12px;color:var(--text2);font-weight:500;margin-left:6px;">(${nomScopeTxt}${nomLinkedTxt})</span>
         </div>
         <span class="nom-cat-group-count">${noms.length} nominee${noms.length!==1?'s':''}</span>
         <button class="btn-sm green" onclick="openAddNomModal('${catId}')" style="padding:4px 10px;font-size:10px;">+ Add</button>
