@@ -849,7 +849,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
           </div>
           <div id="deploy-test-result" style="font-size:12px;margin-top:8px;display:none;padding:9px 12px;border-radius:var(--rs);"></div>
           <div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);border-radius:var(--rs);padding:10px 12px;margin-top:10px;font-size:11px;color:var(--gold2);line-height:1.6;">
-            ⚠ <b>Important:</b> after pasting updated Apps Script code, you must click <b>Deploy → New deployment</b> (not "Manage deployments → Edit"). Editing an existing deployment's code does <b>not</b> make it live — only a brand-new deployment version does. Forgetting this is the #1 cause of "my changes aren't saving" issues.
+            ⚠ <b>Important — 3 steps, all required:</b><br>
+            1️⃣ Delete <b>all</b> existing code in the Apps Script editor, then paste in the fresh code (don't paste on top of old code).<br>
+            2️⃣ Click <b>Deploy → New deployment</b> — not "Manage deployments → Edit". Editing an existing deployment does not push out new code.<br>
+            3️⃣ <b>Copy the new /exec URL</b> shown after deploying — it can change — and paste it into the <b>Script URL</b> field above, then click Save.<br>
+            Skipping step 3 is the #1 reason a redeploy "doesn't work": the portal keeps using the old URL pointing at old code. Always finish by clicking <b>🔍 Test Apps Script Connection</b> below to confirm.
           </div>
         </div>
       </div>
@@ -3223,7 +3227,7 @@ async function verifyVoterWriteReachedSheet(pin, expected){
   if(mismatch){
     cacheData();
     renderVoterList(); renderAdminVoterList();
-    showSheetSyncWarning(`⚠ "${expected.name}"'s changes didn't reach the Google Sheet — your Apps Script may need to be redeployed. Go to Settings → Get Apps Script code, and create a NEW deployment (not edit existing).`);
+    showSheetSyncWarning(`⚠ "${expected.name}"'s changes didn't reach the Google Sheet. Go to Settings → click "🔍 Test Apps Script Connection" — it will tell you exactly what's wrong and how to fix it.`);
   }
 }
 
@@ -4032,6 +4036,8 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v2';
+
 async function testDeploymentRoundtrip(){
   const resEl=document.getElementById('deploy-test-result');
   if(!resEl) return;
@@ -4043,8 +4049,34 @@ async function testDeploymentRoundtrip(){
   }
   resEl.style.display='block';
   resEl.style.background='var(--bg3)'; resEl.style.color='var(--text2)';
-  resEl.textContent='⏳ Sending a test write, then checking if it landed in the sheet…';
+  resEl.textContent='⏳ Checking your deployed script version…';
 
+  // ── Attempt 1: direct version check (reads the actual response) ──
+  // This is the most conclusive check — it tells us exactly which
+  // code version is live, not just whether *some* write succeeded.
+  try{
+    const pingUrl = CFG.scriptUrl + '?data=' + encodeURIComponent(JSON.stringify({action:'ping'}));
+    const r = await fetch(pingUrl, { method:'GET' }); // normal mode — we need to read this response
+    if(r.ok){
+      const j = await r.json();
+      if(j && j.version){
+        if(j.version === EXPECTED_SCRIPT_VERSION){
+          resEl.style.background='var(--green-dim)'; resEl.style.color='var(--green)';
+          resEl.textContent=`✓ Your deployment is up to date (version ${j.version}). Writes should be reaching the sheet correctly.`;
+        } else {
+          resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+          resEl.textContent=`✕ Your deployed script is OUTDATED — it's running "${j.version}" but the latest is "${EXPECTED_SCRIPT_VERSION}". This confirms your redeploy didn't take effect. Open Apps Script → paste the latest code (replacing everything) → Deploy → New deployment → copy the NEW /exec URL → paste it into Script URL above and click Save → then run this test again.`;
+        }
+        return;
+      }
+    }
+  }catch(e){
+    // Direct read blocked (CORS) or network issue — fall through to the indirect test below
+  }
+
+  // ── Attempt 2 (fallback): indirect sentinel round-trip via Sheets API readback ──
+  // Used only if the direct version check above couldn't read a response at all.
+  resEl.textContent='⏳ Direct check unavailable — trying an indirect write+readback test…';
   const sentinel = 'check_'+Date.now();
   const ok1 = await writeToSheets('setConfig',{key:'_pingCheck', value:sentinel});
   if(!ok1){
@@ -4061,10 +4093,10 @@ async function testDeploymentRoundtrip(){
     const found=rows.find(row=>(row[0]||'').toLowerCase()==='_pingcheck');
     if(found && found[1]===sentinel){
       resEl.style.background='var(--green-dim)'; resEl.style.color='var(--green)';
-      resEl.textContent='✓ Success! Your Apps Script deployment is live and writes are reaching the sheet correctly.';
+      resEl.textContent='✓ Writes are reaching the sheet. (Could not confirm exact script version — direct check was blocked by your browser, but this indirect test passed.)';
     } else {
       resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
-      resEl.textContent='✕ The write did not reach the sheet. Your Apps Script likely needs to be redeployed — go to Apps Script editor → Deploy → New deployment.';
+      resEl.textContent='✕ The write did not reach the sheet. Your Apps Script needs to be redeployed — go to Apps Script editor → Deploy → New deployment → copy the NEW /exec URL into Script URL above.';
     }
   }catch(e){
     resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
@@ -4622,6 +4654,11 @@ function showScriptHelp(){
 //       Copy the /exec URL → paste in Portal Settings → Script URL
 // ═══════════════════════════════════════════════════════
 
+// ── Version fingerprint — bump this whenever this script changes ──
+// The portal's diagnostic test checks this directly so you get a
+// definitive answer on whether your deployment is actually current.
+var SCRIPT_VERSION = '2026-06-17-v2';
+
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
   return (str || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -4633,14 +4670,19 @@ function doPost(e) { return handleRequest(e.postData ? e.postData.contents : (e.
 
 function handleRequest(raw) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let result = { status: 'ok' };
+  let result = { status: 'ok', version: SCRIPT_VERSION };
   try {
     const data = JSON.parse(decodeURIComponent(raw));
     const action = data.action;
     Logger.log('Action: ' + action + ' | Data: ' + JSON.stringify(data));
 
+    // ── PING (diagnostic — returns SCRIPT_VERSION above) ──
+    if (action === 'ping') {
+      // result.version is already set above — nothing else to do
+    }
+
     // ── VOTES ──
-    if (action === 'submitVotes') {
+    else if (action === 'submitVotes') {
       const vSheet = getOrCreate(ss, 'Votes');
       data.votes.forEach(function(v) {
         vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]);
@@ -4838,7 +4880,7 @@ function handleRequest(raw) {
 
   } catch (err) {
     Logger.log('Error: ' + err.message);
-    result = { status: 'error', message: err.message };
+    result = { status: 'error', message: err.message, version: SCRIPT_VERSION };
   }
   return buildResponse(JSON.stringify(result));
 }
