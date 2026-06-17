@@ -1219,20 +1219,29 @@ async function fetchFromSheets() {
     const c3=(r[3]||'').trim(), c4=(r[4]||'').trim(), c5=(r[5]||'').trim();
     // Detect if first column looks like a generated ID
     const looksLikeId = /^[a-z_]+\d{10,}$/.test(c0) || c0.startsWith('cat_');
-    let id, name, scope, linkedDept='', linkedUnit='', year='';
+    let id, name, scope, linkedDept='', linkedUnit='', rawYear='';
     if(looksLikeId){
       // Portal format: ID | Name | Scope | LinkedDept | LinkedUnit | Year
       id=c0; name=c1||c0;
       scope=VALID_SCOPES.includes(c2)?c2:'global';
-      linkedDept=c3; linkedUnit=c4; year=c5;
+      linkedDept=c3; linkedUnit=c4; rawYear=c5;
     } else {
       // Human format: Name | Scope | LinkedDept | LinkedUnit | Year
       name=c0; id='cat_'+toId(c0);
       scope=VALID_SCOPES.includes(c1)?c1:'global';
-      linkedDept=c2; linkedUnit=c3; year=c4||c5;
+      linkedDept=c2; linkedUnit=c3; rawYear=c4||c5;
     }
-    // Normalise year — default to the configured default year
-    year = (year||'').replace(/[^0-9]/g,'') || DEFAULT_YEAR;
+    // Normalise year — IMPORTANT: never blindly default a blank sheet cell to
+    // DEFAULT_YEAR, since that silently overwrites categories whose year just
+    // wasn't written to the sheet yet (e.g. before the Year column existed).
+    // Instead, recover the year from the ID suffix (addCat embeds it as
+    // cat_..._2024 / cat_..._2025) before falling back to DEFAULT_YEAR.
+    const cleanRawYear = (rawYear||'').replace(/[^0-9]/g,'');
+    const idYearMatch = id.match(/_(20\d{2})$/);
+    const yearFromId = idYearMatch ? idYearMatch[1] : '';
+    const year = cleanRawYear || yearFromId || DEFAULT_YEAR;
+    // Flag for self-healing: sheet cell was blank but we recovered the year from the ID
+    const needsYearHeal = !cleanRawYear && !!yearFromId;
     // Resolve linkedDept/Unit names to IDs
     if(linkedDept && !linkedDept.startsWith('dept_')){
       const d=DATA.departments.find(d=>d.name.toLowerCase()===linkedDept.toLowerCase());
@@ -1244,8 +1253,14 @@ async function fetchFromSheets() {
         if(u){ linkedUnit=u.id; break; }
       }
     }
-    return {id, name, scope, linkedDept, linkedUnit, year};
+    return {id, name, scope, linkedDept, linkedUnit, year, _needsYearHeal:needsYearHeal};
   }).filter(c=>c.name);
+
+  // Self-heal: write the recovered year back to the sheet so this is permanent
+  // and future syncs don't need to recover it again.
+  DATA.categories.filter(c=>c._needsYearHeal).forEach(c=>{
+    writeToSheets('updateCategory',{category:c});
+  });
 
   // ── DEPARTMENTS: Flexible — accepts either:
   //    DeptID | DeptName | Color | UnitName   (portal format)
