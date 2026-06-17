@@ -2790,8 +2790,6 @@ function WelcomePage(props) {
   var cs = useState(Math.max(0, TARGET - Date.now()));
   var rem = cs[0]; var setRem = cs[1];
   useEffect(function() {
-    // Expose setAnnsByRoom so module-level enterRoom can use it
-    window._setAnnsByRoom = setAnnsByRoom;
     if (rem <= 0) return;
     var tmr = setInterval(function() { setRem(Math.max(0, TARGET - Date.now())); }, 1000);
     return function() { clearInterval(tmr); };
@@ -4787,6 +4785,7 @@ function App() {
   var s19=useState(shuffle(QQ).slice(0,5)); var qSet=s19[0]; var setQSet=s19[1];
 
   useEffect(function() {
+    window._setAnnsByRoom = setAnnsByRoom; // expose for module-level enterRoom
     var sess = Sess.get('wc26s');
     if (!sess) { setScr('welcome'); }
     else {
@@ -5453,3 +5452,4 @@ try {
 </script>
 </body>
 </html>
+      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
