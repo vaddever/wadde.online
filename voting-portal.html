@@ -4402,9 +4402,13 @@ function switchToStaffTab(){
 function onNomStaffChange(){
   const staffId=document.getElementById('mn-staff')?.value;
   const card=document.getElementById('mn-staff-card');
-  if(!staffId||!card){ if(card) card.style.display='none'; return; }
+  if(!staffId||!card){
+    if(card) card.style.display='none';
+    refreshAwardOptions(); // reset award dropdown back to placeholder
+    return;
+  }
   const s=DATA.staff.find(x=>x.id===staffId);
-  if(!s){ card.style.display='none'; return; }
+  if(!s){ card.style.display='none'; refreshAwardOptions(); return; }
   const color=stringToColor(s.name);
   const initials=s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const av=document.getElementById('mn-card-avatar');
@@ -4419,6 +4423,7 @@ function onNomStaffChange(){
   if(dp) dp.textContent='🏢 '+getDeptName(s.dept)+' · 📍 '+getUnitName(s.unit);
   if(un) un.textContent='🪪 Staff ID: '+(s.empId||s.id);
   card.style.display='block';
+  refreshAwardOptions();
   checkNomDuplicate();
 }
 
