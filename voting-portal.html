@@ -655,6 +655,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
           <button class="btn-sm green" onclick="openAddStaffModal()">+ Add staff</button>
         </div>
       </div>
+      <div class="nom-search-wrap" style="margin-bottom:10px;">
+        <span class="nom-search-icon">🔍</span>
+        <input class="nom-search-inp" id="admin-staff-search-inp" placeholder="Search staff by name or Staff ID…" oninput="renderAdminStaff()">
+      </div>
       <div class="rf">
         <select class="fsel" id="admin-staff-fdept" onchange="adminStaffDeptChanged()"><option value="">All departments</option></select>
         <select class="fsel" id="admin-staff-funit" onchange="renderAdminStaff()"><option value="">All units</option></select>
@@ -796,6 +800,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <div style="font-size:14px;font-weight:500;">Staff Directory</div>
         <button class="btn-sm green" onclick="openAddStaffModal()">+ Add staff</button>
       </div>
+      <div class="nom-search-wrap" style="margin-bottom:10px;">
+        <span class="nom-search-icon">🔍</span>
+        <input class="nom-search-inp" id="staff-search-inp" placeholder="Search staff by name or Staff ID…" oninput="renderStaff()">
+      </div>
       <div class="rf">
         <select class="fsel" id="staff-fdept" onchange="staffDeptChanged()"><option value="">All departments</option></select>
         <select class="fsel" id="staff-funit" onchange="renderStaff()"><option value="">All units</option></select>
@@ -837,6 +845,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
             <button class="btn-sm" onclick="testConnection()">Test connection</button>
             <button class="btn-sm" onclick="manualSync()">Sync now</button>
             <button class="btn-sm" onclick="showScriptHelp()">Get Apps Script code</button>
+            <button class="btn-sm gold" onclick="testDeploymentRoundtrip()">🔍 Test Apps Script Connection</button>
+          </div>
+          <div id="deploy-test-result" style="font-size:12px;margin-top:8px;display:none;padding:9px 12px;border-radius:var(--rs);"></div>
+          <div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);border-radius:var(--rs);padding:10px 12px;margin-top:10px;font-size:11px;color:var(--gold2);line-height:1.6;">
+            ⚠ <b>Important:</b> after pasting updated Apps Script code, you must click <b>Deploy → New deployment</b> (not "Manage deployments → Edit"). Editing an existing deployment's code does <b>not</b> make it live — only a brand-new deployment version does. Forgetting this is the #1 cause of "my changes aren't saving" issues.
           </div>
         </div>
       </div>
@@ -2063,13 +2076,19 @@ function adminStaffDeptChanged(){
 function renderAdminStaff(){
   const deptF = document.getElementById('admin-staff-fdept')?.value||'';
   const unitF = document.getElementById('admin-staff-funit')?.value||'';
+  const q = (document.getElementById('admin-staff-search-inp')?.value||'').trim().toLowerCase();
   const dEl = document.getElementById('admin-staff-fdept');
   if(dEl&&dEl.options.length<=1) dEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  const filtered = DATA.staff.filter(s=>(!deptF||s.dept===deptF)&&(!unitF||s.unit===unitF));
+  const filtered = DATA.staff.filter(s=>
+    (!deptF||s.dept===deptF) && (!unitF||s.unit===unitF) &&
+    (!q || s.name.toLowerCase().includes(q) || (s.empId||s.id||'').toLowerCase().includes(q))
+  );
   const el = document.getElementById('admin-staff-list-container');
   if(!el) return;
   if(!filtered.length){
-    el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👤</div>No staff found. Add staff in SuperAdmin or bulk upload.</div>';
+    el.innerHTML = q
+      ? `<div class="empty-state"><div class="empty-state-icon">🔍</div>No staff match "${q}".</div>`
+      : '<div class="empty-state"><div class="empty-state-icon">👤</div>No staff found. Add staff in SuperAdmin or bulk upload.</div>';
     return;
   }
   el.innerHTML=`<div class="staff-list-wrap">`+filtered.map(s=>`
@@ -3176,11 +3195,48 @@ async function saveEditVoter(pin){
   v.unit  = document.getElementById('ev-unit')?.value||v.unit;
   v.excl2024 = !(document.getElementById('ev-elig-2024')?.checked??true);
   v.excl2025 = !(document.getElementById('ev-elig-2025')?.checked??true);
+  const expected = {excl2024:v.excl2024, excl2025:v.excl2025, name:v.name, dept:v.dept, unit:v.unit};
   cacheData();
   closeModal();
   renderVoterList(); renderAdminVoterList();
   await writeToSheets('updateVoter',{voter:v});
   showToast(`${v.name} updated`,'ok');
+  verifyVoterWriteReachedSheet(pin, expected);
+}
+
+// ── Verify a voter edit actually reached the Google Sheet ──
+// writeToSheets uses GET+no-cors (fire-and-forget) so we can never read
+// its response. The only way to know if the write really landed is to
+// re-read the TRUE sheet state via the Sheets API (which IS readable)
+// a moment later, and compare it to what we expected to see.
+async function verifyVoterWriteReachedSheet(pin, expected){
+  if(!CFG.scriptUrl) return; // no script configured — nothing to verify
+  await new Promise(r=>setTimeout(r,1400));
+  try{
+    await fetchFromSheets();
+  }catch(e){ return; } // network hiccup — don't false-alarm
+  const fresh = DATA.voters.find(v=>v.pin===pin);
+  if(!fresh) return;
+  const mismatch = !!fresh.excl2024 !== !!expected.excl2024
+                 || !!fresh.excl2025 !== !!expected.excl2025
+                 || fresh.name !== expected.name;
+  if(mismatch){
+    cacheData();
+    renderVoterList(); renderAdminVoterList();
+    showSheetSyncWarning(`⚠ "${expected.name}"'s changes didn't reach the Google Sheet — your Apps Script may need to be redeployed. Go to Settings → Get Apps Script code, and create a NEW deployment (not edit existing).`);
+  }
+}
+
+// Persistent warning banner (doesn't auto-dismiss like a normal toast)
+function showSheetSyncWarning(msg){
+  let el=document.getElementById('sheet-sync-warning');
+  if(!el){
+    el=document.createElement('div');
+    el.id='sheet-sync-warning';
+    el.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);max-width:480px;width:92%;background:var(--red-dim);border:1px solid rgba(224,85,85,.4);color:var(--red);font-size:13px;font-weight:500;line-height:1.5;padding:14px 18px;border-radius:var(--r);box-shadow:0 8px 30px rgba(0,0,0,.4);z-index:9999;display:flex;gap:10px;align-items:flex-start;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML=`<div style="flex:1;">${msg}</div><button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;flex-shrink:0;line-height:1;">✕</button>`;
 }
 
 // Generate a unique random 6-digit PIN not already in use
@@ -3360,16 +3416,25 @@ async function removeNom(id){
 function renderStaff(){
   const deptF=document.getElementById('staff-fdept')?.value||'';
   const unitF=document.getElementById('staff-funit')?.value||'';
+  const q=(document.getElementById('staff-search-inp')?.value||'').trim().toLowerCase();
   const deptEl=document.getElementById('staff-fdept');
   const unitEl=document.getElementById('staff-funit');
   if(deptEl&&deptEl.options.length<=1){
     deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
   }
   populateStaffUnitFilter();
-  const filtered=DATA.staff.filter(s=>(!deptF||s.dept===deptF)&&(!unitF||s.unit===unitF));
+  const filtered=DATA.staff.filter(s=>
+    (!deptF||s.dept===deptF) && (!unitF||s.unit===unitF) &&
+    (!q || s.name.toLowerCase().includes(q) || (s.empId||s.id||'').toLowerCase().includes(q))
+  );
   const el=document.getElementById('staff-list-container');
   if(!el) return;
-  if(!filtered.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👤</div>No staff yet. Add staff members or add them directly in the Staff tab of your Google Sheet.</div>';return;}
+  if(!filtered.length){
+    el.innerHTML = q
+      ? `<div class="empty-state"><div class="empty-state-icon">🔍</div>No staff match "${q}".</div>`
+      : '<div class="empty-state"><div class="empty-state-icon">👤</div>No staff yet. Add staff members or add them directly in the Staff tab of your Google Sheet.</div>';
+    return;
+  }
   el.innerHTML=`<div class="staff-list-wrap">`+filtered.map(s=>`
     <div class="staff-row">
       <div class="staff-avatar" style="background:${stringToColor(s.name)}22;color:${stringToColor(s.name)};">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -3967,6 +4032,46 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
+async function testDeploymentRoundtrip(){
+  const resEl=document.getElementById('deploy-test-result');
+  if(!resEl) return;
+  if(!CFG.scriptUrl){
+    resEl.style.display='block';
+    resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+    resEl.textContent='✕ No Script URL configured — paste your Apps Script Web App URL above first.';
+    return;
+  }
+  resEl.style.display='block';
+  resEl.style.background='var(--bg3)'; resEl.style.color='var(--text2)';
+  resEl.textContent='⏳ Sending a test write, then checking if it landed in the sheet…';
+
+  const sentinel = 'check_'+Date.now();
+  const ok1 = await writeToSheets('setConfig',{key:'_pingCheck', value:sentinel});
+  if(!ok1){
+    resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+    resEl.textContent='✕ Could not even send the request — check your Script URL is correct and the deployment is set to "Anyone" access.';
+    return;
+  }
+  await new Promise(r=>setTimeout(r,1600));
+  try{
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/Config!A:B?key=${CFG.apiKey}`;
+    const r=await fetch(url);
+    const j=await r.json();
+    const rows=j.values||[];
+    const found=rows.find(row=>(row[0]||'').toLowerCase()==='_pingcheck');
+    if(found && found[1]===sentinel){
+      resEl.style.background='var(--green-dim)'; resEl.style.color='var(--green)';
+      resEl.textContent='✓ Success! Your Apps Script deployment is live and writes are reaching the sheet correctly.';
+    } else {
+      resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+      resEl.textContent='✕ The write did not reach the sheet. Your Apps Script likely needs to be redeployed — go to Apps Script editor → Deploy → New deployment.';
+    }
+  }catch(e){
+    resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+    resEl.textContent='✕ Could not verify — check your Sheet ID and API key are correct. ('+e.message+')';
+  }
+}
+
 async function testConnection(){
   if(!CFG.sheetId||!CFG.apiKey){showToast('Enter Sheet ID and API key first','err');return;}
   showToast('Testing…');
@@ -4082,6 +4187,7 @@ async function addVoter(){
   closeModal();renderVoterList();renderAdminVoterList();renderStats('sa');renderStats('admin');
   await writeToSheets('addVoter',{voter});
   showToast(`${name} added as voter (PIN: ${pin})`,'ok');
+  if(excl2024||excl2025) verifyVoterWriteReachedSheet(pin, {excl2024, excl2025, name, dept, unit});
 }
 
 function buildCatOptGroups(preCatId){
@@ -4103,18 +4209,19 @@ function buildCatOptGroups(preCatId){
   }).join('');
 }
 
+let _nomPreCatId = null;
+
 function openAddNomModal(preCatId){
+  _nomPreCatId = preCatId || null;
   const hasStaff = DATA.staff.length > 0;
-  const cOpts = buildCatOptGroups(preCatId);
 
   if(hasStaff){
-    // Sort staff alphabetically by name for easier picking
-  const sortedStaff = [...DATA.staff].sort((a,b)=>a.name.localeCompare(b.name));
-  const staffOpts = sortedStaff.map(s=>{
-    const deptName = getDeptName(s.dept);
-    const unitName = getUnitName(s.unit);
-    return `<option value="${s.id}">[${s.empId||s.id}] ${s.name} — ${deptName} · ${unitName}</option>`;
-  }).join('');
+    const sortedStaff = [...DATA.staff].sort((a,b)=>a.name.localeCompare(b.name));
+    const staffOpts = sortedStaff.map(s=>{
+      const deptName = getDeptName(s.dept);
+      const unitName = getUnitName(s.unit);
+      return `<option value="${s.id}">[${s.empId||s.id}] ${s.name} — ${deptName} · ${unitName}</option>`;
+    }).join('');
     openModal(`<div class="modal-title">Add Nominee</div>
       <div class="modal-field">
         <label class="modal-lbl">Staff Member</label>
@@ -4134,17 +4241,22 @@ function openAddNomModal(preCatId){
         </div>
       </div>
       <div class="modal-field" style="margin-top:12px;">
-        <label class="modal-lbl">Award / Category</label>
-        <select class="modal-sel" id="mn-cat" onchange="onNomCatChange()">${cOpts||'<option value="">— add categories first —</option>'}</select>
+        <label class="modal-lbl">Award Name</label>
+        <select class="modal-sel" id="mn-award" onchange="onAwardNameChange()" disabled>
+          <option value="">— select staff member first —</option>
+        </select>
       </div>
+      <div class="modal-field" id="mn-award-year-wrap" style="display:none;">
+        <label class="modal-lbl">Year</label>
+        <select class="modal-sel" id="mn-award-year" onchange="onAwardYearChange()"></select>
+      </div>
+      <input type="hidden" id="mn-cat" value="">
       <div id="mn-duplicate-warn" style="font-size:12px;color:var(--red);margin-top:6px;padding:7px 10px;background:var(--red-dim);border-radius:var(--rs);display:none;"></div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeModal()">Cancel</button>
         <button class="btn-confirm" id="mn-confirm-btn" onclick="addNom()">Add Nominee</button>
       </div>`);
-    if(preCatId){ const el=document.getElementById('mn-cat'); if(el) el.value=preCatId; }
   } else {
-    // No staff list yet — simple manual entry with link to add staff first
     const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
     openModal(`<div class="modal-title">Add Nominee</div>
       <div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:var(--rs);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold2);">
@@ -4152,17 +4264,133 @@ function openAddNomModal(preCatId){
         <span onclick="switchToStaffTab();closeModal();" style="cursor:pointer;text-decoration:underline;display:block;margin-top:4px;">Go to Staff tab →</span>
       </div>
       <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mn-name" placeholder="Nominee full name" oninput="checkNomDuplicate()"></div>
-      <div class="modal-field"><label class="modal-lbl">Category</label><select class="modal-sel" id="mn-cat" onchange="checkNomDuplicate()">${cOpts||'<option value="">— add categories first —</option>'}</select></div>
-      <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" onchange="fillNomUnits()">${dOpts}</select></div>
-      <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mn-unit"></select></div>
+      <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" onchange="fillNomUnits();refreshAwardOptions();">${dOpts}</select></div>
+      <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mn-unit" onchange="refreshAwardOptions();"></select></div>
+      <div class="modal-field" style="margin-top:6px;">
+        <label class="modal-lbl">Award Name</label>
+        <select class="modal-sel" id="mn-award" onchange="onAwardNameChange()">
+          <option value="">— select —</option>
+        </select>
+      </div>
+      <div class="modal-field" id="mn-award-year-wrap" style="display:none;">
+        <label class="modal-lbl">Year</label>
+        <select class="modal-sel" id="mn-award-year" onchange="onAwardYearChange()"></select>
+      </div>
+      <input type="hidden" id="mn-cat" value="">
       <div id="mn-duplicate-warn" style="font-size:12px;color:var(--red);margin-top:6px;padding:7px 10px;background:var(--red-dim);border-radius:var(--rs);display:none;"></div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeModal()">Cancel</button>
         <button class="btn-confirm" onclick="addNom()">Add Nominee</button>
       </div>`);
-    if(preCatId){ const el=document.getElementById('mn-cat'); if(el) el.value=preCatId; }
     fillNomUnits();
+    refreshAwardOptions();
   }
+}
+
+// ── Helpers for the Award Name + Year picker ──
+function currentNomDeptUnit(){
+  const staffSel=document.getElementById('mn-staff');
+  if(staffSel){
+    const s=DATA.staff.find(x=>x.id===staffSel.value);
+    return s ? {dept:s.dept, unit:s.unit} : {dept:'', unit:''};
+  }
+  const dept=document.getElementById('mn-dept')?.value||'';
+  const unit=document.getElementById('mn-unit')?.value||'';
+  return {dept, unit};
+}
+
+function getCompatibleCategories(dept, unit){
+  return DATA.categories.filter(cat=>{
+    const scope = cat.scope || 'global';
+    if(scope==='global') return true;
+    if(scope==='dept' || scope==='deptcat'){
+      if(!cat.linkedDept) return true;
+      return cat.linkedDept===dept;
+    }
+    if(scope==='unit'){
+      if(!cat.linkedUnit) return true;
+      return cat.linkedUnit===unit;
+    }
+    return true;
+  });
+}
+
+function refreshAwardOptions(){
+  const awardSel=document.getElementById('mn-award');
+  if(!awardSel) return;
+  const {dept, unit} = currentNomDeptUnit();
+
+  if(!dept && !unit && document.getElementById('mn-staff')){
+    // Staff mode, nothing selected yet
+    awardSel.disabled=true;
+    awardSel.innerHTML='<option value="">— select staff member first —</option>';
+    document.getElementById('mn-award-year-wrap').style.display='none';
+    document.getElementById('mn-cat').value='';
+    return;
+  }
+
+  const compatible = getCompatibleCategories(dept, unit);
+  const names = [...new Set(compatible.map(c=>c.name))].sort((a,b)=>a.localeCompare(b));
+
+  awardSel.disabled=false;
+  if(!names.length){
+    awardSel.innerHTML='<option value="">— no matching awards for this dept/unit —</option>';
+    document.getElementById('mn-award-year-wrap').style.display='none';
+    document.getElementById('mn-cat').value='';
+    return;
+  }
+
+  // Try to preselect based on _nomPreCatId if it's compatible
+  let preselectName='';
+  if(_nomPreCatId){
+    const preCat=DATA.categories.find(c=>c.id===_nomPreCatId);
+    if(preCat && compatible.find(c=>c.id===preCat.id)) preselectName=preCat.name;
+  }
+
+  awardSel.innerHTML='<option value="">— select an award —</option>'+
+    names.map(n=>`<option value="${n}" ${n===preselectName?'selected':''}>${n}</option>`).join('');
+
+  if(preselectName) onAwardNameChange();
+  else { document.getElementById('mn-award-year-wrap').style.display='none'; document.getElementById('mn-cat').value=''; }
+}
+
+function onAwardNameChange(){
+  const awardName=document.getElementById('mn-award')?.value||'';
+  const yearWrap=document.getElementById('mn-award-year-wrap');
+  const yearSel=document.getElementById('mn-award-year');
+  const catInp=document.getElementById('mn-cat');
+  if(!awardName){
+    if(yearWrap) yearWrap.style.display='none';
+    if(catInp) catInp.value='';
+    checkNomDuplicate();
+    return;
+  }
+  const {dept, unit} = currentNomDeptUnit();
+  const compatible = getCompatibleCategories(dept, unit).filter(c=>c.name===awardName);
+  // Sort years newest first
+  const sorted=[...compatible].sort((a,b)=>String(b.year||'').localeCompare(String(a.year||'')));
+
+  if(sorted.length>1){
+    let preselectYear='';
+    if(_nomPreCatId){
+      const preCat=DATA.categories.find(c=>c.id===_nomPreCatId);
+      if(preCat && preCat.name===awardName) preselectYear=String(preCat.year||'');
+    }
+    if(yearWrap) yearWrap.style.display='block';
+    if(yearSel) yearSel.innerHTML=sorted.map(c=>`<option value="${c.id}" ${String(c.year)===preselectYear?'selected':''}>${c.year||'—'}</option>`).join('');
+    onAwardYearChange();
+  } else {
+    if(yearWrap) yearWrap.style.display='none';
+    if(catInp) catInp.value = sorted[0] ? sorted[0].id : '';
+    checkNomDuplicate();
+  }
+}
+
+function onAwardYearChange(){
+  const yearSel=document.getElementById('mn-award-year');
+  const catInp=document.getElementById('mn-cat');
+  if(catInp) catInp.value = yearSel ? yearSel.value : '';
+  checkNomDuplicate();
 }
 
 function switchToStaffTab(){
