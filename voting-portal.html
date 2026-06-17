@@ -771,13 +771,21 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     </div>
 
     <div class="tab-panel" id="superadmin-voters">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:14px;font-weight:500;">Voters</div>
-        <div style="display:flex;gap:7px;">
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
           <button class="btn-sm green" onclick="openAddVoterModal()">+ Add voter</button>
           <button class="btn-sm gold" onclick="syncStaffToVoters()">⟳ Sync staff to voters</button>
           <button class="btn-sm red" onclick="resetAllVotes()">Reset all votes</button>
         </div>
+      </div>
+      <div class="rf" style="margin-bottom:14px;">
+        <select class="fsel" id="voter-fyear" onchange="renderVoterList()">
+          <option value="">All rosters</option>
+          <option value="2024">📋 2024 roster</option>
+          <option value="2025">📋 2025 roster</option>
+          <option value="legacy">⚠ Legacy (shared list)</option>
+        </select>
       </div>
       <div class="voter-tbl" id="voter-list"></div>
     </div>
@@ -1156,7 +1164,7 @@ async function fetchFromSheets() {
 
   // Fetch all tabs in one batch — tabs that don't exist are skipped gracefully
   const tabRanges = [
-    'Voters!A2:H',
+    'Voters!A2:I',
     'Nominees!A2:F',
     'Votes!A2:D',
     'Admins!A2:E',
@@ -1213,8 +1221,9 @@ async function fetchFromSheets() {
     unit:    (r[3]||'').trim(),
     hasVoted:(r[4]||'').toUpperCase()==='TRUE',
     empId:   (r[5]||'').trim(),  // column F — Employee ID
-    excl2024:(r[6]||'').toUpperCase()==='TRUE',  // column G — excluded from 2024
-    excl2025:(r[7]||'').toUpperCase()==='TRUE'   // column H — excluded from 2025
+    excl2024:(r[6]||'').toUpperCase()==='TRUE',  // column G — legacy: excluded from 2024
+    excl2025:(r[7]||'').toUpperCase()==='TRUE',  // column H — legacy: excluded from 2025
+    year:    (r[8]||'').replace(/[^0-9]/g,'')    // column I — independent-roster year (new model)
   })).filter(v=>v.pin);
 
   // ── ADMINS: PIN | Role | Name ──
@@ -2243,6 +2252,9 @@ function updateVProg(){
 function voterEligibleForYear(voter, year){
   // Returns true if voter is allowed to vote in this year
   if(!voter) return false;
+  // New model: voter.year set → belongs to exactly ONE independent roster
+  if(voter.year) return String(voter.year)===String(year);
+  // Legacy model: eligible for both years unless explicitly excluded
   if(String(year)==='2024' && voter.excl2024) return false;
   if(String(year)==='2025' && voter.excl2025) return false;
   return true;
@@ -2326,6 +2338,11 @@ const getStaffId = name => { const s=getStaff(name); return s?s.empId||s.id:''; 
 
 // Year eligibility badges for a voter — green = eligible, struck = excluded
 function voterYearBadges(v){
+  if(v.year){
+    // New model — this voter belongs to exactly one independent year roster
+    return `<span style="font-size:9px;font-weight:700;font-family:monospace;padding:1px 7px;border-radius:3px;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.3);" title="Independent ${v.year} roster">📋 ${v.year}</span>`;
+  }
+  // Legacy model — shared list with per-year exclusion flags
   return YEARS.map(yr=>{
     const eligible = voterEligibleForYear(v, yr);
     if(eligible){
@@ -3109,8 +3126,22 @@ function initSA(){
 // ── VOTERS ──
 function renderVoterList(){
   const el=document.getElementById('voter-list');
+  if(!el) return;
   if(!DATA.voters.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👥</div>No voters yet. Add voters or sync from Google Sheets.</div>';return;}
-  el.innerHTML=DATA.voters.map(v=>`
+  const yearF=document.getElementById('voter-fyear')?.value||'';
+  const filtered = DATA.voters.filter(v=>{
+    if(!yearF) return true;
+    if(yearF==='legacy') return !v.year;
+    return String(v.year)===String(yearF);
+  });
+  if(!filtered.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-state-icon">📋</div>No voters in this roster yet.</div>';
+    return;
+  }
+  el.innerHTML=filtered.map(v=>{
+    const otherYear = v.year ? YEARS.find(y=>y!==v.year) : null;
+    const dupBtn = v.year ? `<button class="btn-sm" onclick="duplicateVoterToOtherYear('${v.pin}')" title="Add this person to the ${otherYear} roster too">➕${otherYear}</button>` : '';
+    return `
     <div class="vrow">
       <span class="vpin">${v.pin}</span>
       ${v.empId?`<span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;">${v.empId}</span>`:''}
@@ -3121,10 +3152,12 @@ function renderVoterList(){
         <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
         <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
       </div>
+      ${dupBtn}
       <button class="btn-sm gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
       <button class="btn-sm" onclick="resetVoter('${v.pin}')">Reset</button>
       <button class="btn-sm red" onclick="removeVoter('${v.pin}')">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // Admin-scoped remove functions (also refresh admin panels)
@@ -3153,6 +3186,28 @@ function openEditVoterModal(pin){
   const v=DATA.voters.find(x=>x.pin===pin);
   if(!v){showToast('Voter not found','err');return;}
   const dOpts=DATA.departments.map(d=>`<option value="${d.id}" ${d.id===v.dept?'selected':''}>${d.name}</option>`).join('');
+  const isNewModel = !!v.year;
+  const yrOpts=YEARS.map(y=>`<option value="${y}" ${y===v.year?'selected':''}>${y}</option>`).join('');
+
+  const eligibilityBlock = isNewModel
+    ? `<div class="modal-field">
+        <label class="modal-lbl">Voter Roster Year</label>
+        <select class="modal-sel" id="ev-year">${yrOpts}</select>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">This voter belongs to ONLY this year's independent roster.</div>
+      </div>`
+    : `<div class="modal-field">
+        <label class="modal-lbl">Voting Eligibility <span style="color:var(--text3);font-weight:400;">(legacy shared list)</span></label>
+        <div style="display:flex;gap:16px;margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="ev-elig-2024" ${!v.excl2024?'checked':''} style="width:15px;height:15px;accent-color:var(--gold);"> 2024
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="ev-elig-2025" ${!v.excl2025?'checked':''} style="width:15px;height:15px;accent-color:var(--gold);"> 2025
+          </label>
+        </div>
+        <button class="btn-sm gold" onclick="splitVoterIntoYears('${pin}')" style="margin-top:8px;">➗ Split into separate year rosters</button>
+      </div>`;
+
   openModal(`<div class="modal-title">Edit Voter — ${v.name}</div>
     <div class="modal-field"><label class="modal-lbl">Staff ID</label>
       <input class="modal-inp" id="ev-empid" value="${v.empId||''}" placeholder="e.g. EMP001" style="text-transform:uppercase;">
@@ -3166,22 +3221,46 @@ function openEditVoterModal(pin){
     <div class="modal-field"><label class="modal-lbl">Unit</label>
       <select class="modal-sel" id="ev-unit"></select>
     </div>
-    <div class="modal-field">
-      <label class="modal-lbl">Voting Eligibility</label>
-      <div style="display:flex;gap:16px;margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
-          <input type="checkbox" id="ev-elig-2024" ${!v.excl2024?'checked':''} style="width:15px;height:15px;accent-color:var(--gold);"> 2024
-        </label>
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
-          <input type="checkbox" id="ev-elig-2025" ${!v.excl2025?'checked':''} style="width:15px;height:15px;accent-color:var(--gold);"> 2025
-        </label>
-      </div>
-    </div>
+    ${eligibilityBlock}
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-confirm" onclick="saveEditVoter('${pin}')">Save Changes</button>
     </div>`);
   fillEditVoterUnits(pin, v.unit);
+}
+
+// ── Migration helper: split a legacy multi-year voter into independent rosters ──
+// Safe to run even after the voter has already voted in 2024/2025 — their existing
+// vote history stays correctly attributed (votes are tied to nominees/categories,
+// not to this exclusion-flag structure), and we relabel rather than recreate where
+// possible to avoid generating a confusing brand-new PIN unnecessarily.
+async function splitVoterIntoYears(pin){
+  const v=DATA.voters.find(x=>x.pin===pin);
+  if(!v){showToast('Voter not found','err');return;}
+  const eligibleYears = YEARS.filter(y=>voterEligibleForYear(v,y));
+  if(!eligibleYears.length){showToast('This voter is not eligible for any year','err');return;}
+  if(!confirm(`Split "${v.name}" into independent roster(s) for: ${eligibleYears.join(', ')}? This cannot be undone.`)) return;
+
+  closeModal();
+  const firstYear = eligibleYears[0];
+  // Relabel the existing row as the first eligible year — keeps their current PIN
+  // and any vote history exactly as it was.
+  v.year = firstYear;
+  v.excl2024 = undefined; v.excl2025 = undefined;
+  await writeToSheets('updateVoter',{voter:v});
+
+  // For any additional eligible years, create brand-new rows with fresh PINs
+  for(let i=1;i<eligibleYears.length;i++){
+    const yr=eligibleYears[i];
+    const newPin=generatePin();
+    const newVoter={pin:newPin, empId:v.empId, name:v.name, dept:v.dept, unit:v.unit, hasVoted:false, year:yr};
+    DATA.voters.push(newVoter);
+    await writeToSheets('addVoter',{voter:newVoter});
+  }
+
+  cacheData();
+  renderVoterList(); renderAdminVoterList(); renderStats('sa'); renderStats('admin');
+  showToast(`${v.name} split into ${eligibleYears.length} independent roster${eligibleYears.length>1?'s':''}`,'ok');
 }
 function fillEditVoterUnits(pin, preselect){
   const deptId=document.getElementById('ev-dept')?.value;
@@ -3197,9 +3276,18 @@ async function saveEditVoter(pin){
   v.name  = document.getElementById('ev-name')?.value.trim()||v.name;
   v.dept  = document.getElementById('ev-dept')?.value||v.dept;
   v.unit  = document.getElementById('ev-unit')?.value||v.unit;
-  v.excl2024 = !(document.getElementById('ev-elig-2024')?.checked??true);
-  v.excl2025 = !(document.getElementById('ev-elig-2025')?.checked??true);
-  const expected = {excl2024:v.excl2024, excl2025:v.excl2025, name:v.name, dept:v.dept, unit:v.unit};
+  const yearSel=document.getElementById('ev-year');
+  let expected;
+  if(yearSel){
+    // New independent-roster model
+    v.year = yearSel.value||v.year;
+    expected = {year:v.year, name:v.name, dept:v.dept, unit:v.unit};
+  } else {
+    // Legacy shared-list model
+    v.excl2024 = !(document.getElementById('ev-elig-2024')?.checked??true);
+    v.excl2025 = !(document.getElementById('ev-elig-2025')?.checked??true);
+    expected = {excl2024:v.excl2024, excl2025:v.excl2025, name:v.name, dept:v.dept, unit:v.unit};
+  }
   cacheData();
   closeModal();
   renderVoterList(); renderAdminVoterList();
@@ -3221,9 +3309,11 @@ async function verifyVoterWriteReachedSheet(pin, expected){
   }catch(e){ return; } // network hiccup — don't false-alarm
   const fresh = DATA.voters.find(v=>v.pin===pin);
   if(!fresh) return;
-  const mismatch = !!fresh.excl2024 !== !!expected.excl2024
-                 || !!fresh.excl2025 !== !!expected.excl2025
-                 || fresh.name !== expected.name;
+  const mismatch = expected.year
+    ? (String(fresh.year)!==String(expected.year) || fresh.name!==expected.name)
+    : (!!fresh.excl2024 !== !!expected.excl2024
+       || !!fresh.excl2025 !== !!expected.excl2025
+       || fresh.name !== expected.name);
   if(mismatch){
     cacheData();
     renderVoterList(); renderAdminVoterList();
@@ -3255,23 +3345,28 @@ async function syncStaffToVoters(){
   if(!DATA.staff.length){
     showToast('No staff found — add staff first','err'); return;
   }
+  const year = prompt(`Sync all staff to which year's independent roster? Enter ${YEARS.join(' or ')}:`, DEFAULT_YEAR);
+  if(!year) return;
+  if(!YEARS.includes(year)){ showToast(`Please enter ${YEARS.join(' or ')}`,'err'); return; }
+
   let added=0, skipped=0;
   const newVoters=[];
   DATA.staff.forEach(s=>{
-    // Skip if already a voter (match by empId or name+dept)
+    // Skip if already a voter for THIS year (match by empId or name+dept within the same roster year)
     const exists=DATA.voters.find(v=>
-      (v.empId && v.empId===s.empId) ||
-      (v.name.toLowerCase()===s.name.toLowerCase() && v.dept===s.dept && v.unit===s.unit)
+      String(v.year)===String(year) &&
+      ((v.empId && v.empId===s.empId) ||
+       (v.name.toLowerCase()===s.name.toLowerCase() && v.dept===s.dept && v.unit===s.unit))
     );
     if(exists){ skipped++; return; }
     const pin=generatePin();
-    const voter={pin, empId:s.empId||s.id, name:s.name, dept:s.dept, unit:s.unit, hasVoted:false};
+    const voter={pin, empId:s.empId||s.id, name:s.name, dept:s.dept, unit:s.unit, hasVoted:false, year};
     DATA.voters.push(voter);
     newVoters.push(voter);
     added++;
   });
   if(!added){
-    showToast(`All staff already in voters list (${skipped} skipped)`,'ok'); return;
+    showToast(`All staff already in the ${year} roster (${skipped} skipped)`,'ok'); return;
   }
   cacheData();
   renderVoterList(); renderStats('sa');
@@ -3284,7 +3379,7 @@ async function syncStaffToVoters(){
   }
   showSyncBadge(allOk?'ok':'err', allOk?`Synced ✓`:'Some failed — check Script URL');
   renderAdminVoterList();
-  showToast(`${added} staff synced as voters${skipped?' ('+skipped+' already existed)':''}`, 'ok');
+  showToast(`${added} staff synced to the ${year} roster${skipped?' ('+skipped+' already existed)':''}`, 'ok');
 }
 
 async function resetVoter(pin){
@@ -4036,7 +4131,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v2';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v3';
 
 async function testDeploymentRoundtrip(){
   const resEl=document.getElementById('deploy-test-result');
@@ -4161,15 +4256,24 @@ function openModal(html){
 }
 function closeModal(){document.getElementById('modal-ov')?.remove();}
 
-function openAddVoterModal(){
-  const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+function openAddVoterModal(prefillYear, prefill){
+  const dOpts=DATA.departments.map(d=>`<option value="${d.id}" ${prefill&&d.id===prefill.dept?'selected':''}>${d.name}</option>`).join('');
   const autoPin=generatePin();
-  openModal(`<div class="modal-title">Add Voter</div>
+  const yrOpts=YEARS.map(y=>`<option value="${y}" ${y===(prefillYear||DEFAULT_YEAR)?'selected':''}>${y}</option>`).join('');
+  openModal(`<div class="modal-title">${prefill?'Duplicate Voter to Another Year':'Add Voter'}</div>
+    ${prefill?`<div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);border-radius:var(--rs);padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--gold2);">
+      Adding <b>${prefill.name}</b> to a separate roster — they'll get a brand-new PIN for this year, independent of their other year's PIN.
+    </div>`:''}
+    <div class="modal-field">
+      <label class="modal-lbl">Voter Roster Year</label>
+      <select class="modal-sel" id="mv-year">${yrOpts}</select>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">This voter belongs to ONLY this year's independent roster — they won't see or vote in the other year at all.</div>
+    </div>
     <div class="modal-field">
       <label class="modal-lbl">Staff ID <span style="color:var(--text3);font-weight:400;">(optional)</span></label>
-      <input class="modal-inp" id="mv-empid" placeholder="e.g. EMP001" style="text-transform:uppercase;">
+      <input class="modal-inp" id="mv-empid" value="${prefill?prefill.empId||'':''}" placeholder="e.g. EMP001" style="text-transform:uppercase;">
     </div>
-    <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mv-name" placeholder="Staff full name"></div>
+    <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mv-name" value="${prefill?prefill.name:''}" placeholder="Staff full name"></div>
     <div class="modal-field">
       <label class="modal-lbl">Voter PIN</label>
       <div style="display:flex;gap:7px;">
@@ -4177,31 +4281,19 @@ function openAddVoterModal(){
         <button class="btn-sm" onclick="document.getElementById('mv-pin').value=generatePin()" style="flex-shrink:0;">New PIN</button>
       </div>
     </div>
-    <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mv-dept" onchange="fillVoterUnits()">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
+    <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mv-dept" onchange="fillVoterUnits('${prefill?prefill.unit:''}')">${dOpts||'<option value="">— no departments yet —</option>'}</select></div>
     <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mv-unit"></select></div>
-    <div class="modal-field">
-      <label class="modal-lbl">Voting Eligibility</label>
-      <div style="display:flex;gap:16px;margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
-          <input type="checkbox" id="mv-elig-2024" checked style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;"> 2024
-        </label>
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
-          <input type="checkbox" id="mv-elig-2025" checked style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;"> 2025
-        </label>
-      </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Uncheck a year to exclude this voter from that year's awards.</div>
-    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-confirm" onclick="addVoter()">Add Voter</button>
     </div>`);
-  fillVoterUnits();
+  fillVoterUnits(prefill?prefill.unit:'');
 }
-function fillVoterUnits(){
+function fillVoterUnits(preselect){
   const deptId=document.getElementById('mv-dept')?.value;
   const dept=DATA.departments.find(d=>d.id===deptId);
   const sel=document.getElementById('mv-unit');
-  if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  if(sel&&dept) sel.innerHTML=dept.units.map(u=>`<option value="${u.id}" ${u.id===preselect?'selected':''}>${u.name}</option>`).join('');
 }
 async function addVoter(){
   const empId=(document.getElementById('mv-empid')?.value||'').trim().toUpperCase();
@@ -4209,17 +4301,24 @@ async function addVoter(){
   const pin=document.getElementById('mv-pin').value.trim();
   const dept=document.getElementById('mv-dept').value;
   const unit=document.getElementById('mv-unit').value;
-  const excl2024=!(document.getElementById('mv-elig-2024')?.checked ?? true);
-  const excl2025=!(document.getElementById('mv-elig-2025')?.checked ?? true);
+  const year=document.getElementById('mv-year')?.value||DEFAULT_YEAR;
   if(!name||!pin){showToast('Name and PIN required','err');return;}
   if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){showToast('PIN already in use — click "New PIN"','err');return;}
-  const voter={pin, empId, name, dept, unit, hasVoted:false, excl2024, excl2025};
+  const voter={pin, empId, name, dept, unit, hasVoted:false, year};
   DATA.voters.push(voter);
   cacheData();
   closeModal();renderVoterList();renderAdminVoterList();renderStats('sa');renderStats('admin');
   await writeToSheets('addVoter',{voter});
-  showToast(`${name} added as voter (PIN: ${pin})`,'ok');
-  if(excl2024||excl2025) verifyVoterWriteReachedSheet(pin, {excl2024, excl2025, name, dept, unit});
+  showToast(`${name} added to the ${year} roster (PIN: ${pin})`,'ok');
+  verifyVoterWriteReachedSheet(pin, {year, name, dept, unit});
+}
+
+// ── Duplicate a voter into the OTHER year's independent roster ──
+function duplicateVoterToOtherYear(pin){
+  const v=DATA.voters.find(x=>x.pin===pin);
+  if(!v){showToast('Voter not found','err');return;}
+  const otherYear = YEARS.find(y=>y!==v.year) || YEARS[0];
+  openAddVoterModal(otherYear, v);
 }
 
 function buildCatOptGroups(preCatId){
@@ -4657,7 +4756,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v2';
+var SCRIPT_VERSION = '2026-06-17-v3';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -4693,8 +4792,8 @@ function handleRequest(raw) {
     // ── VOTERS ──
     else if (action === 'addVoter') {
       var v = data.voter;
-      // PIN | Name | Dept | Unit | HasVoted | EmpID | Excl2024 | Excl2025
-      getOrCreate(ss, 'Voters').appendRow([v.pin, v.name, v.dept, v.unit, 'FALSE', v.empId||'', v.excl2024?'TRUE':'', v.excl2025?'TRUE':'']);
+      // PIN | Name | Dept | Unit | HasVoted | EmpID | Excl2024 | Excl2025 | Year
+      getOrCreate(ss, 'Voters').appendRow([v.pin, v.name, v.dept, v.unit, 'FALSE', v.empId||'', v.excl2024?'TRUE':'', v.excl2025?'TRUE':'', v.year||'']);
     }
     else if (action === 'removeVoter') {
       deleteRowByValue(ss.getSheetByName('Voters'), data.pin, 0);
@@ -4744,6 +4843,7 @@ function handleRequest(raw) {
             vs.getRange(i+1,6).setValue(v.empId||'');
             vs.getRange(i+1,7).setValue(v.excl2024?'TRUE':'');
             vs.getRange(i+1,8).setValue(v.excl2025?'TRUE':'');
+            vs.getRange(i+1,9).setValue(v.year||'');
             break;
           }
         }
