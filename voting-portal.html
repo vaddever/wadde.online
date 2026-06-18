@@ -859,6 +859,15 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
             <button class="btn-sm gold" onclick="testDeploymentRoundtrip()">🔍 Test Apps Script Connection</button>
           </div>
           <div id="deploy-test-result" style="font-size:12px;margin-top:8px;display:none;padding:9px 12px;border-radius:var(--rs);"></div>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">Diagnose a specific voter's PIN</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">If edits to one voter aren't reaching the sheet, check whether their PIN is actually matching a row in your Voters tab.</div>
+            <div style="display:flex;gap:8px;">
+              <input class="gs-inp" id="diag-voter-pin" placeholder="Enter their PIN, e.g. 180007" style="flex:1;">
+              <button class="btn-sm" onclick="diagnoseVoterPin()">Check</button>
+            </div>
+            <div id="diag-voter-result" style="font-size:12px;margin-top:8px;display:none;padding:9px 12px;border-radius:var(--rs);white-space:pre-wrap;"></div>
+          </div>
           <div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);border-radius:var(--rs);padding:10px 12px;margin-top:10px;font-size:11px;color:var(--gold2);line-height:1.6;">
             ⚠ <b>Important — 3 steps, all required:</b><br>
             1️⃣ Delete <b>all</b> existing code in the Apps Script editor, then paste in the fresh code (don't paste on top of old code).<br>
@@ -4358,7 +4367,50 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v5';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v6';
+
+async function diagnoseVoterPin(){
+  const pin=(document.getElementById('diag-voter-pin')?.value||'').trim();
+  const resEl=document.getElementById('diag-voter-result');
+  if(!resEl) return;
+  if(!pin){ resEl.style.display='block'; resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)'; resEl.textContent='Enter a PIN first.'; return; }
+  if(!CFG.scriptUrl){ resEl.style.display='block'; resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)'; resEl.textContent='No Script URL configured.'; return; }
+
+  resEl.style.display='block';
+  resEl.style.background='var(--bg3)'; resEl.style.color='var(--text2)';
+  resEl.textContent='⏳ Asking your Apps Script to look up this PIN…';
+
+  const ok=await writeToSheets('findVoter',{pin});
+  if(!ok){
+    resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+    resEl.textContent='✕ Could not even send the request — check your Script URL.';
+    return;
+  }
+  await new Promise(r=>setTimeout(r,2500));
+  try{
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/Config!A:B?key=${CFG.apiKey}`;
+    const r=await fetch(url);
+    const j=await r.json();
+    const rows=j.values||[];
+    const found=rows.find(row=>(row[0]||'').toLowerCase()==='_findvoterresult');
+    if(!found){
+      resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+      resEl.textContent='✕ No result came back at all — the request likely never reached your script. Check Settings → Script URL and your deployment access settings.';
+      return;
+    }
+    const data=JSON.parse(found[1]);
+    if(data.found){
+      resEl.style.background='var(--green-dim)'; resEl.style.color='var(--green)';
+      resEl.textContent=`✓ Found this PIN at row ${data.rowIndex} in your Voters sheet.\nRaw row data: ${JSON.stringify(data.raw)}\n\nThis means the row-matching logic works correctly for this PIN — if edits still aren't saving, the issue is likely in the write step itself (worth re-checking deployment permissions).`;
+    } else {
+      resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+      resEl.textContent=`✕ This PIN was NOT found in your Voters sheet at all.\n\nThis means edits to this voter can never be saved — the script can't find a row to update. Check for: extra spaces, the PIN being stored as a number vs text in the sheet (leading zeros can get dropped), or the PIN simply being in a different sheet/tab.`;
+    }
+  }catch(e){
+    resEl.style.background='var(--red-dim)'; resEl.style.color='var(--red)';
+    resEl.textContent='✕ Could not read the result — '+e.message;
+  }
+}
 
 async function testDeploymentRoundtrip(){
   const resEl=document.getElementById('deploy-test-result');
@@ -5043,7 +5095,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v5';
+var SCRIPT_VERSION = '2026-06-17-v6';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -5254,6 +5306,28 @@ function handleRequest(raw) {
     }
     else if (action === 'setConfig') {
       setConfigValue(ss, data.key, data.value);
+    }
+    // ── DIAGNOSTIC: safely check if a PIN actually matches a row in Voters ──
+    // (read-only — never modifies the Voters sheet). Writes its result into
+    // Config so the client can read it back via the Sheets API, since direct
+    // Apps Script responses can be blocked by some browsers' CORS handling.
+    else if (action === 'findVoter') {
+      var fvSheet = ss.getSheetByName('Voters');
+      var fvFound = false, fvRow = -1, fvRaw = [];
+      if (fvSheet && fvSheet.getLastRow() > 1) {
+        var fvRows = fvSheet.getDataRange().getValues();
+        for (var fi = 1; fi < fvRows.length; fi++) {
+          if (String(fvRows[fi][0]).trim() === String(data.pin).trim()) {
+            fvFound = true;
+            fvRow = fi + 1;
+            fvRaw = fvRows[fi];
+            break;
+          }
+        }
+      }
+      setConfigValue(ss, '_findVoterResult', JSON.stringify({
+        pin: data.pin, found: fvFound, rowIndex: fvRow, raw: fvRaw, checkedAt: new Date().toISOString()
+      }));
     }
 
     // ── ADMIN PASSWORD ──
