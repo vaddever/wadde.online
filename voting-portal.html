@@ -1164,6 +1164,19 @@ async function fetchRange(range) {
   }
 }
 
+// Safely reads a TRUE/FALSE flag from a sheet cell, regardless of whether
+// Google Sheets stored it as text ("TRUE"/"FALSE") or auto-converted it to
+// an actual boolean (which happens silently if anyone ever types TRUE/FALSE
+// directly into a cell in the Sheets UI). Without this, a single boolean-
+// typed cell anywhere in the sheet crashes the entire sync with a hard
+// JS error (booleans have no .toUpperCase()), silently freezing ALL voter
+// data — eligibility, hasVoted, everything — at whatever it was when the
+// crash first happened.
+function parseBoolCell(v){
+  if(typeof v === 'boolean') return v;
+  return String(v||'').trim().toUpperCase()==='TRUE';
+}
+
 async function fetchFromSheets() {
   if (!CFG.sheetId || !CFG.apiKey) return false;
 
@@ -1227,19 +1240,31 @@ async function fetchFromSheets() {
 
   // ── VOTERS: PIN | Name | Dept | Unit | HasVoted ──
   // Dept & Unit columns accept either an ID or a plain name — resolved after depts load
-  if (vD.length) DATA.voters = vD.map(r=>({
-    pin:     (r[0]||'').trim(),
-    name:    (r[1]||'').trim(),
-    dept:    (r[2]||'').trim(),
-    unit:    (r[3]||'').trim(),
-    hasVoted:(r[4]||'').toUpperCase()==='TRUE',
-    empId:   (r[5]||'').trim(),  // column F — Employee ID
-    excl2024:(r[6]||'').toUpperCase()==='TRUE',  // column G — legacy: excluded from 2024
-    excl2025:(r[7]||'').toUpperCase()==='TRUE',  // column H — legacy: excluded from 2025
-    year:    (r[8]||'').replace(/[^0-9]/g,''),   // column I — independent-roster year (separate-PIN model)
-    voted2024:(r[9]||'').toUpperCase()==='TRUE', // column J — voted in 2024 (single-PIN model)
-    voted2025:(r[10]||'').toUpperCase()==='TRUE' // column K — voted in 2025 (single-PIN model)
-  })).filter(v=>v.pin);
+  // Parses one Voters row defensively — if ANYTHING unexpected happens with
+// this one row (an odd cell type, etc.), we skip just that row instead of
+// crashing the whole sync and silently freezing every voter's data.
+function parseVoterRow(r){
+  try{
+    const txt = (x)=> (typeof x==='boolean' ? String(x) : (x||'')).toString().trim();
+    return {
+      pin:      txt(r[0]),
+      name:     txt(r[1]),
+      dept:     txt(r[2]),
+      unit:     txt(r[3]),
+      hasVoted: parseBoolCell(r[4]),
+      empId:    txt(r[5]),  // column F — Employee ID
+      excl2024: parseBoolCell(r[6]),  // column G — legacy: excluded from 2024
+      excl2025: parseBoolCell(r[7]),  // column H — legacy: excluded from 2025
+      year:     txt(r[8]).replace(/[^0-9]/g,''),   // column I — independent-roster year (separate-PIN model)
+      voted2024:parseBoolCell(r[9]), // column J — voted in 2024 (single-PIN model)
+      voted2025:parseBoolCell(r[10]) // column K — voted in 2025 (single-PIN model)
+    };
+  }catch(e){
+    console.warn('[Voters parse] Skipped a malformed row:', r, e.message);
+    return null;
+  }
+}
+if (vD.length) DATA.voters = vD.map(parseVoterRow).filter(v=>v && v.pin);
 
   // ── ADMINS: PIN | Role | Name ──
   if (adD.length) DATA.admins = adD.map(r=>({
@@ -1373,8 +1398,8 @@ async function fetchFromSheets() {
   // ── Config tab — rows of [key, value] ──
   if (cfgD.length) {
     cfgD.forEach(r=>{
-      const key=(r[0]||'').trim().toLowerCase();
-      const val=(r[1]||'').trim();
+      const key=(typeof r[0]==='boolean'?String(r[0]):(r[0]||'')).trim().toLowerCase();
+      const val=(typeof r[1]==='boolean'?(r[1]?'TRUE':'FALSE'):(r[1]||'')).trim();
       if (key==='votingopen')        CFG.votingOpen  = (val.toUpperCase()!=='FALSE');
       if (key==='orgname'   && val)  CFG.orgName    = val;
       if (key==='scripturl' && val)  CFG.scriptUrl  = val;
@@ -3494,14 +3519,15 @@ async function fetchSingleVoterFromSheet(pin){
   const res = await fetch(url);
   if(!res.ok) throw new Error('Sheets read failed: HTTP '+res.status);
   const json = await res.json();
-  const row = (json.values||[]).find(r=>(r[0]||'').trim()===String(pin).trim());
+  const txt = (x)=> (typeof x==='boolean' ? String(x) : (x||'')).toString().trim();
+  const row = (json.values||[]).find(r=>txt(r[0])===String(pin).trim());
   if(!row) return null;
   return {
-    pin:(row[0]||'').trim(), name:(row[1]||'').trim(), dept:(row[2]||'').trim(), unit:(row[3]||'').trim(),
-    hasVoted:(row[4]||'').toUpperCase()==='TRUE', empId:(row[5]||'').trim(),
-    excl2024:(row[6]||'').toUpperCase()==='TRUE', excl2025:(row[7]||'').toUpperCase()==='TRUE',
-    year:(row[8]||'').replace(/[^0-9]/g,''),
-    voted2024:(row[9]||'').toUpperCase()==='TRUE', voted2025:(row[10]||'').toUpperCase()==='TRUE'
+    pin:txt(row[0]), name:txt(row[1]), dept:txt(row[2]), unit:txt(row[3]),
+    hasVoted:parseBoolCell(row[4]), empId:txt(row[5]),
+    excl2024:parseBoolCell(row[6]), excl2025:parseBoolCell(row[7]),
+    year:txt(row[8]).replace(/[^0-9]/g,''),
+    voted2024:parseBoolCell(row[9]), voted2025:parseBoolCell(row[10])
   };
 }
 
