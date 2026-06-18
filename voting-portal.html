@@ -3433,12 +3433,17 @@ async function saveEditVoter(pin){
 // its response. The only way to know if the write really landed is to
 // re-read the TRUE sheet state via the Sheets API (which IS readable)
 // a moment later, and compare it to what we expected to see.
-async function verifyVoterWriteReachedSheet(pin, expected){
+async function verifyVoterWriteReachedSheet(pin, expected, attempt){
+  attempt = attempt || 1;
+  const MAX_ATTEMPTS = 5;
+  const DELAYS = [2000, 2500, 3000, 3500, 4000]; // increasing backoff — Apps Script cold-starts can take several seconds
   if(!CFG.scriptUrl) return; // no script configured — nothing to verify
-  await new Promise(r=>setTimeout(r,1400));
+
+  await new Promise(r=>setTimeout(r, DELAYS[attempt-1] || 4000));
   try{
     await fetchFromSheets();
   }catch(e){ return; } // network hiccup — don't false-alarm
+
   const fresh = DATA.voters.find(v=>v.pin===pin);
   if(!fresh) return;
   const mismatch = expected.year
@@ -3446,10 +3451,20 @@ async function verifyVoterWriteReachedSheet(pin, expected){
     : (!!fresh.excl2024 !== !!expected.excl2024
        || !!fresh.excl2025 !== !!expected.excl2025
        || fresh.name !== expected.name);
+
   if(mismatch){
+    if(attempt < MAX_ATTEMPTS){
+      // Could just be propagation/cold-start delay — don't panic yet, try again
+      return verifyVoterWriteReachedSheet(pin, expected, attempt+1);
+    }
+    // Genuinely didn't land after several attempts and ~15s total wait
     cacheData();
     renderVoterList(); renderAdminVoterList();
-    showSheetSyncWarning(`⚠ "${expected.name}"'s changes didn't reach the Google Sheet. Go to Settings → click "🔍 Test Apps Script Connection" — it will tell you exactly what's wrong and how to fix it.`);
+    showSheetSyncWarning(`⚠ "${expected.name}"'s changes didn't reach the Google Sheet after several checks. Go to Settings → click "🔍 Test Apps Script Connection" — it will tell you exactly what's wrong and how to fix it.`);
+  } else {
+    // Confirmed synced successfully — make sure the displayed data reflects it
+    cacheData();
+    renderVoterList(); renderAdminVoterList();
   }
 }
 
@@ -4330,7 +4345,7 @@ async function testDeploymentRoundtrip(){
     resEl.textContent='✕ Could not even send the request — check your Script URL is correct and the deployment is set to "Anyone" access.';
     return;
   }
-  await new Promise(r=>setTimeout(r,1600));
+  await new Promise(r=>setTimeout(r,3000));
   try{
     const url=`https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/Config!A:B?key=${CFG.apiKey}`;
     const r=await fetch(url);
