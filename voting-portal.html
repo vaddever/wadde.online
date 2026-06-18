@@ -3795,10 +3795,22 @@ async function saveEditStaff(id){
   showToast(`${s.name} updated`,'ok');
 }
 
+function buildCatOptGroupsByName(preCatId){
+  // Flat dropdown grouped by award name, with year + unit/dept shown per option
+  const grouped = {};
+  DATA.categories.forEach(c=>{ (grouped[c.name]=grouped[c.name]||[]).push(c); });
+  const names = Object.keys(grouped).sort((a,b)=>a.localeCompare(b));
+  return names.map(name=>{
+    const cats=[...grouped[name]].sort((a,b)=>String(b.year||'').localeCompare(String(a.year||'')));
+    const opts=cats.map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.year||'—'} — ${categoryTargetLabel(c)}</option>`).join('');
+    return `<optgroup label="${name}">${opts}</optgroup>`;
+  }).join('');
+}
+
 function openEditNomModal(id){
   const nom=DATA.nominees.find(n=>n.id===id);
   if(!nom){showToast('Nominee not found','err');return;}
-  const cOpts=buildCatOptGroups(nom.category);
+  const cOpts=buildCatOptGroupsByName(nom.category);
   // Build staff opts
   const sortedStaff=[...DATA.staff].sort((a,b)=>a.name.localeCompare(b.name));
   const staffOpts=sortedStaff.map(s=>`<option value="${s.id}" ${s.name===nom.name?'selected':''}>[${s.empId||s.id}] ${s.name} — ${getDeptName(s.dept)} · ${getUnitName(s.unit)}</option>`).join('');
@@ -3915,15 +3927,12 @@ function renderCatList(){
   const scopeF=document.getElementById('cat-fscope')?.value||'';
   const deptF=document.getElementById('cat-fdept')?.value||'';
   const unitF=document.getElementById('cat-funit')?.value||'';
-  const scopeLabel={global:'🌐 Company-wide',dept:'🏢 Department',unit:'📍 Unit',deptcat:'🏢 Department'};
-  const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
 
   let filtered=DATA.categories.filter(cat=>{
     if(scopeF && cat.scope!==scopeF) return false;
     if(deptF){
       if(cat.scope==='dept' && cat.linkedDept!==deptF) return false;
       if(cat.scope==='unit'){
-        // check if linked unit belongs to selected dept
         const dept=DATA.departments.find(d=>d.id===deptF);
         if(dept && !dept.units.find(u=>u.id===cat.linkedUnit)) return false;
       }
@@ -3936,26 +3945,33 @@ function renderCatList(){
     el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏷</div>'+(DATA.categories.length?'No categories match the selected filters.':'No categories yet. Add your voting categories.')+'</div>';
     return;
   }
-  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">` +
-  filtered.map(cat=>{
-    const voteCount=DATA.votes.filter(v=>v.category===cat.id).length;
-    const nomCount=DATA.nominees.filter(n=>n.category===cat.id).length;
-    const scopeTxt=scopeTag[cat.scope]||cat.scope;
-    const linkedTxt=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
-    const scopeColor={global:'var(--blue)',dept:'var(--purple)',unit:'var(--green)',deptcat:'var(--purple)'};
-    const scopeBg={global:'var(--blue-dim)',dept:'var(--purple-dim)',unit:'var(--green-dim)',deptcat:'var(--purple-dim)'};
-    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;">
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;">
-          <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${scopeBg[cat.scope]};color:${scopeColor[cat.scope]};border:1px solid ${scopeColor[cat.scope]}33;">${scopeLabel[cat.scope]}${linkedTxt}</span>
-          <span style="font-size:11px;color:var(--text3);">${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</span>
-        </div>
-      </div>
-      <button class="btn-sm gold" onclick="openEditCatModal('${cat.id}')">✎</button>
-      <button class="btn-sm red" onclick="removeCat('${cat.id}')">✕</button>
+
+  // Group by award name — one card per award, with each year/unit version listed underneath
+  const groups={};
+  filtered.forEach(cat=>{ (groups[cat.name]=groups[cat.name]||[]).push(cat); });
+  const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+  const scopeColor={global:'var(--blue)',dept:'var(--purple)',unit:'var(--green)',deptcat:'var(--purple)'};
+  const scopeBg={global:'var(--blue-dim)',dept:'var(--purple-dim)',unit:'var(--green-dim)',deptcat:'var(--purple-dim)'};
+
+  el.innerHTML = names.map(name=>{
+    const cats=groups[name].sort((a,b)=>String(b.year||'').localeCompare(String(a.year||''))||categoryTargetLabel(a).localeCompare(categoryTargetLabel(b)));
+    const rows = cats.map(cat=>{
+      const voteCount=DATA.votes.filter(v=>v.category===cat.id).length;
+      const nomCount=DATA.nominees.filter(n=>n.category===cat.id).length;
+      const targetTxt=categoryTargetLabel(cat);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border);">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:var(--gold);background:var(--gold-dim);padding:2px 9px;border-radius:4px;min-width:50px;text-align:center;flex-shrink:0;">${cat.year||'—'}</span>
+        <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:${scopeBg[cat.scope]};color:${scopeColor[cat.scope]};border:1px solid ${scopeColor[cat.scope]}33;flex:1;">${targetTxt}</span>
+        <span style="font-size:11px;color:var(--text3);flex-shrink:0;">${nomCount} nominee${nomCount!==1?'s':''} · ${voteCount} vote${voteCount!==1?'s':''}</span>
+        <button class="btn-sm gold" onclick="openEditCatModal('${cat.id}')" style="flex-shrink:0;">✎</button>
+        <button class="btn-sm red" onclick="removeCat('${cat.id}')" style="flex-shrink:0;">✕</button>
+      </div>`;
+    }).join('');
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;">
+      <div style="font-size:14px;font-weight:600;">${name}</div>
+      ${rows}
     </div>`;
-  }).join('') + '</div>';
+  }).join('');
 }
 async function removeCat(id){
   const cat=DATA.categories.find(c=>c.id===id);
@@ -4447,23 +4463,25 @@ function duplicateVoterToOtherYear(pin){
   openAddVoterModal(otherYear, v);
 }
 
-function buildCatOptGroups(preCatId){
-  // Group categories by year using <optgroup> so similar names are clearly separated
-  const grouped = {};
-  DATA.categories.forEach(c=>{
-    const yr = c.year || 'Other';
-    if(!grouped[yr]) grouped[yr]=[];
-    grouped[yr].push(c);
-  });
-  const years = Object.keys(grouped).sort((a,b)=>b.localeCompare(a)); // newest first
-  if(years.length<=1){
-    // Only one year — just show name + year without groups
-    return DATA.categories.map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.name}${c.year?' '+c.year:''}</option>`).join('');
-  }
-  return years.map(yr=>{
-    const opts=grouped[yr].map(c=>`<option value="${c.id}" ${c.id===preCatId?'selected':''}>${c.name}</option>`).join('');
-    return `<optgroup label="── ${yr} Awards ──">${opts}</optgroup>`;
-  }).join('');
+// ── Helpers for the Award Name → Year → Unit/Dept → Staff picker ──
+function categoryTargetLabel(cat){
+  if(!cat) return '';
+  if(cat.scope==='dept' || cat.scope==='deptcat') return getDeptName(cat.linkedDept)||'(unassigned department)';
+  if(cat.scope==='unit') return getUnitName(cat.linkedUnit)||'(unassigned unit)';
+  return 'Company-wide';
+}
+function getYearsForAwardName(name){
+  const cats=DATA.categories.filter(c=>c.name===name);
+  return [...new Set(cats.map(c=>String(c.year||'').trim()))].filter(Boolean).sort((a,b)=>b.localeCompare(a));
+}
+function getCategoriesForAward(name, year){
+  return DATA.categories.filter(c=>c.name===name && String(c.year||'').trim()===String(year));
+}
+function getCompatibleStaffForCategory(cat){
+  if(!cat) return [];
+  if((cat.scope==='dept'||cat.scope==='deptcat') && cat.linkedDept) return DATA.staff.filter(s=>s.dept===cat.linkedDept);
+  if(cat.scope==='unit' && cat.linkedUnit) return DATA.staff.filter(s=>s.unit===cat.linkedUnit);
+  return DATA.staff; // company-wide
 }
 
 let _nomPreCatId = null;
@@ -4471,20 +4489,15 @@ let _nomPreCatId = null;
 function openAddNomModal(preCatId){
   _nomPreCatId = preCatId || null;
   const hasStaff = DATA.staff.length > 0;
+  const allNames = [...new Set(DATA.categories.map(c=>c.name))].sort((a,b)=>a.localeCompare(b));
+  const nameOpts = '<option value="">— select an award —</option>' +
+    allNames.map(n=>`<option value="${n}">${n}</option>`).join('');
 
-  if(hasStaff){
-    const sortedStaff = [...DATA.staff].sort((a,b)=>a.name.localeCompare(b.name));
-    const staffOpts = sortedStaff.map(s=>{
-      const deptName = getDeptName(s.dept);
-      const unitName = getUnitName(s.unit);
-      return `<option value="${s.id}">[${s.empId||s.id}] ${s.name} — ${deptName} · ${unitName}</option>`;
-    }).join('');
-    openModal(`<div class="modal-title">Add Nominee</div>
-      <div class="modal-field">
+  const staffField = hasStaff
+    ? `<div class="modal-field" id="mn-staff-wrap" style="margin-top:12px;">
         <label class="modal-lbl">Staff Member</label>
-        <select class="modal-sel" id="mn-staff" onchange="onNomStaffChange()">
-          <option value="">— select a staff member —</option>
-          ${staffOpts}
+        <select class="modal-sel" id="mn-staff" onchange="onNomStaffChange()" disabled>
+          <option value="">— select an award above first —</option>
         </select>
       </div>
       <div id="mn-staff-card" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;margin-top:6px;">
@@ -4496,157 +4509,160 @@ function openAddNomModal(preCatId){
             <div id="mn-card-unit" style="font-size:11px;color:var(--text3);margin-top:1px;"></div>
           </div>
         </div>
-      </div>
-      <div class="modal-field" style="margin-top:12px;">
-        <label class="modal-lbl">Award Name</label>
-        <select class="modal-sel" id="mn-award" onchange="onAwardNameChange()" disabled>
-          <option value="">— select staff member first —</option>
-        </select>
-      </div>
-      <div class="modal-field" id="mn-award-year-wrap" style="display:none;">
-        <label class="modal-lbl">Year</label>
-        <select class="modal-sel" id="mn-award-year" onchange="onAwardYearChange()"></select>
-      </div>
-      <input type="hidden" id="mn-cat" value="">
-      <div id="mn-duplicate-warn" style="font-size:12px;color:var(--red);margin-top:6px;padding:7px 10px;background:var(--red-dim);border-radius:var(--rs);display:none;"></div>
-      <div class="modal-actions">
-        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-        <button class="btn-confirm" id="mn-confirm-btn" onclick="addNom()">Add Nominee</button>
-      </div>`);
-  } else {
-    const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-    openModal(`<div class="modal-title">Add Nominee</div>
-      <div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:var(--rs);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold2);">
-        💡 Add your staff in the <b>Staff tab</b> first — then nominees can be selected from the staff list automatically.
-        <span onclick="switchToStaffTab();closeModal();" style="cursor:pointer;text-decoration:underline;display:block;margin-top:4px;">Go to Staff tab →</span>
-      </div>
-      <div class="modal-field"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mn-name" placeholder="Nominee full name" oninput="checkNomDuplicate()"></div>
-      <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" onchange="fillNomUnits();refreshAwardOptions();">${dOpts}</select></div>
-      <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mn-unit" onchange="refreshAwardOptions();"></select></div>
-      <div class="modal-field" style="margin-top:6px;">
-        <label class="modal-lbl">Award Name</label>
-        <select class="modal-sel" id="mn-award" onchange="onAwardNameChange()">
-          <option value="">— select —</option>
-        </select>
-      </div>
-      <div class="modal-field" id="mn-award-year-wrap" style="display:none;">
-        <label class="modal-lbl">Year</label>
-        <select class="modal-sel" id="mn-award-year" onchange="onAwardYearChange()"></select>
-      </div>
-      <input type="hidden" id="mn-cat" value="">
-      <div id="mn-duplicate-warn" style="font-size:12px;color:var(--red);margin-top:6px;padding:7px 10px;background:var(--red-dim);border-radius:var(--rs);display:none;"></div>
-      <div class="modal-actions">
-        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-        <button class="btn-confirm" onclick="addNom()">Add Nominee</button>
-      </div>`);
-    fillNomUnits();
-    refreshAwardOptions();
-  }
-}
+      </div>`
+    : `<div class="modal-field" style="margin-top:12px;"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mn-name" placeholder="Nominee full name" oninput="checkNomDuplicate()" disabled></div>
+       <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" disabled><option value="">— select an award above first —</option></select></div>
+       <div class="modal-field"><label class="modal-lbl">Unit</label><select class="modal-sel" id="mn-unit" disabled></select></div>`;
 
-// ── Helpers for the Award Name + Year picker ──
-function currentNomDeptUnit(){
-  const staffSel=document.getElementById('mn-staff');
-  if(staffSel){
-    const s=DATA.staff.find(x=>x.id===staffSel.value);
-    return s ? {dept:s.dept, unit:s.unit} : {dept:'', unit:''};
-  }
-  const dept=document.getElementById('mn-dept')?.value||'';
-  const unit=document.getElementById('mn-unit')?.value||'';
-  return {dept, unit};
-}
+  openModal(`<div class="modal-title">Add Nominee</div>
+    ${!hasStaff?`<div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:var(--rs);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold2);">
+      💡 Add your staff in the <b>Staff tab</b> first — then nominees can be selected from the staff list automatically.
+      <span onclick="switchToStaffTab();closeModal();" style="cursor:pointer;text-decoration:underline;display:block;margin-top:4px;">Go to Staff tab →</span>
+    </div>`:''}
+    <div class="modal-field">
+      <label class="modal-lbl">Award Name</label>
+      <select class="modal-sel" id="mn-award" onchange="onAwardNameChange()">${nameOpts}</select>
+    </div>
+    <div class="modal-field" id="mn-award-year-wrap" style="display:none;">
+      <label class="modal-lbl">Year</label>
+      <select class="modal-sel" id="mn-award-year" onchange="onAwardYearChange()"></select>
+    </div>
+    <div class="modal-field" id="mn-award-target-wrap" style="display:none;">
+      <label class="modal-lbl" id="mn-award-target-lbl">Department/Unit</label>
+      <select class="modal-sel" id="mn-award-target" onchange="onAwardTargetChange()"></select>
+    </div>
+    <input type="hidden" id="mn-cat" value="">
+    ${staffField}
+    <div id="mn-duplicate-warn" style="font-size:12px;color:var(--red);margin-top:6px;padding:7px 10px;background:var(--red-dim);border-radius:var(--rs);display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" id="mn-confirm-btn" onclick="addNom()">Add Nominee</button>
+    </div>`);
 
-function getCompatibleCategories(dept, unit){
-  return DATA.categories.filter(cat=>{
-    const scope = cat.scope || 'global';
-    if(scope==='global') return true;
-    if(scope==='dept' || scope==='deptcat'){
-      if(!cat.linkedDept) return true;
-      return cat.linkedDept===dept;
-    }
-    if(scope==='unit'){
-      if(!cat.linkedUnit) return true;
-      return cat.linkedUnit===unit;
-    }
-    return true;
-  });
-}
-
-function refreshAwardOptions(){
-  const awardSel=document.getElementById('mn-award');
-  if(!awardSel) return;
-  const {dept, unit} = currentNomDeptUnit();
-
-  if(!dept && !unit && document.getElementById('mn-staff')){
-    // Staff mode, nothing selected yet
-    awardSel.disabled=true;
-    awardSel.innerHTML='<option value="">— select staff member first —</option>';
-    document.getElementById('mn-award-year-wrap').style.display='none';
-    document.getElementById('mn-cat').value='';
-    return;
-  }
-
-  const compatible = getCompatibleCategories(dept, unit);
-  const names = [...new Set(compatible.map(c=>c.name))].sort((a,b)=>a.localeCompare(b));
-
-  awardSel.disabled=false;
-  if(!names.length){
-    awardSel.innerHTML='<option value="">— no matching awards for this dept/unit —</option>';
-    document.getElementById('mn-award-year-wrap').style.display='none';
-    document.getElementById('mn-cat').value='';
-    return;
-  }
-
-  // Try to preselect based on _nomPreCatId if it's compatible
-  let preselectName='';
+  // Opened from a specific category's "+ Add" button — pre-select everything
   if(_nomPreCatId){
     const preCat=DATA.categories.find(c=>c.id===_nomPreCatId);
-    if(preCat && compatible.find(c=>c.id===preCat.id)) preselectName=preCat.name;
+    if(preCat){
+      const awardSel=document.getElementById('mn-award');
+      if(awardSel){ awardSel.value=preCat.name; onAwardNameChange(); }
+    }
   }
-
-  awardSel.innerHTML='<option value="">— select an award —</option>'+
-    names.map(n=>`<option value="${n}" ${n===preselectName?'selected':''}>${n}</option>`).join('');
-
-  if(preselectName) onAwardNameChange();
-  else { document.getElementById('mn-award-year-wrap').style.display='none'; document.getElementById('mn-cat').value=''; }
 }
 
 function onAwardNameChange(){
-  const awardName=document.getElementById('mn-award')?.value||'';
+  const name=document.getElementById('mn-award')?.value||'';
   const yearWrap=document.getElementById('mn-award-year-wrap');
-  const yearSel=document.getElementById('mn-award-year');
-  const catInp=document.getElementById('mn-cat');
-  if(!awardName){
+  if(!name){
     if(yearWrap) yearWrap.style.display='none';
-    if(catInp) catInp.value='';
-    checkNomDuplicate();
+    resolveAwardYear('', '');
     return;
   }
-  const {dept, unit} = currentNomDeptUnit();
-  const compatible = getCompatibleCategories(dept, unit).filter(c=>c.name===awardName);
-  // Sort years newest first
-  const sorted=[...compatible].sort((a,b)=>String(b.year||'').localeCompare(String(a.year||'')));
-
-  if(sorted.length>1){
-    let preselectYear='';
+  const years=getYearsForAwardName(name);
+  if(years.length>1){
+    let preselect='';
     if(_nomPreCatId){
       const preCat=DATA.categories.find(c=>c.id===_nomPreCatId);
-      if(preCat && preCat.name===awardName) preselectYear=String(preCat.year||'');
+      if(preCat && preCat.name===name) preselect=String(preCat.year||'');
     }
     if(yearWrap) yearWrap.style.display='block';
-    if(yearSel) yearSel.innerHTML=sorted.map(c=>`<option value="${c.id}" ${String(c.year)===preselectYear?'selected':''}>${c.year||'—'}</option>`).join('');
+    const yearSel=document.getElementById('mn-award-year');
+    if(yearSel) yearSel.innerHTML=years.map(y=>`<option value="${y}" ${y===preselect?'selected':''}>${y}</option>`).join('');
     onAwardYearChange();
   } else {
     if(yearWrap) yearWrap.style.display='none';
-    if(catInp) catInp.value = sorted[0] ? sorted[0].id : '';
-    checkNomDuplicate();
+    resolveAwardYear(name, years[0]||'');
   }
 }
 
 function onAwardYearChange(){
-  const yearSel=document.getElementById('mn-award-year');
+  const name=document.getElementById('mn-award')?.value||'';
+  const year=document.getElementById('mn-award-year')?.value||'';
+  resolveAwardYear(name, year);
+}
+
+function resolveAwardYear(name, year){
+  const targetWrap=document.getElementById('mn-award-target-wrap');
+  const targetLbl=document.getElementById('mn-award-target-lbl');
+  if(!name||!year){
+    if(targetWrap) targetWrap.style.display='none';
+    resolveNomCategory(null);
+    return;
+  }
+  const cats=getCategoriesForAward(name, year);
+  if(cats.length>1){
+    let preselectId='';
+    if(_nomPreCatId && cats.find(c=>c.id===_nomPreCatId)) preselectId=_nomPreCatId;
+    const isUnit = cats[0].scope==='unit';
+    if(targetLbl) targetLbl.textContent = isUnit ? 'Unit' : 'Department';
+    if(targetWrap) targetWrap.style.display='block';
+    const targetSel=document.getElementById('mn-award-target');
+    const sorted=[...cats].sort((a,b)=>categoryTargetLabel(a).localeCompare(categoryTargetLabel(b)));
+    if(targetSel) targetSel.innerHTML='<option value="">— select —</option>'+
+      sorted.map(c=>`<option value="${c.id}" ${c.id===preselectId?'selected':''}>${categoryTargetLabel(c)}</option>`).join('');
+    resolveNomCategory(preselectId||null);
+  } else {
+    if(targetWrap) targetWrap.style.display='none';
+    resolveNomCategory(cats[0] ? cats[0].id : null);
+  }
+}
+
+function onAwardTargetChange(){
+  const catId=document.getElementById('mn-award-target')?.value||'';
+  resolveNomCategory(catId||null);
+}
+
+// Once a SPECIFIC category is resolved (one exact year+unit/dept), filter
+// the staff list (or lock the dept/unit fields in manual mode) to match it.
+function resolveNomCategory(catId){
   const catInp=document.getElementById('mn-cat');
-  if(catInp) catInp.value = yearSel ? yearSel.value : '';
+  if(catInp) catInp.value=catId||'';
+  const cat=catId?DATA.categories.find(c=>c.id===catId):null;
+
+  const staffSel=document.getElementById('mn-staff');
+  if(staffSel){
+    if(!cat){
+      staffSel.disabled=true;
+      staffSel.innerHTML='<option value="">— select an award above first —</option>';
+      const card=document.getElementById('mn-staff-card'); if(card) card.style.display='none';
+    } else {
+      const compatible=getCompatibleStaffForCategory(cat).slice().sort((a,b)=>a.name.localeCompare(b.name));
+      staffSel.disabled=false;
+      if(!compatible.length){
+        staffSel.innerHTML='<option value="">— no staff in this department/unit —</option>';
+      } else {
+        staffSel.innerHTML='<option value="">— select a staff member —</option>'+
+          compatible.map(s=>`<option value="${s.id}">[${s.empId||s.id}] ${s.name} — ${getDeptName(s.dept)} · ${getUnitName(s.unit)}</option>`).join('');
+      }
+      const card=document.getElementById('mn-staff-card'); if(card) card.style.display='none';
+    }
+  } else {
+    // Manual entry mode — auto-fill + lock dept/unit to match the resolved category's scope
+    const nameInp=document.getElementById('mn-name');
+    const deptSel=document.getElementById('mn-dept');
+    const unitSel=document.getElementById('mn-unit');
+    if(!cat){
+      if(nameInp) nameInp.disabled=true;
+      if(deptSel){ deptSel.disabled=true; deptSel.innerHTML='<option value="">— select an award above first —</option>'; }
+      if(unitSel){ unitSel.disabled=true; unitSel.innerHTML=''; }
+      checkNomDuplicate();
+      return;
+    }
+    if(nameInp) nameInp.disabled=false;
+    const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+    if(cat.scope==='unit' && cat.linkedUnit){
+      const dept=DATA.departments.find(d=>d.units.find(u=>u.id===cat.linkedUnit));
+      if(deptSel){ deptSel.innerHTML=dOpts; deptSel.value=dept?.id||''; deptSel.disabled=true; }
+      if(unitSel){ unitSel.innerHTML=(dept?.units||[]).map(u=>`<option value="${u.id}">${u.name}</option>`).join(''); unitSel.value=cat.linkedUnit; unitSel.disabled=true; }
+    } else if((cat.scope==='dept'||cat.scope==='deptcat') && cat.linkedDept){
+      const dept=DATA.departments.find(d=>d.id===cat.linkedDept);
+      if(deptSel){ deptSel.innerHTML=dOpts; deptSel.value=cat.linkedDept; deptSel.disabled=true; }
+      if(unitSel){ unitSel.innerHTML=(dept?.units||[]).map(u=>`<option value="${u.id}">${u.name}</option>`).join(''); unitSel.disabled=false; }
+    } else {
+      if(deptSel){ deptSel.innerHTML=dOpts; deptSel.disabled=false; deptSel.onchange=()=>fillNomUnits(); }
+      if(unitSel) unitSel.disabled=false;
+      fillNomUnits();
+    }
+  }
   checkNomDuplicate();
 }
 
@@ -4661,11 +4677,11 @@ function onNomStaffChange(){
   const card=document.getElementById('mn-staff-card');
   if(!staffId||!card){
     if(card) card.style.display='none';
-    refreshAwardOptions(); // reset award dropdown back to placeholder
+    checkNomDuplicate();
     return;
   }
   const s=DATA.staff.find(x=>x.id===staffId);
-  if(!s){ card.style.display='none'; refreshAwardOptions(); return; }
+  if(!s){ card.style.display='none'; checkNomDuplicate(); return; }
   const color=stringToColor(s.name);
   const initials=s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const av=document.getElementById('mn-card-avatar');
@@ -4680,7 +4696,6 @@ function onNomStaffChange(){
   if(dp) dp.textContent='🏢 '+getDeptName(s.dept)+' · 📍 '+getUnitName(s.unit);
   if(un) un.textContent='🪪 Staff ID: '+(s.empId||s.id);
   card.style.display='block';
-  refreshAwardOptions();
   checkNomDuplicate();
 }
 
@@ -4756,51 +4771,60 @@ async function addNom(){
 }
 
 function openAddCatModal(){
-  const dOpts=DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  const allUnitOpts=DATA.departments.flatMap(d=>d.units.map(u=>
-    `<option value="${u.id}">${d.name} › ${u.name}</option>`)).join('');
-  const yrOpts=YEARS.map(y=>`<option value="${y}" ${y===DEFAULT_YEAR?'selected':''}>${y}</option>`).join('');
-  openModal(`<div class="modal-title">Add Voting Category</div>
-    <div class="modal-field">
-      <label class="modal-lbl">Category Name</label>
-      <input class="modal-inp" id="mc-name" placeholder="e.g. Best Staff — Leadership">
+  const yearChecks = YEARS.map(y=>`<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+      <input type="checkbox" class="mc-year-chk" value="${y}" checked style="width:15px;height:15px;accent-color:var(--gold);"> ${y}
+    </label>`).join('');
+
+  const deptChecks = DATA.departments.map(d=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:5px 0;">
+      <input type="checkbox" class="mc-dept-chk" value="${d.id}" style="width:15px;height:15px;accent-color:var(--gold);flex-shrink:0;"> ${d.name}
+    </label>`).join('') || '<div style="font-size:12px;color:var(--text3);">No departments yet.</div>';
+
+  const unitChecks = DATA.departments.map(d=>`
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">${d.name}</div>
+      ${d.units.map(u=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:4px 0 4px 8px;">
+        <input type="checkbox" class="mc-unit-chk" value="${u.id}" style="width:15px;height:15px;accent-color:var(--gold);flex-shrink:0;"> ${u.name}
+      </label>`).join('') || '<div style="font-size:11px;color:var(--text3);padding-left:8px;">No units yet</div>'}
+    </div>`).join('') || '<div style="font-size:12px;color:var(--text3);">No departments yet.</div>';
+
+  openModal(`<div class="modal-title">Add Award Category</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">
+      Define the award once — tick which years it runs in and which units/departments get their own competition. We'll generate everything for you.
     </div>
     <div class="modal-field">
-      <label class="modal-lbl">Award Year</label>
-      <select class="modal-sel" id="mc-year">${yrOpts}</select>
+      <label class="modal-lbl">Award Name</label>
+      <input class="modal-inp" id="mc-name" placeholder="e.g. Employee of the Unit">
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Years</label>
+      <div style="display:flex;gap:18px;margin-top:4px;">${yearChecks}</div>
     </div>
     <div class="modal-field">
       <label class="modal-lbl">Visibility</label>
       <select class="modal-sel" id="mc-scope" onchange="catScopeChanged()">
-        <option value="global">🌐 Company-wide — all staff see this category</option>
-        <option value="dept">🏢 Department — only staff from a specific department</option>
-        <option value="unit">📍 Unit — only staff from a specific unit</option>
+        <option value="global">🌐 Company-wide — one shared award for everyone</option>
+        <option value="dept">🏢 Department-wise — a separate award per department</option>
+        <option value="unit">📍 Unit-wise — a separate award per unit</option>
       </select>
     </div>
     <div id="mc-dept-wrap" style="display:none;">
       <div class="modal-field">
-        <label class="modal-lbl">Select Department</label>
-        <select class="modal-sel" id="mc-linked-dept"><option value="">— choose —</option>${dOpts}</select>
+        <label class="modal-lbl">Select Departments <span style="color:var(--text3);font-weight:400;">(tick all that should run this award)</span></label>
+        <div style="display:flex;flex-direction:column;margin-top:6px;max-height:170px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 12px;">${deptChecks}</div>
       </div>
     </div>
     <div id="mc-unit-wrap" style="display:none;">
       <div class="modal-field">
-        <label class="modal-lbl">Filter by Department</label>
-        <select class="modal-sel" id="mc-unit-dept-filter" onchange="catUnitDeptChanged()">
-          <option value="">— select department first —</option>${dOpts}
-        </select>
-      </div>
-      <div class="modal-field" id="mc-unit-field" style="display:none;">
-        <label class="modal-lbl">Select Unit</label>
-        <select class="modal-sel" id="mc-linked-unit"><option value="">— choose unit —</option></select>
+        <label class="modal-lbl">Select Units <span style="color:var(--text3);font-weight:400;">(tick all that should run this award)</span></label>
+        <div style="margin-top:6px;max-height:230px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 12px;">${unitChecks}</div>
       </div>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6;" id="mc-scope-hint">
-      All staff can vote in this category.
+      One shared award — every eligible voter sees and votes in the same competition.
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-confirm" onclick="addCat()">Add Category</button>
+      <button class="btn-confirm" onclick="addCat()">Create Award</button>
     </div>`);
 }
 function catScopeChanged(){
@@ -4811,36 +4835,53 @@ function catScopeChanged(){
   if(dw) dw.style.display=(scope==='dept')?'block':'none';
   if(uw) uw.style.display=(scope==='unit')?'block':'none';
   if(hint){
-    if(scope==='dept')   hint.textContent='Only staff belonging to the selected department will see and vote in this category.';
-    else if(scope==='unit') hint.textContent='Only staff belonging to the selected unit will see and vote in this category.';
-    else                    hint.textContent='All staff can vote in this category.';
+    if(scope==='dept')   hint.textContent='Creates one separate competition per ticked department — only staff in that department can vote/nominate for theirs.';
+    else if(scope==='unit') hint.textContent='Creates one separate competition per ticked unit — only staff in that unit can vote/nominate for theirs.';
+    else                    hint.textContent='One shared award — every eligible voter sees and votes in the same competition.';
   }
-}
-function catUnitDeptChanged(){
-  const deptId=document.getElementById('mc-unit-dept-filter')?.value;
-  const dept=DATA.departments.find(d=>d.id===deptId);
-  const unitSel=document.getElementById('mc-linked-unit');
-  const unitField=document.getElementById('mc-unit-field');
-  if(!dept||!unitSel){ if(unitField) unitField.style.display='none'; return; }
-  unitSel.innerHTML=`<option value="">— choose unit —</option>`+dept.units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
-  if(unitField) unitField.style.display='block';
 }
 async function addCat(){
   const name=document.getElementById('mc-name').value.trim();
   const scope=document.getElementById('mc-scope').value;
-  const year=document.getElementById('mc-year')?.value||DEFAULT_YEAR;
-  const linkedDept=document.getElementById('mc-linked-dept')?.value||'';
-  const linkedUnit=document.getElementById('mc-linked-unit')?.value||'';
-  if(!name){showToast('Enter a category name','err');return;}
-  if(scope==='dept'&&!linkedDept){showToast('Please select a department','err');return;}
-  if(scope==='unit'&&!linkedUnit){showToast('Please select a unit','err');return;}
-  // ID includes year so same-named categories in different years stay distinct
-  const cat={id:'cat_'+toId(name)+'_'+year, name, scope, linkedDept, linkedUnit, year};
-  DATA.categories.push(cat);
+  if(!name){showToast('Enter an award name','err');return;}
+
+  const years=[...document.querySelectorAll('.mc-year-chk:checked')].map(c=>c.value);
+  if(!years.length){showToast('Tick at least one year','err');return;}
+
+  let targets=[{linkedDept:'',linkedUnit:''}]; // default for company-wide
+  if(scope==='dept'){
+    const deptIds=[...document.querySelectorAll('.mc-dept-chk:checked')].map(c=>c.value);
+    if(!deptIds.length){showToast('Tick at least one department','err');return;}
+    targets=deptIds.map(id=>({linkedDept:id,linkedUnit:''}));
+  } else if(scope==='unit'){
+    const unitIds=[...document.querySelectorAll('.mc-unit-chk:checked')].map(c=>c.value);
+    if(!unitIds.length){showToast('Tick at least one unit','err');return;}
+    targets=unitIds.map(id=>({linkedDept:'',linkedUnit:id}));
+  }
+
+  const newCats=[];
+  years.forEach(year=>{
+    targets.forEach(t=>{
+      const slugParts=[toId(name)];
+      if(t.linkedDept) slugParts.push(toId(getDeptName(t.linkedDept)));
+      if(t.linkedUnit) slugParts.push(toId(getUnitName(t.linkedUnit)));
+      slugParts.push(year);
+      const id='cat_'+slugParts.join('_');
+      if(DATA.categories.find(c=>c.id===id)) return; // skip ones that already exist
+      const cat={id, name, scope, linkedDept:t.linkedDept, linkedUnit:t.linkedUnit, year};
+      DATA.categories.push(cat);
+      newCats.push(cat);
+    });
+  });
+
+  if(!newCats.length){ showToast('All those year/unit combinations already exist','err'); return; }
+
   cacheData();
   closeModal();renderCatList();fillResultFilters('sa');fillResultFilters('a');
-  await writeToSheets('addCategory',{category:cat});
-  showToast(`Category "${name}" (${year}) added`,'ok');
+  for(const cat of newCats){
+    await writeToSheets('addCategory',{category:cat});
+  }
+  showToast(`"${name}" created — ${newCats.length} version${newCats.length!==1?'s':''} added across ${years.join(', ')}`,'ok');
 }
 
 function openAddDeptModal(){
