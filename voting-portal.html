@@ -553,9 +553,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 <div id="screen-success" class="screen">
   <div class="suc-box">
     <div class="suc-icon">🏆</div>
-    <h2 class="suc-title">Vote Submitted!</h2>
+    <h2 class="suc-title" id="suc-title">Vote Submitted!</h2>
     <div class="suc-line"></div>
-    <p class="suc-msg">Thank you — your votes have been recorded. Results will be announced at the event.</p>
+    <p class="suc-msg" id="suc-msg">Thank you — your votes have been recorded. Results will be announced at the event.</p>
+    <div id="suc-next-year-wrap" style="display:none;margin-top:22px;">
+      <button class="btn-confirm" id="suc-next-year-btn" onclick="continueToNextYear()" style="padding:13px 28px;font-size:14px;">Continue →</button>
+    </div>
   </div>
 </div>
 
@@ -1130,6 +1133,7 @@ function loadCachedData() {
 
 const COLORS=['#c9a84c','#5b8ef0','#4caf7d','#e05555','#9b74db','#5bbef0','#e08a55','#e05599','#7db854'];
 let currentUser=null, selections={};
+let currentVotingYear=null; // tracks which year's ballot the voter is currently filling out
 
 // ═══════════════════════════════════════════════════════════
 // GOOGLE SHEETS — READ (API key)
@@ -1164,7 +1168,7 @@ async function fetchFromSheets() {
 
   // Fetch all tabs in one batch — tabs that don't exist are skipped gracefully
   const tabRanges = [
-    'Voters!A2:I',
+    'Voters!A2:K',
     'Nominees!A2:F',
     'Votes!A2:D',
     'Admins!A2:E',
@@ -1223,7 +1227,9 @@ async function fetchFromSheets() {
     empId:   (r[5]||'').trim(),  // column F — Employee ID
     excl2024:(r[6]||'').toUpperCase()==='TRUE',  // column G — legacy: excluded from 2024
     excl2025:(r[7]||'').toUpperCase()==='TRUE',  // column H — legacy: excluded from 2025
-    year:    (r[8]||'').replace(/[^0-9]/g,'')    // column I — independent-roster year (new model)
+    year:    (r[8]||'').replace(/[^0-9]/g,''),   // column I — independent-roster year (separate-PIN model)
+    voted2024:(r[9]||'').toUpperCase()==='TRUE', // column J — voted in 2024 (single-PIN model)
+    voted2025:(r[10]||'').toUpperCase()==='TRUE' // column K — voted in 2025 (single-PIN model)
   })).filter(v=>v.pin);
 
   // ── ADMINS: PIN | Role | Name ──
@@ -1638,7 +1644,6 @@ function doLogin(){
   const empId = (document.getElementById('voter-empid-inp')?.value||'').trim().toUpperCase();
   const pin   = (document.getElementById('voter-pin-inp')?.value||'').trim();
   if(!empId||!pin){ setLoginErr('Please enter your Staff ID and PIN'); return; }
-  // Sync pin-dots visual (kept for compatibility but not primary UI now)
   const voter = DATA.voters.find(v=>{
     // If voter has an empId set, require both empId + PIN
     if(v.empId) return v.empId.toUpperCase()===empId && v.pin===pin;
@@ -1647,7 +1652,6 @@ function doLogin(){
     return v.pin===pin;
   });
   if(!voter){ setLoginErr('Staff ID or PIN is incorrect.'); return; }
-  if(voter.hasVoted){ setLoginErr('You have already submitted your vote.'); return; }
   if(!votingIsLive()){
     const start=CFG.votingStart;
     const now=new Date();
@@ -1659,8 +1663,23 @@ function doLogin(){
     }
     return;
   }
+
+  const votable = getVotableYears(voter);
+  if(!votable.length){
+    const eligible = YEARS.filter(y=>voterEligibleForYear(voter,y));
+    if(!eligible.length){
+      setLoginErr('You are not eligible to vote in any current awards.');
+    } else if(eligible.every(y=>voterHasVotedForYear(voter,y))){
+      setLoginErr('You have already submitted your vote for all eligible years.');
+    } else {
+      setLoginErr('No awards are currently open for you to vote on yet.');
+    }
+    return;
+  }
+
   currentUser={...voter,type:'voter'};
   selections={};
+  currentVotingYear = votable.length===1 ? votable[0] : null;
   saveSession(voter.pin);
   showScreen('screen-voter');
   initVoter();
@@ -1740,9 +1759,13 @@ function restoreSession(){
     currentUser={...admin};showScreen('screen-admin');initAdmin();return true;
   }
   const voter=DATA.voters.find(v=>v.pin===pin);
-  if(voter && !voter.hasVoted && votingIsLive()){
-    currentUser={...voter,type:'voter'};selections={};
-    showScreen('screen-voter');initVoter();return true;
+  if(voter && votingIsLive()){
+    const votable = getVotableYears(voter);
+    if(votable.length){
+      currentUser={...voter,type:'voter'};selections={};
+      currentVotingYear = votable.length===1 ? votable[0] : null;
+      showScreen('screen-voter');initVoter();return true;
+    }
   }
   clearSession();
   return false;
@@ -1781,38 +1804,51 @@ function initVoter(){
   const deptName = (DATA.departments.find(d=>d.id===v.dept)||{name:v.dept}).name;
   const unitName = (() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===v.unit);if(u)return u.name;} return v.unit; })();
   document.getElementById('v-greet').textContent=`Welcome, ${v.name.split(' ')[0]}!`;
-  document.getElementById('v-sub').textContent='Cast your vote — one nominee per category';
   document.getElementById('v-meta').innerHTML=`
     <span class="meta-chip">🏢 ${deptName}</span>
     <span class="meta-chip">📍 ${unitName}</span>`;
-  // Populate stats dashboard
   renderVoterStats();
   renderVotingPeriodBanner('voter-status-bar', true);
 
   const container=document.getElementById('cats-container');
+  const footer=document.querySelector('.vote-footer');
   container.innerHTML='';
-  let idx=0;
 
-  // Group categories by year — show each year as its own section
-  YEARS.forEach(yr=>{
-    // Categories for this year that the voter can see + have nominees
-    const yrCats = DATA.categories.filter(cat=>
-      String(cat.year)===String(yr) &&
-      voterCanSeeCategory(cat, v) &&
-      DATA.nominees.filter(n=>n.category===cat.id).length>0
-    );
-    if(!yrCats.length) return;
-    // Year header
-    const yrHdr=document.createElement('div');
-    yrHdr.className='year-divider';
-    yrHdr.innerHTML=`<span class="year-divider-line"></span><span class="year-divider-label">${yr} Awards</span><span class="year-divider-line"></span>`;
-    container.appendChild(yrHdr);
+  // ── No year chosen yet AND eligible for more than one → show the picker ──
+  if(!currentVotingYear){
+    const votable = getVotableYears(v);
+    if(votable.length > 1){
+      if(footer) footer.style.display='none';
+      document.getElementById('v-sub').textContent='Choose which year you\'d like to vote in';
+      container.innerHTML=`
+        <div style="text-align:center;padding:50px 16px;">
+          <div style="font-size:38px;margin-bottom:14px;">🗳️</div>
+          <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">You're eligible to vote in multiple years</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:28px;">Pick one to start — you can vote in the other right after.</div>
+          <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+            ${votable.map(yr=>`<button onclick="chooseVotingYear('${yr}')" style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.4);color:var(--gold);font-size:15px;font-weight:600;padding:16px 32px;border-radius:var(--r);cursor:pointer;">Vote in ${yr}</button>`).join('')}
+          </div>
+        </div>`;
+      return;
+    }
+    currentVotingYear = votable[0] || YEARS[0];
+  }
+
+  if(footer) footer.style.display='flex';
+  document.getElementById('v-sub').textContent=`Cast your vote for the ${currentVotingYear} Awards — one nominee per category`;
+
+  let idx=0;
+  const yr=currentVotingYear;
+  const yrCats = DATA.categories.filter(cat=>
+    String(cat.year)===String(yr) &&
+    voterCanSeeCategory(cat, v) &&
+    DATA.nominees.filter(n=>n.category===cat.id).length>0
+  );
 
   yrCats.forEach(cat=>{
     const noms=DATA.nominees.filter(n=>n.category===cat.id);
     idx++;
     const hasMany = noms.length > 3;
-    // Build scope label for header
     const voterScopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
     const voterLinked=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
     const voterScopeTxt=voterScopeTag[cat.scope]||'';
@@ -1855,12 +1891,17 @@ function initVoter(){
       grid.appendChild(card);
     });
   });
-  }); // end YEARS forEach
 
   if(idx===0){
     container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div>No nominees available for your department/unit yet. Please contact the administrator.</div>`;
   }
   updateVProg();
+}
+
+function chooseVotingYear(yr){
+  currentVotingYear = yr;
+  selections = {};
+  initVoter();
 }
 
 function renderVoterStats(){
@@ -2066,8 +2107,8 @@ function renderAdminVoterList(){
       <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
       <span class="vyears">${voterYearBadges(v)}</span>
       <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
-        <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
-        <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
+        <div class="vdot ${voterStatusInfo(v).cls==='yes'?'yes':voterStatusInfo(v).cls==='partial'?'':'no'}" style="${voterStatusInfo(v).cls==='partial'?'background:var(--gold);':''}"></div>
+        <span class="vlbl" style="${voterStatusInfo(v).cls==='partial'?'color:var(--gold);':''}">${voterStatusInfo(v).txt}</span>
       </div>
       <button class="btn-sm gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
       <button class="btn-sm red" onclick="adminRemoveVoter('${v.pin}')">✕</button>
@@ -2234,6 +2275,7 @@ function updateVProg(){
   const v=currentUser;
   let total=0;
   DATA.categories.forEach(cat=>{
+    if(String(cat.year)!==String(currentVotingYear)) return;
     if(!voterCanSeeCategory(cat, v)) return;
     const noms=DATA.nominees.filter(n=>n.category===cat.id);
     if(noms.length) total++;
@@ -2252,12 +2294,34 @@ function updateVProg(){
 function voterEligibleForYear(voter, year){
   // Returns true if voter is allowed to vote in this year
   if(!voter) return false;
-  // New model: voter.year set → belongs to exactly ONE independent roster
+  // Separate-PIN model: voter.year set → belongs to exactly ONE independent roster
   if(voter.year) return String(voter.year)===String(year);
-  // Legacy model: eligible for both years unless explicitly excluded
+  // Single-PIN / legacy model: eligible for both years unless explicitly excluded
   if(String(year)==='2024' && voter.excl2024) return false;
   if(String(year)==='2025' && voter.excl2025) return false;
   return true;
+}
+
+// Has this voter already voted in this specific year?
+function voterHasVotedForYear(voter, year){
+  if(!voter) return false;
+  if(voter.year) return !!voter.hasVoted; // separate-PIN model — one flag is enough
+  return String(year)==='2024' ? !!voter.voted2024 : !!voter.voted2025;
+}
+
+// Which years can this voter still vote in right now?
+// (eligible + not yet voted + has at least one renderable category with nominees)
+function getVotableYears(voter){
+  if(!voter) return [];
+  return YEARS.filter(yr=>{
+    if(!voterEligibleForYear(voter, yr)) return false;
+    if(voterHasVotedForYear(voter, yr)) return false;
+    return DATA.categories.some(cat=>
+      String(cat.year)===String(yr) &&
+      voterCanSeeCategory(cat, voter) &&
+      DATA.nominees.filter(n=>n.category===cat.id).length>0
+    );
+  });
 }
 
 function voterCanSeeCategory(cat, voter){
@@ -2284,13 +2348,60 @@ async function submitVotes(){
   }));
   newVotes.forEach(v=>DATA.votes.push(v));
   const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
-  if(voter) voter.hasVoted=true;
-  showScreen('screen-success');
-  // Write to Sheets
+  const votedYear=currentVotingYear;
+  if(voter){
+    if(voter.year){
+      voter.hasVoted=true; // separate-PIN model — one flag is enough
+    } else {
+      if(votedYear==='2024') voter.voted2024=true;
+      else if(votedYear==='2025') voter.voted2025=true;
+    }
+  }
+  cacheData();
+
+  // Write to Sheets — pass which year was just voted on
   await writeToSheets('submitVotes',{
     pin:currentUser.pin,
     votes:newVotes,
+    year:votedYear,
   });
+
+  // Check if this same voter can still vote in another year right now
+  const stillVotable = voter ? getVotableYears(voter).filter(y=>y!==votedYear) : [];
+  if(stillVotable.length){
+    showContinueToNextYearScreen(votedYear, stillVotable[0]);
+  } else {
+    const titleEl=document.getElementById('suc-title');
+    const msgEl=document.getElementById('suc-msg');
+    const wrap=document.getElementById('suc-next-year-wrap');
+    if(titleEl) titleEl.textContent='Vote Submitted!';
+    if(msgEl) msgEl.textContent='Thank you — your votes have been recorded. Results will be announced at the event.';
+    if(wrap) wrap.style.display='none';
+    showScreen('screen-success');
+  }
+}
+
+let _pendingNextYear=null;
+function showContinueToNextYearScreen(votedYear, nextYear){
+  const titleEl=document.getElementById('suc-title');
+  const msgEl=document.getElementById('suc-msg');
+  const wrap=document.getElementById('suc-next-year-wrap');
+  const btn=document.getElementById('suc-next-year-btn');
+  if(titleEl) titleEl.textContent=`${votedYear} Vote Submitted!`;
+  if(msgEl) msgEl.textContent=`Thank you! You're also eligible to vote in the ${nextYear} awards.`;
+  if(btn) btn.textContent=`🗳️ Vote in ${nextYear} now`;
+  if(wrap) wrap.style.display='block';
+  _pendingNextYear=nextYear;
+  showScreen('screen-success');
+}
+
+function continueToNextYear(){
+  if(!_pendingNextYear) return;
+  currentVotingYear=_pendingNextYear;
+  _pendingNextYear=null;
+  selections={};
+  showScreen('screen-voter');
+  initVoter();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2337,6 +2448,18 @@ const getStaff = name => DATA.staff.find(s=>s.name.toLowerCase()===(name||'').to
 const getStaffId = name => { const s=getStaff(name); return s?s.empId||s.id:''; };
 
 // Year eligibility badges for a voter — green = eligible, struck = excluded
+function voterStatusInfo(v){
+  if(v.year){
+    return v.hasVoted ? {cls:'yes', txt:'Voted'} : {cls:'no', txt:'Pending'};
+  }
+  const eligible = YEARS.filter(y=>voterEligibleForYear(v,y));
+  if(!eligible.length) return {cls:'no', txt:'Not eligible'};
+  const votedCount = eligible.filter(y=>voterHasVotedForYear(v,y)).length;
+  if(votedCount===eligible.length) return {cls:'yes', txt:'Voted (all)'};
+  if(votedCount===0) return {cls:'no', txt:'Pending'};
+  return {cls:'partial', txt:`Voted ${votedCount}/${eligible.length}`};
+}
+
 function voterYearBadges(v){
   if(v.year){
     // New model — this voter belongs to exactly one independent year roster
@@ -3149,8 +3272,8 @@ function renderVoterList(){
       <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
       <span class="vyears">${voterYearBadges(v)}</span>
       <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
-        <div class="vdot ${v.hasVoted?'yes':'no'}"></div>
-        <span class="vlbl">${v.hasVoted?'Voted':'Pending'}</span>
+        <div class="vdot ${voterStatusInfo(v).cls==='yes'?'yes':voterStatusInfo(v).cls==='partial'?'':'no'}" style="${voterStatusInfo(v).cls==='partial'?'background:var(--gold);':''}"></div>
+        <span class="vlbl" style="${voterStatusInfo(v).cls==='partial'?'color:var(--gold);':''}">${voterStatusInfo(v).txt}</span>
       </div>
       ${dupBtn}
       <button class="btn-sm gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
@@ -3385,8 +3508,11 @@ async function syncStaffToVoters(){
 async function resetVoter(pin){
   const v=DATA.voters.find(v=>v.pin===pin);if(!v)return;
   v.hasVoted=false;
+  v.voted2024=false;
+  v.voted2025=false;
   DATA.votes=DATA.votes.filter(x=>x.pin!==pin);
-  renderVoterList();renderStats('sa');
+  cacheData();
+  renderVoterList();renderAdminVoterList();renderStats('sa');renderStats('admin');
   await writeToSheets('resetVoter',{pin});
   showToast(`${v.name}'s votes reset`,'ok');
 }
@@ -4131,7 +4257,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v3';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v4';
 
 async function testDeploymentRoundtrip(){
   const resEl=document.getElementById('deploy-test-result');
@@ -4756,7 +4882,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v3';
+var SCRIPT_VERSION = '2026-06-17-v4';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -4786,7 +4912,7 @@ function handleRequest(raw) {
       data.votes.forEach(function(v) {
         vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]);
       });
-      markVoterDone(ss, data.pin);
+      markVoterDone(ss, data.pin, true, data.year);
     }
 
     // ── VOTERS ──
@@ -4800,7 +4926,9 @@ function handleRequest(raw) {
       deleteRowsByValue(ss.getSheetByName('Votes'),  data.pin, 0);
     }
     else if (action === 'resetVoter') {
-      markVoterDone(ss, data.pin, false);
+      markVoterDone(ss, data.pin, false, '2024');
+      markVoterDone(ss, data.pin, false, '2025');
+      markVoterDone(ss, data.pin, false); // legacy/separate-PIN model HasVoted
       deleteRowsByValue(ss.getSheetByName('Votes'), data.pin, 0);
     }
     else if (action === 'resetAllVotes') {
@@ -4987,14 +5115,20 @@ function handleRequest(raw) {
 
 // ── Helpers ──────────────────────────────────────────────
 
-function markVoterDone(ss, pin, done) {
+function markVoterDone(ss, pin, done, year) {
   if (done === undefined) done = true;
   var s = ss.getSheetByName('Voters');
   if (!s || s.getLastRow() < 2) return;
   var rows = s.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim() === String(pin).trim()) {
-      s.getRange(i + 1, 5).setValue(done ? 'TRUE' : 'FALSE');
+      if (year === '2024') {
+        s.getRange(i + 1, 10).setValue(done ? 'TRUE' : 'FALSE'); // col J = Voted2024
+      } else if (year === '2025') {
+        s.getRange(i + 1, 11).setValue(done ? 'TRUE' : 'FALSE'); // col K = Voted2025
+      } else {
+        s.getRange(i + 1, 5).setValue(done ? 'TRUE' : 'FALSE'); // legacy/separate-PIN model HasVoted
+      }
       break;
     }
   }
