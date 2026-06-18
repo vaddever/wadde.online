@@ -2293,6 +2293,18 @@ function updateVProg(){
   btn.disabled=sel<total||!votingIsLive();
 }
 
+// ── Local device-level vote lock ──
+// This is a SAFETY NET independent of the Google Sheet sync. The moment a
+// voter submits a ballot, we record it in THIS device's localStorage right
+// away — before even attempting the cloud write. Even if the sheet write
+// silently fails (the sync issue we've been chasing), this same device will
+// never show that voter's ballot again for that year. It does not protect
+// against voting from a different device with the same PIN — only the
+// server-side duplicate-vote guard (in Apps Script) protects against that.
+function localVoteKey(pin, year){ return 'voted_local_'+pin+'_'+year; }
+function markLocalVoted(pin, year){ try{ localStorage.setItem(localVoteKey(pin,year), '1'); }catch(e){} }
+function hasLocalVoted(pin, year){ try{ return localStorage.getItem(localVoteKey(pin,year))==='1'; }catch(e){ return false; } }
+
 function voterEligibleForYear(voter, year){
   // Returns true if voter is allowed to vote in this year
   if(!voter) return false;
@@ -2307,6 +2319,7 @@ function voterEligibleForYear(voter, year){
 // Has this voter already voted in this specific year?
 function voterHasVotedForYear(voter, year){
   if(!voter) return false;
+  if(hasLocalVoted(voter.pin, year)) return true; // local safety net — always wins, even if cloud sync is broken
   if(voter.year) return !!voter.hasVoted; // separate-PIN model — one flag is enough
   return String(year)==='2024' ? !!voter.voted2024 : !!voter.voted2025;
 }
@@ -2351,6 +2364,11 @@ async function submitVotes(){
   newVotes.forEach(v=>DATA.votes.push(v));
   const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
   const votedYear=currentVotingYear;
+
+  // Lock this device IMMEDIATELY, before attempting the cloud write — this is
+  // what actually prevents re-voting on this device even if the sheet sync fails.
+  markLocalVoted(currentUser.pin, votedYear);
+
   if(voter){
     if(voter.year){
       voter.hasVoted=true; // separate-PIN model — one flag is enough
@@ -2411,16 +2429,26 @@ function continueToNextYear(){
 // ═══════════════════════════════════════════════════════════
 // Slug helper — used everywhere for consistent ID generation
 const toId = str => (str||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+// De-duplicates by (pin + category) so any duplicate rows that may already
+// exist in the sheet (e.g. from before the duplicate-vote guard was added)
+// never get double-counted in results — one voter's vote in a category only
+// ever counts once, no matter how many rows happen to exist for it.
 const getVotes = (nomId, nomName) => {
-  return DATA.votes.filter(v => {
-    if (v.nomineeId === nomId) return true;
-    // Fallback: match by name-based slug (handles sheet vs portal ID mismatch)
-    if (nomName) {
+  const seenPinCategory = new Set();
+  let count = 0;
+  DATA.votes.forEach(v => {
+    let matches = v.nomineeId === nomId;
+    if (!matches && nomName) {
       const nameSlug = 'nom_' + toId(nomName);
-      if (v.nomineeId.startsWith(nameSlug)) return true;
+      matches = v.nomineeId.startsWith(nameSlug);
     }
-    return false;
-  }).length;
+    if (!matches) return;
+    const key = v.pin + '|' + v.category;
+    if (seenPinCategory.has(key)) return; // duplicate row — already counted
+    seenPinCategory.add(key);
+    count++;
+  });
+  return count;
 };
 const getDeptName = id => {
   if(!id) return '';
@@ -4297,7 +4325,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v4';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v5';
 
 async function testDeploymentRoundtrip(){
   const resEl=document.getElementById('deploy-test-result');
@@ -4982,7 +5010,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v4';
+var SCRIPT_VERSION = '2026-06-17-v5';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -5009,8 +5037,23 @@ function handleRequest(raw) {
     // ── VOTES ──
     else if (action === 'submitVotes') {
       const vSheet = getOrCreate(ss, 'Votes');
+      // Duplicate-vote guard: never let the same pin+category combo get
+      // recorded twice, even if this same submission is somehow sent more
+      // than once (flaky network retry, double-click, re-login, etc.).
+      // This protects the integrity of the actual vote count regardless of
+      // any other sync issues.
+      var existingRows = vSheet.getLastRow() > 1
+        ? vSheet.getRange(2, 1, vSheet.getLastRow() - 1, 3).getValues()
+        : [];
+      var existingKeys = {};
+      existingRows.forEach(function(r) {
+        existingKeys[String(r[0]).trim() + '|' + String(r[2]).trim()] = true;
+      });
       data.votes.forEach(function(v) {
+        var key = String(v.pin).trim() + '|' + String(v.category).trim();
+        if (existingKeys[key]) return; // already voted in this category — skip duplicate
         vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]);
+        existingKeys[key] = true;
       });
       markVoterDone(ss, data.pin, true, data.year);
     }
