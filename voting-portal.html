@@ -1804,9 +1804,11 @@ function initVoter(){
   const deptName = (DATA.departments.find(d=>d.id===v.dept)||{name:v.dept}).name;
   const unitName = (() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===v.unit);if(u)return u.name;} return v.unit; })();
   document.getElementById('v-greet').textContent=`Welcome, ${v.name.split(' ')[0]}!`;
+  const completedYears = YEARS.filter(y=>voterEligibleForYear(v,y) && voterHasVotedForYear(v,y) && y!==currentVotingYear);
+  const completedChips = completedYears.map(y=>`<span class="meta-chip" style="background:var(--green-dim);color:var(--green);border-color:rgba(76,175,125,.3);">✓ ${y} voted</span>`).join('');
   document.getElementById('v-meta').innerHTML=`
     <span class="meta-chip">🏢 ${deptName}</span>
-    <span class="meta-chip">📍 ${unitName}</span>`;
+    <span class="meta-chip">📍 ${unitName}</span>${completedChips}`;
   renderVoterStats();
   renderVotingPeriodBanner('voter-status-bar', true);
 
@@ -2462,17 +2464,24 @@ function voterStatusInfo(v){
 
 function voterYearBadges(v){
   if(v.year){
-    // New model — this voter belongs to exactly one independent year roster
-    return `<span style="font-size:9px;font-weight:700;font-family:monospace;padding:1px 7px;border-radius:3px;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.3);" title="Independent ${v.year} roster">📋 ${v.year}</span>`;
+    // Separate-roster model — this voter belongs to exactly one independent year roster
+    const done = !!v.hasVoted;
+    const bg = done ? 'var(--green-dim)' : 'var(--gold-dim)';
+    const fg = done ? 'var(--green)' : 'var(--gold)';
+    const border = done ? 'rgba(76,175,125,.3)' : 'rgba(201,168,76,.3)';
+    return `<span style="font-size:9px;font-weight:700;font-family:monospace;padding:1px 7px;border-radius:3px;background:${bg};color:${fg};border:1px solid ${border};" title="Independent ${v.year} roster${done?' — voted ✓':''}">${done?'✓':'📋'} ${v.year}</span>`;
   }
-  // Legacy model — shared list with per-year exclusion flags
+  // Single-PIN multi-year model — one badge per year, reflecting eligibility AND completion
   return YEARS.map(yr=>{
     const eligible = voterEligibleForYear(v, yr);
-    if(eligible){
-      return `<span style="font-size:9px;font-weight:600;font-family:monospace;padding:1px 5px;border-radius:3px;background:var(--green-dim);color:var(--green);border:1px solid rgba(76,175,125,.2);margin-right:3px;">${yr}</span>`;
-    } else {
+    if(!eligible){
       return `<span style="font-size:9px;font-weight:600;font-family:monospace;padding:1px 5px;border-radius:3px;background:var(--bg3);color:var(--text3);text-decoration:line-through;margin-right:3px;" title="Excluded from ${yr}">${yr}</span>`;
     }
+    const voted = voterHasVotedForYear(v, yr);
+    if(voted){
+      return `<span style="font-size:9px;font-weight:700;font-family:monospace;padding:1px 6px;border-radius:3px;background:var(--green-dim);color:var(--green);border:1px solid rgba(76,175,125,.3);margin-right:3px;" title="Voted in ${yr}">✓ ${yr}</span>`;
+    }
+    return `<span style="font-size:9px;font-weight:600;font-family:monospace;padding:1px 5px;border-radius:3px;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.25);margin-right:3px;" title="Eligible for ${yr} — not yet voted">${yr}</span>`;
   }).join('');
 }
 
@@ -4401,16 +4410,33 @@ function closeModal(){document.getElementById('modal-ov')?.remove();}
 function openAddVoterModal(prefillYear, prefill){
   const dOpts=DATA.departments.map(d=>`<option value="${d.id}" ${prefill&&d.id===prefill.dept?'selected':''}>${d.name}</option>`).join('');
   const autoPin=generatePin();
+  const useRosterModel = !!prefill; // only the "duplicate to other year" flow uses separate rosters
   const yrOpts=YEARS.map(y=>`<option value="${y}" ${y===(prefillYear||DEFAULT_YEAR)?'selected':''}>${y}</option>`).join('');
+
+  const eligibilityBlock = useRosterModel
+    ? `<div class="modal-field">
+        <label class="modal-lbl">Voter Roster Year</label>
+        <select class="modal-sel" id="mv-year">${yrOpts}</select>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">This voter belongs to ONLY this year's independent roster — they won't see or vote in the other year at all.</div>
+      </div>`
+    : `<div class="modal-field">
+        <label class="modal-lbl">Voting Eligibility</label>
+        <div style="display:flex;gap:16px;margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="mv-elig-2024" checked style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;"> 2024
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="mv-elig-2025" checked style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer;"> 2025
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">One PIN — if eligible for both years, they'll choose which to vote in after logging in, and can vote in the other right after.</div>
+      </div>`;
+
   openModal(`<div class="modal-title">${prefill?'Duplicate Voter to Another Year':'Add Voter'}</div>
     ${prefill?`<div style="background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);border-radius:var(--rs);padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--gold2);">
       Adding <b>${prefill.name}</b> to a separate roster — they'll get a brand-new PIN for this year, independent of their other year's PIN.
     </div>`:''}
-    <div class="modal-field">
-      <label class="modal-lbl">Voter Roster Year</label>
-      <select class="modal-sel" id="mv-year">${yrOpts}</select>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">This voter belongs to ONLY this year's independent roster — they won't see or vote in the other year at all.</div>
-    </div>
+    ${eligibilityBlock}
     <div class="modal-field">
       <label class="modal-lbl">Staff ID <span style="color:var(--text3);font-weight:400;">(optional)</span></label>
       <input class="modal-inp" id="mv-empid" value="${prefill?prefill.empId||'':''}" placeholder="e.g. EMP001" style="text-transform:uppercase;">
@@ -4443,16 +4469,34 @@ async function addVoter(){
   const pin=document.getElementById('mv-pin').value.trim();
   const dept=document.getElementById('mv-dept').value;
   const unit=document.getElementById('mv-unit').value;
-  const year=document.getElementById('mv-year')?.value||DEFAULT_YEAR;
   if(!name||!pin){showToast('Name and PIN required','err');return;}
   if(DATA.voters.find(v=>v.pin===pin)||DATA.admins.find(a=>a.pin===pin)){showToast('PIN already in use — click "New PIN"','err');return;}
-  const voter={pin, empId, name, dept, unit, hasVoted:false, year};
+
+  const yearSel=document.getElementById('mv-year');
+  let voter, toastMsg, verifyExpected;
+
+  if(yearSel){
+    // Separate-roster model (only used via "duplicate to other year")
+    const year=yearSel.value||DEFAULT_YEAR;
+    voter={pin, empId, name, dept, unit, hasVoted:false, year};
+    toastMsg=`${name} added to the ${year} roster (PIN: ${pin})`;
+    verifyExpected={year, name, dept, unit};
+  } else {
+    // Single-PIN multi-year model (default)
+    const excl2024=!(document.getElementById('mv-elig-2024')?.checked??true);
+    const excl2025=!(document.getElementById('mv-elig-2025')?.checked??true);
+    voter={pin, empId, name, dept, unit, hasVoted:false, excl2024, excl2025, voted2024:false, voted2025:false};
+    const eligibleYears=YEARS.filter(y=>voterEligibleForYear(voter,y));
+    toastMsg=`${name} added — eligible for ${eligibleYears.join(' & ')||'no years'} (PIN: ${pin})`;
+    verifyExpected={excl2024, excl2025, name, dept, unit};
+  }
+
   DATA.voters.push(voter);
   cacheData();
   closeModal();renderVoterList();renderAdminVoterList();renderStats('sa');renderStats('admin');
   await writeToSheets('addVoter',{voter});
-  showToast(`${name} added to the ${year} roster (PIN: ${pin})`,'ok');
-  verifyVoterWriteReachedSheet(pin, {year, name, dept, unit});
+  showToast(toastMsg,'ok');
+  verifyVoterWriteReachedSheet(pin, verifyExpected);
 }
 
 // ── Duplicate a voter into the OTHER year's independent roster ──
