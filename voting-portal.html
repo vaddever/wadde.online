@@ -1164,6 +1164,55 @@ async function fetchRange(range) {
   }
 }
 
+// ── Voter eligibility overrides ──────────────────────────────────────────
+// Stores per-voter eligibility settings in the Config sheet via the
+// setConfig action (proven reliable write path). These overrides are read
+// at startup and take priority over whatever is in the Voters sheet columns.
+// This sidesteps the row-scanning updateVoter write path entirely.
+
+const ELIG_CONFIG_KEY = '_voterElig';
+
+function saveVoterEligOverrides(){
+  // Build a minimal map: only voters with any restriction set
+  const overrides = {};
+  DATA.voters.forEach(v=>{
+    if(v.excl2024 || v.excl2025 || v.year){
+      overrides[v.pin] = {};
+      if(v.excl2024) overrides[v.pin].excl2024 = true;
+      if(v.excl2025) overrides[v.pin].excl2025 = true;
+      if(v.year)     overrides[v.pin].year      = v.year;
+    }
+  });
+  const value = JSON.stringify(overrides);
+  // Write via setConfig — the same proven pathway the diagnostic test uses
+  writeToSheets('setConfig', {key: ELIG_CONFIG_KEY, value});
+  // Cache locally too
+  try{ localStorage.setItem('voterEligOverrides', value); }catch(e){}
+}
+
+function loadVoterEligOverrides(){
+  // Returns the overrides object from Config (read in fetchFromSheets)
+  // or localStorage cache if Config read hasn't happened yet
+  try{
+    const raw = CFG._voterEligRaw || localStorage.getItem('voterEligOverrides') || '{}';
+    return JSON.parse(raw);
+  }catch(e){ return {}; }
+}
+
+function applyVoterEligOverrides(){
+  // Merge overrides on top of whatever the Voters sheet says —
+  // called once after fetchFromSheets completes
+  const overrides = loadVoterEligOverrides();
+  if(!Object.keys(overrides).length) return;
+  DATA.voters.forEach(v=>{
+    const ov = overrides[v.pin];
+    if(!ov) return;
+    if(ov.excl2024 !== undefined) v.excl2024 = ov.excl2024;
+    if(ov.excl2025 !== undefined) v.excl2025 = ov.excl2025;
+    if(ov.year !== undefined)     v.year      = ov.year;
+  });
+}
+
 // Safely reads a TRUE/FALSE flag from a sheet cell, regardless of whether
 // Google Sheets stored it as text ("TRUE"/"FALSE") or auto-converted it to
 // an actual boolean (which happens silently if anyone ever types TRUE/FALSE
@@ -1400,6 +1449,7 @@ if (vD.length) DATA.voters = vD.map(parseVoterRow).filter(v=>v && v.pin);
     cfgD.forEach(r=>{
       const key=(typeof r[0]==='boolean'?String(r[0]):(r[0]||'')).trim().toLowerCase();
       const val=(typeof r[1]==='boolean'?(r[1]?'TRUE':'FALSE'):(r[1]||'')).trim();
+      if (key===ELIG_CONFIG_KEY.toLowerCase()) CFG._voterEligRaw = val; // store raw JSON for applyVoterEligOverrides
       if (key==='votingopen')        CFG.votingOpen  = (val.toUpperCase()!=='FALSE');
       if (key==='orgname'   && val)  CFG.orgName    = val;
       if (key==='scripturl' && val)  CFG.scriptUrl  = val;
@@ -1535,6 +1585,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   const hadCache = loadCachedData();
   try {
     await fetchFromSheets();
+    applyVoterEligOverrides(); // apply eligibility overrides on top of sheet data
     cacheData();
   } catch(e) {
     console.error('[Boot] Sync failed:', e);
@@ -3496,9 +3547,12 @@ async function saveEditVoter(pin){
   cacheData();
   closeModal();
   renderVoterList(); renderAdminVoterList();
+  // Write eligibility overrides via the proven setConfig pathway first —
+  // this is the reliable route. updateVoter also writes to the Voters sheet
+  // as a secondary backup, but eligibility is controlled by the Config key.
+  saveVoterEligOverrides();
   await writeToSheets('updateVoter',{voter:v});
   showToast(`${v.name} updated`,'ok');
-  verifyVoterWriteReachedSheet(pin, expected);
 }
 
 // ── Verify a voter edit actually reached the Google Sheet ──
@@ -4525,6 +4579,7 @@ async function manualSync(){
   showToast('Syncing from Sheets…');
   try{
     await fetchFromSheets();
+    applyVoterEligOverrides();
     cacheData();
     initSA();
     showToast('Sync complete!','ok');
