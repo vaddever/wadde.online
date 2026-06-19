@@ -507,6 +507,35 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   </div>
 </div>
 
+<!-- ══ NOT ELIGIBLE ══ -->
+<div id="screen-not-eligible" class="screen">
+  <div class="login-glow-c1" style="position:absolute;pointer-events:none;"></div>
+  <div class="login-glow-c2" style="position:absolute;pointer-events:none;"></div>
+  <div class="login-box" style="text-align:center;padding:40px 32px 36px;">
+    <div style="font-size:52px;margin-bottom:18px;">🌟</div>
+    <h1 class="login-ti" style="font-size:22px;margin-bottom:8px;">Welcome, <span id="ne-name"></span>!</h1>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;">
+      <span id="ne-dept" style="font-weight:600;color:var(--gold);"></span>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:24px;text-align:left;">
+      <div style="font-size:22px;margin-bottom:10px;">👋</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;line-height:1.5;">
+        Great to have you on the team!
+      </div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;">
+        The current awards cover the <strong id="ne-years" style="color:var(--text);"></strong> cycle, 
+        which was open to staff who joined before this year. Since you recently joined us, 
+        you're not yet eligible for these awards — but your contributions are already valued.
+        <br><br>
+        <span style="color:var(--gold);font-weight:500;">Stay tuned for future awards where you'll be able to participate and shine! ✨</span>
+      </div>
+    </div>
+    <button class="btn-login" onclick="doLogout()" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);font-size:13px;padding:12px 24px;">
+      ← Back to Login
+    </button>
+  </div>
+</div>
+
 <!-- ══ VOTER ══ -->
 <div id="screen-voter" class="screen">
   <div class="topbar">
@@ -1765,11 +1794,11 @@ function doLogin(){
   if(!votable.length){
     const eligible = YEARS.filter(y=>voterEligibleForYear(voter,y));
     if(!eligible.length){
-      setLoginErr('You are not eligible to vote in any current awards.');
+      showNotEligibleScreen(voter);
     } else if(eligible.every(y=>voterHasVotedForYear(voter,y))){
-      setLoginErr('You have already submitted your vote for all eligible years.');
+      setLoginErr('You have already submitted your vote for all eligible years. Thank you for participating! 🏆');
     } else {
-      setLoginErr('No awards are currently open for you to vote on yet.');
+      setLoginErr('No awards are open for you to vote on just yet — check back soon.');
     }
     return;
   }
@@ -1905,7 +1934,7 @@ function initVoter(){
   const effectiveUnit = getVoterUnitForYear(v, currentVotingYear||v.unit||'');
   const deptName = (DATA.departments.find(d=>d.id===effectiveDept)||{name:effectiveDept||v.dept}).name;
   const unitName = (() => { const uid=effectiveUnit||v.unit; for(const d of DATA.departments){const u=d.units.find(u=>u.id===uid);if(u)return u.name;} return uid; })();
-  document.getElementById('v-greet').textContent=`Welcome, ${v.name.split(' ')[0]}!`;
+  document.getElementById('v-greet').textContent=`Welcome, ${v.name}!`;
   const completedYears = YEARS.filter(y=>voterEligibleForYear(v,y) && voterHasVotedForYear(v,y) && y!==currentVotingYear);
   const completedChips = completedYears.map(y=>`<span class="meta-chip" style="background:var(--green-dim);color:var(--green);border-color:rgba(76,175,125,.3);">✓ ${y} voted</span>`).join('');
   document.getElementById('v-meta').innerHTML=`
@@ -2000,6 +2029,19 @@ function initVoter(){
     container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div>No nominees available for your department/unit yet. Please contact the administrator.</div>`;
   }
   updateVProg();
+}
+
+function showNotEligibleScreen(voter){
+  const deptName = getDeptName(voter.dept) || 'your department';
+  const unitName = getUnitName(voter.unit) || '';
+  const locationStr = unitName ? `${deptName} — ${unitName}` : deptName;
+  // Determine which years exist but they're excluded from
+  const allYears = YEARS.join(' & ');
+
+  showScreen('screen-not-eligible');
+  document.getElementById('ne-name').textContent  = voter.name;
+  document.getElementById('ne-dept').textContent  = locationStr;
+  document.getElementById('ne-years').textContent = allYears;
 }
 
 function chooseVotingYear(yr){
