@@ -705,6 +705,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <div style="display:flex;gap:7px;">
           <button class="btn-sm gold" onclick="openBulkUploadModal('nominees')">⬆ Bulk upload</button>
           <button class="btn-sm green" onclick="openAddNomModal()">+ Add nominee</button>
+          <button class="btn-sm" onclick="printNomineesList()">🖨 Print</button>
         </div>
       </div>
       <div class="rf">
@@ -831,6 +832,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:500;">Nominees</div>
         <button class="btn-sm green" onclick="openAddNomModal()">+ Add nominee</button>
+        <button class="btn-sm" onclick="printNomineesList()">🖨 Print</button>
       </div>
       <div class="rf">
         <select class="fsel" id="nom-fcat" onchange="renderNominees()"><option value="">All categories</option></select>
@@ -2989,6 +2991,101 @@ function renderResults(who){
 }
 
 // ── Export results as a print-ready PDF (layout document) ──
+function printNomineesList(){
+  const catF  = document.getElementById('nom-fcat')?.value||'';
+  const deptF = document.getElementById('nom-fdept')?.value||'';
+  const unitF = document.getElementById('nom-funit')?.value||'';
+  const orgName = CFG.orgName || 'Staff Awards';
+  const now = new Date();
+  const dateStr = now.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+
+  const filtered = DATA.nominees.filter(n=>
+    (!catF||n.category===catF) &&
+    (!deptF||n.dept===deptF) &&
+    (!unitF||n.unit===unitF)
+  );
+
+  if(!filtered.length){ showToast('No nominees to print','err'); return; }
+
+  // Group by category
+  const grouped = {};
+  filtered.forEach(n=>{ (grouped[n.category]=grouped[n.category]||[]).push(n); });
+  const catOrder = DATA.categories.map(c=>c.id);
+  const sortedKeys = Object.keys(grouped).sort((a,b)=>catOrder.indexOf(a)-catOrder.indexOf(b));
+
+  const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
+
+  let body = sortedKeys.map(catId=>{
+    const cat = getCat(catId);
+    const noms = grouped[catId].sort((a,b)=>a.name.localeCompare(b.name));
+    const rows = noms.map((n,i)=>{
+      const empId = getStaffId(n.name);
+      return `<tr>
+        <td class="num">${i+1}</td>
+        <td class="name">${n.name}${empId?` <span class="emp">${empId}</span>`:''}</td>
+        <td class="loc">${getDeptName(n.dept)}${getUnitName(n.unit)?' · '+getUnitName(n.unit):''}</td>
+      </tr>`;
+    }).join('');
+    const scopeTxt = scopeTag[cat.scope]||'';
+    const linkedTxt = (cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept)
+                    : (cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
+    return `<section>
+      <div class="cat-head">
+        <h2>${cat.name} <span class="yr">${cat.year||''}</span></h2>
+        <div class="cat-meta">${scopeTxt}${linkedTxt} &nbsp;·&nbsp; ${noms.length} nominee${noms.length!==1?'s':''}</div>
+      </div>
+      <table>
+        <thead><tr><th class="num">#</th><th>Nominee</th><th>Department · Unit</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </section>`;
+  }).join('');
+
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${orgName} — Nominees List</title>
+  <style>
+    @page{size:A4;margin:16mm 14mm}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:#1a1a1a;line-height:1.5}
+    .hdr{text-align:center;border-bottom:2px solid #c9a84c;padding-bottom:14px;margin-bottom:18px}
+    .hdr .icon{font-size:28px}
+    .hdr h1{font-size:20px;font-weight:600;margin:6px 0 2px}
+    .hdr .sub{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.1em}
+    .hdr .date{font-size:10px;color:#aaa;margin-top:4px}
+    section{margin-bottom:20px;page-break-inside:avoid}
+    .cat-head{border-left:3px solid #c9a84c;padding-left:10px;margin-bottom:8px}
+    .cat-head h2{font-size:14px;font-weight:600}
+    .cat-head .yr{color:#c9a84c;font-weight:400}
+    .cat-head .cat-meta{font-size:10px;color:#888;margin-top:2px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#999;padding:5px 8px;border-bottom:1.5px solid #ddd}
+    td{padding:7px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+    th.num,td.num{width:28px;text-align:center;color:#aaa}
+    td.name{font-weight:500}
+    td.loc{color:#777;font-size:11px}
+    .emp{display:inline-block;font-family:monospace;font-size:9px;color:#9a6e1e;background:#faf5e8;border:1px solid #e8dcc0;border-radius:3px;padding:1px 5px;margin-left:5px}
+    .footer{text-align:center;font-size:9px;color:#aaa;margin-top:20px;padding-top:10px;border-top:1px solid #eee}
+    .print-btn{position:fixed;top:14px;right:14px;background:#c9a84c;color:#fff;border:none;padding:10px 20px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+    @media print{.print-btn{display:none};body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+  <div class="hdr">
+    <div class="icon">🏆</div>
+    <h1>${orgName}</h1>
+    <div class="sub">Nominees List</div>
+    <div class="date">Generated ${dateStr}</div>
+  </div>
+  ${body}
+  <div class="footer">Generated by ${orgName} Voting Portal &nbsp;·&nbsp; Confidential</div>
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  if(!w){ showToast('Please allow pop-ups to print','err'); return; }
+  w.document.open(); w.document.write(doc); w.document.close();
+  setTimeout(()=>{ try{w.focus();w.print();}catch(e){} }, 500);
+  showToast('Opening print view…','ok');
+}
+
 function exportResultsPDF(){
   const catF  = document.getElementById('sa-fcat')?.value||'';
   const deptF = document.getElementById('sa-fdept')?.value||'';
@@ -4483,7 +4580,7 @@ async function saveEditUnit(deptId, unitId){
   renderAdminResults();
   showToast(`"${oldName}" renamed to "${newName}"`, 'ok');
   // Persist to sheet
-  await writeToSheets('updateUnit',{deptId, unitId, name:newName});
+  await writeToSheets('updateUnit',{deptId, unitId, name:newName, oldName, deptName:getDeptName(deptId)});
 }
 
 async function addUnit(deptId){
@@ -4745,7 +4842,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v7';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v8';
 
 async function diagnoseVoterPin(){
   const pin=(document.getElementById('diag-voter-pin')?.value||'').trim();
@@ -5067,20 +5164,16 @@ function openAddNomModal(preCatId){
 
   const staffField = hasStaff
     ? `<div class="modal-field" id="mn-staff-wrap" style="margin-top:12px;">
-        <label class="modal-lbl">Staff Member</label>
-        <select class="modal-sel" id="mn-staff" onchange="onNomStaffChange()" disabled>
-          <option value="">— select an award above first —</option>
-        </select>
-      </div>
-      <div id="mn-staff-card" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;margin-top:6px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div id="mn-card-avatar" style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;"></div>
-          <div style="flex:1;">
-            <div id="mn-card-name" style="font-size:13px;font-weight:500;"></div>
-            <div id="mn-card-dept" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
-            <div id="mn-card-unit" style="font-size:11px;color:var(--text3);margin-top:1px;"></div>
+        <label class="modal-lbl">Staff Members <span style="color:var(--text3);font-weight:400;">(tick one or more)</span></label>
+        <div style="display:none;" id="mn-staff-list-wrap">
+          <div class="nom-search-wrap" style="margin:6px 0 4px;">
+            <span class="nom-search-icon">🔍</span>
+            <input class="nom-search-inp" id="mn-staff-search" placeholder="Search staff…" oninput="filterNomStaffList()">
           </div>
+          <div id="mn-staff-checklist" style="max-height:190px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:4px 0;"></div>
+          <div id="mn-staff-sel-count" style="font-size:11px;color:var(--text3);margin-top:6px;"></div>
         </div>
+        <div id="mn-staff-placeholder" style="font-size:12px;color:var(--text3);padding:8px 0;">— select an award above first —</div>
       </div>`
     : `<div class="modal-field" style="margin-top:12px;"><label class="modal-lbl">Full Name</label><input class="modal-inp" id="mn-name" placeholder="Nominee full name" oninput="checkNomDuplicate()" disabled></div>
        <div class="modal-field"><label class="modal-lbl">Department</label><select class="modal-sel" id="mn-dept" disabled><option value="">— select an award above first —</option></select></div>
@@ -5190,22 +5283,33 @@ function resolveNomCategory(catId){
   if(catInp) catInp.value=catId||'';
   const cat=catId?DATA.categories.find(c=>c.id===catId):null;
 
-  const staffSel=document.getElementById('mn-staff');
-  if(staffSel){
+  const checklistWrap=document.getElementById('mn-staff-list-wrap');
+  const placeholder=document.getElementById('mn-staff-placeholder');
+  if(checklistWrap){
     if(!cat){
-      staffSel.disabled=true;
-      staffSel.innerHTML='<option value="">— select an award above first —</option>';
-      const card=document.getElementById('mn-staff-card'); if(card) card.style.display='none';
+      checklistWrap.style.display='none';
+      if(placeholder) placeholder.style.display='block';
+      if(placeholder) placeholder.textContent='— select an award above first —';
     } else {
       const compatible=getCompatibleStaffForCategory(cat).slice().sort((a,b)=>a.name.localeCompare(b.name));
-      staffSel.disabled=false;
-      if(!compatible.length){
-        staffSel.innerHTML='<option value="">— no staff in this department/unit —</option>';
-      } else {
-        staffSel.innerHTML='<option value="">— select a staff member —</option>'+
-          compatible.map(s=>`<option value="${s.id}">[${s.empId||s.id}] ${s.name} — ${getDeptName(s.dept)} · ${getUnitName(s.unit)}</option>`).join('');
+      checklistWrap.style.display='block';
+      if(placeholder) placeholder.style.display='none';
+      const list=document.getElementById('mn-staff-checklist');
+      if(list){
+        if(!compatible.length){
+          list.innerHTML='<div style="padding:12px;font-size:12px;color:var(--text3);">No staff in this department/unit yet.</div>';
+        } else {
+          list.innerHTML=compatible.map(s=>`
+            <label style="display:flex;align-items:center;gap:9px;padding:7px 12px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseenter="this.style.background='var(--bg4)'" onmouseleave="this.style.background=''">
+              <input type="checkbox" class="mn-staff-chk" value="${s.id}" style="width:15px;height:15px;accent-color:var(--gold);flex-shrink:0;" onchange="updateNomStaffCount()">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:500;">${s.name}${s.empId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${s.empId}</span>`:''}</div>
+                <div style="font-size:11px;color:var(--text3);">${getDeptName(s.dept)} · ${getUnitName(s.unit)}</div>
+              </div>
+            </label>`).join('');
+        }
       }
-      const card=document.getElementById('mn-staff-card'); if(card) card.style.display='none';
+      updateNomStaffCount();
     }
   } else {
     // Manual entry mode — auto-fill + lock dept/unit to match the resolved category's scope
@@ -5244,6 +5348,26 @@ function switchToStaffTab(){
   switchTab('superadmin','staff',btn);
 }
 
+function filterNomStaffList(){
+  const q=(document.getElementById('mn-staff-search')?.value||'').toLowerCase();
+  const list=document.getElementById('mn-staff-checklist');
+  if(!list) return;
+  list.querySelectorAll('label').forEach(lbl=>{
+    const text=lbl.textContent.toLowerCase();
+    lbl.style.display=text.includes(q)?'':'none';
+  });
+}
+
+function updateNomStaffCount(){
+  const checked=[...document.querySelectorAll('.mn-staff-chk:checked')];
+  const el=document.getElementById('mn-staff-sel-count');
+  if(el){
+    if(!checked.length) el.textContent='';
+    else el.innerHTML=`<span style="color:var(--gold);font-weight:600;">${checked.length} staff selected</span>`;
+  }
+  checkNomDuplicate();
+}
+
 function onNomStaffChange(){
   const staffId=document.getElementById('mn-staff')?.value;
   const card=document.getElementById('mn-staff-card');
@@ -5276,12 +5400,34 @@ function onNomCatChange(){ checkNomDuplicate(); }
 function checkNomDuplicate(){
   let name='';
   const catId=document.getElementById('mn-cat')?.value||'';
-  // Staff mode
-  const staffSel=document.getElementById('mn-staff');
-  if(staffSel){
-    const s=DATA.staff.find(x=>x.id===staffSel.value);
-    name=s?s.name.toLowerCase():'';
-  } else {
+  // Multi-select checklist mode
+  const checklist=document.getElementById('mn-staff-checklist');
+  if(checklist){
+    const checked=[...document.querySelectorAll('.mn-staff-chk:checked')];
+    const btn=document.getElementById('mn-confirm-btn');
+    const warn=document.getElementById('mn-duplicate-warn');
+    if(!warn) return;
+    if(!checked.length||!catId){ warn.style.display='none'; if(btn) btn.disabled=!checked.length; return; }
+    const allDupes=checked.every(chk=>{
+      const s=DATA.staff.find(x=>x.id===chk.value);
+      return s && DATA.nominees.find(n=>n.name.toLowerCase()===s.name.toLowerCase()&&n.category===catId);
+    });
+    const newCount=checked.filter(chk=>{
+      const s=DATA.staff.find(x=>x.id===chk.value);
+      return s && !DATA.nominees.find(n=>n.name.toLowerCase()===s.name.toLowerCase()&&n.category===catId);
+    }).length;
+    if(allDupes){
+      warn.textContent='⚠ All selected staff are already nominated for this category.';
+      warn.style.display='block';
+      if(btn) btn.disabled=true;
+    } else {
+      warn.style.display='none';
+      if(btn) btn.disabled=false;
+    }
+    return;
+  }
+  // Manual entry mode
+  if(true){
     name=(document.getElementById('mn-name')?.value||'').trim().toLowerCase();
   }
   const warn=document.getElementById('mn-duplicate-warn');
@@ -5308,44 +5454,58 @@ function fillNomUnits(){
 }
 async function addNom(){
   const hasStaff = DATA.staff.length > 0;
-  let name='', dept='', unit='';
   const catId=document.getElementById('mn-cat')?.value||'';
+  if(!catId){ showToast('Please select a category first','err'); return; }
+  const cat=DATA.categories.find(c=>c.id===catId);
 
   if(hasStaff){
-    const staffId=document.getElementById('mn-staff')?.value;
-    if(!staffId){ showToast('Please select a staff member','err'); return; }
-    const s=DATA.staff.find(x=>x.id===staffId);
-    if(!s){ showToast('Staff member not found','err'); return; }
-    name=s.name; dept=s.dept; unit=s.unit;
-    // If the category has a specific linked unit/dept, use that for the nominee
-    // record — it represents where they're competing this year, which may differ
-    // from their current staff unit (e.g. unit transfer between years)
-    const nomCat=DATA.categories.find(c=>c.id===catId);
-    if(nomCat?.scope==='unit' && nomCat.linkedUnit) unit=nomCat.linkedUnit;
-    if((nomCat?.scope==='dept'||nomCat?.scope==='deptcat') && nomCat.linkedDept) dept=nomCat.linkedDept;
+    // Multi-select mode — get all checked staff
+    const checked=[...document.querySelectorAll('.mn-staff-chk:checked')];
+    if(!checked.length){ showToast('Select at least one staff member','err'); return; }
+
+    const newNoms=[];
+    const dupes=[];
+    checked.forEach(chk=>{
+      const s=DATA.staff.find(x=>x.id===chk.value);
+      if(!s) return;
+      let dept=s.dept, unit=s.unit;
+      if(cat?.scope==='unit' && cat.linkedUnit) unit=cat.linkedUnit;
+      if((cat?.scope==='dept'||cat?.scope==='deptcat') && cat.linkedDept) dept=cat.linkedDept;
+      const already=DATA.nominees.find(n=>n.name.toLowerCase()===s.name.toLowerCase()&&n.category===catId);
+      if(already){ dupes.push(s.name); return; }
+      const nomId='nom_'+toId(s.name)+'_'+toId(dept)+'_'+catId;
+      const nom={id:nomId, name:s.name, dept, unit, category:catId, scope:cat?.scope||'global'};
+      DATA.nominees.push(nom);
+      newNoms.push(nom);
+    });
+
+    if(!newNoms.length && dupes.length){
+      showToast(`${dupes.join(', ')} already nominated`, 'err');
+      return;
+    }
+    cacheData();
+    closeModal(); renderNominees();
+    for(const nom of newNoms) await writeToSheets('addNominee',{nominee:nom});
+    const msg = newNoms.length===1
+      ? `${newNoms[0].name} added as nominee for "${cat?.name}"`
+      : `${newNoms.length} nominees added for "${cat?.name}"${dupes.length?' ('+dupes.length+' duplicates skipped)':''}`;
+    showToast(msg,'ok');
   } else {
-    name=(document.getElementById('mn-name')?.value||'').trim();
-    dept=document.getElementById('mn-dept')?.value||'';
-    unit=document.getElementById('mn-unit')?.value||'';
+    // Manual entry mode
+    const name=(document.getElementById('mn-name')?.value||'').trim();
+    const dept=document.getElementById('mn-dept')?.value||'';
+    const unit=document.getElementById('mn-unit')?.value||'';
+    if(!name){ showToast('Please enter a name','err'); return; }
+    const dupe=DATA.nominees.find(n=>n.name.toLowerCase()===name.toLowerCase()&&n.category===catId);
+    if(dupe){ showToast(`${name} is already nominated for "${cat?.name}"`, 'err'); return; }
+    const nomId='nom_'+toId(name)+'_'+toId(dept)+'_'+catId;
+    const nom={id:nomId, name, dept, unit, category:catId, scope:cat?.scope||'global'};
+    DATA.nominees.push(nom);
+    cacheData();
+    closeModal(); renderNominees();
+    await writeToSheets('addNominee',{nominee:nom});
+    showToast(`${name} added as nominee for "${cat?.name||catId}"`, 'ok');
   }
-
-  if(!name||!catId){ showToast('Please select a staff member and category','err'); return; }
-
-  // Duplicate check
-  const dupe=DATA.nominees.find(n=>n.name.toLowerCase()===name.toLowerCase()&&n.category===catId);
-  if(dupe){
-    const cat=getCat(catId);
-    showToast(`${name} is already nominated for "${cat.name}"`, 'err');
-    return;
-  }
-  const cat=DATA.categories.find(c=>c.id===catId);
-  const nomId='nom_'+toId(name)+'_'+toId(dept)+'_'+catId;
-  const nom={id:nomId, name, dept, unit, category:catId, scope:cat?.scope||'global'};
-  DATA.nominees.push(nom);
-  cacheData();
-  closeModal(); renderNominees();
-  await writeToSheets('addNominee',{nominee:nom});
-  showToast(`${name} added as nominee for "${cat?.name||catId}"`, 'ok');
 }
 
 function openAddCatModal(){
@@ -5501,7 +5661,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v7';
+var SCRIPT_VERSION = '2026-06-17-v8';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -5684,16 +5844,41 @@ function handleRequest(raw) {
       deleteRowsByValue(ss.getSheetByName('Departments'), data.deptId, 0);
     }
     else if (action === 'updateUnit') {
-      // Rename a unit in the Departments sheet — all other sheets use unit IDs,
-      // so only the name column needs updating here.
+      // Rename a unit in the Departments sheet.
+      // The sheet may have rows in two different formats:
+      //  - Portal format:  col A = deptId slug, col D = unit name, col E = unit ID (timestamp)
+      //  - Human format:   col A = dept name,   col B = unit name, cols C-E = empty
+      // We try to match in the order most likely to succeed.
       var ds = ss.getSheetByName('Departments');
       if (ds && ds.getLastRow() > 1) {
         var drows = ds.getDataRange().getValues();
-        for (var i = 1; i < drows.length; i++) {
+        var updated = false;
+        // Pass 1 — portal format: match deptId (col A) + unitId (col E)
+        for (var i = 1; i < drows.length && !updated; i++) {
           if (String(drows[i][0]).trim() === String(data.deptId).trim() &&
               String(drows[i][4]).trim() === String(data.unitId).trim()) {
-            ds.getRange(i + 1, 4).setValue(data.name); // col D = unit name
-            break;
+            ds.getRange(i + 1, 4).setValue(data.name);
+            updated = true;
+          }
+        }
+        // Pass 2 — portal format but match by old name in col D (unitId may differ)
+        if (!updated && data.oldName) {
+          for (var i = 1; i < drows.length && !updated; i++) {
+            if (String(drows[i][0]).trim() === String(data.deptId).trim() &&
+                String(drows[i][3]).trim().toLowerCase() === String(data.oldName).trim().toLowerCase()) {
+              ds.getRange(i + 1, 4).setValue(data.name);
+              updated = true;
+            }
+          }
+        }
+        // Pass 3 — human format: match dept name (col A) + old unit name (col B)
+        if (!updated && data.oldName && data.deptName) {
+          for (var i = 1; i < drows.length && !updated; i++) {
+            if (String(drows[i][0]).trim().toLowerCase() === String(data.deptName).trim().toLowerCase() &&
+                String(drows[i][1]).trim().toLowerCase() === String(data.oldName).trim().toLowerCase()) {
+              ds.getRange(i + 1, 2).setValue(data.name);
+              updated = true;
+            }
           }
         }
       }
