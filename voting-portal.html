@@ -782,6 +782,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
           <button class="btn-sm red" onclick="resetAllVotes()">Reset all votes</button>
         </div>
       </div>
+      <div class="nom-search-wrap" style="margin-bottom:10px;">
+        <span class="nom-search-icon">🔍</span>
+        <input class="nom-search-inp" id="voter-search-inp" placeholder="Search by name, PIN or Staff ID…" oninput="renderVoterList()">
+      </div>
       <div class="rf" style="margin-bottom:14px;">
         <select class="fsel" id="voter-fyear" onchange="renderVoterList()">
           <option value="">All rosters</option>
@@ -3410,13 +3414,19 @@ function renderVoterList(){
   if(!el) return;
   if(!DATA.voters.length){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👥</div>No voters yet. Add voters or sync from Google Sheets.</div>';return;}
   const yearF=document.getElementById('voter-fyear')?.value||'';
+  const q=(document.getElementById('voter-search-inp')?.value||'').trim().toLowerCase();
   const filtered = DATA.voters.filter(v=>{
-    if(!yearF) return true;
-    if(yearF==='legacy') return !v.year;
-    return String(v.year)===String(yearF);
+    if(yearF==='legacy' && v.year) return false;
+    if(yearF && yearF!=='legacy' && String(v.year)!==String(yearF)) return false;
+    if(!q) return true;
+    return v.name.toLowerCase().includes(q) ||
+           v.pin.includes(q) ||
+           (v.empId||'').toLowerCase().includes(q);
   });
   if(!filtered.length){
-    el.innerHTML='<div class="empty-state"><div class="empty-state-icon">📋</div>No voters in this roster yet.</div>';
+    el.innerHTML = q
+      ? `<div class="empty-state"><div class="empty-state-icon">🔍</div>No voters match "${q}".</div>`
+      : '<div class="empty-state"><div class="empty-state-icon">📋</div>No voters in this roster yet.</div>';
     return;
   }
   el.innerHTML=filtered.map(v=>{
