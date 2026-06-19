@@ -1173,15 +1173,21 @@ async function fetchRange(range) {
 const ELIG_CONFIG_KEY = '_voterElig';
 
 function saveVoterEligOverrides(){
-  // Build a minimal map: only voters with any restriction set
+  // Build a minimal map: only voters with any override set
   const overrides = {};
   DATA.voters.forEach(v=>{
-    if(v.excl2024 || v.excl2025 || v.year){
-      overrides[v.pin] = {};
-      if(v.excl2024) overrides[v.pin].excl2024 = true;
-      if(v.excl2025) overrides[v.pin].excl2025 = true;
-      if(v.year)     overrides[v.pin].year      = v.year;
-    }
+    const hasOverride = v.excl2024 || v.excl2025 || v.year ||
+      (v.deptOverrides && Object.keys(v.deptOverrides).length) ||
+      (v.unitOverrides && Object.keys(v.unitOverrides).length);
+    if(!hasOverride) return;
+    overrides[v.pin] = {};
+    if(v.excl2024) overrides[v.pin].excl2024 = true;
+    if(v.excl2025) overrides[v.pin].excl2025 = true;
+    if(v.year)     overrides[v.pin].year      = v.year;
+    if(v.deptOverrides && Object.keys(v.deptOverrides).length)
+      overrides[v.pin].deptOverrides = v.deptOverrides;
+    if(v.unitOverrides && Object.keys(v.unitOverrides).length)
+      overrides[v.pin].unitOverrides = v.unitOverrides;
   });
   const value = JSON.stringify(overrides);
   // Write via setConfig — the same proven pathway the diagnostic test uses
@@ -1207,9 +1213,11 @@ function applyVoterEligOverrides(){
   DATA.voters.forEach(v=>{
     const ov = overrides[v.pin];
     if(!ov) return;
-    if(ov.excl2024 !== undefined) v.excl2024 = ov.excl2024;
-    if(ov.excl2025 !== undefined) v.excl2025 = ov.excl2025;
-    if(ov.year !== undefined)     v.year      = ov.year;
+    if(ov.excl2024 !== undefined)    v.excl2024    = ov.excl2024;
+    if(ov.excl2025 !== undefined)    v.excl2025    = ov.excl2025;
+    if(ov.year !== undefined)        v.year        = ov.year;
+    if(ov.deptOverrides !== undefined) v.deptOverrides = ov.deptOverrides;
+    if(ov.unitOverrides !== undefined) v.unitOverrides = ov.unitOverrides;
   });
 }
 
@@ -1888,8 +1896,11 @@ function showScreen(id){
 // ═══════════════════════════════════════════════════════════
 function initVoter(){
   const v=currentUser;
-  const deptName = (DATA.departments.find(d=>d.id===v.dept)||{name:v.dept}).name;
-  const unitName = (() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===v.unit);if(u)return u.name;} return v.unit; })();
+  // Use the year-specific dept/unit if an override is set for the active voting year
+  const effectiveDept = getVoterDeptForYear(v, currentVotingYear||v.year||'');
+  const effectiveUnit = getVoterUnitForYear(v, currentVotingYear||v.unit||'');
+  const deptName = (DATA.departments.find(d=>d.id===effectiveDept)||{name:effectiveDept||v.dept}).name;
+  const unitName = (() => { const uid=effectiveUnit||v.unit; for(const d of DATA.departments){const u=d.units.find(u=>u.id===uid);if(u)return u.name;} return uid; })();
   document.getElementById('v-greet').textContent=`Welcome, ${v.name.split(' ')[0]}!`;
   const completedYears = YEARS.filter(y=>voterEligibleForYear(v,y) && voterHasVotedForYear(v,y) && y!==currentVotingYear);
   const completedChips = completedYears.map(y=>`<span class="meta-chip" style="background:var(--green-dim);color:var(--green);border-color:rgba(76,175,125,.3);">✓ ${y} voted</span>`).join('');
@@ -2403,6 +2414,15 @@ function hasLocalVoted(pin, year){
   }catch(e){ return false; }
 }
 
+// Resolve a voter's dept/unit for a specific award year
+// Falls back to their base dept/unit if no year-specific override is set
+function getVoterDeptForYear(voter, year){
+  return (voter.deptOverrides && voter.deptOverrides[String(year)]) || voter.dept;
+}
+function getVoterUnitForYear(voter, year){
+  return (voter.unitOverrides && voter.unitOverrides[String(year)]) || voter.unit;
+}
+
 function voterEligibleForYear(voter, year){
   // Returns true if voter is allowed to vote in this year
   if(!voter) return false;
@@ -2442,15 +2462,18 @@ function voterCanSeeCategory(cat, voter){
   if(!cat || !voter) return false;
   // Year eligibility check first
   if(!voterEligibleForYear(voter, cat.year)) return false;
+  // Use the voter's dept/unit for THIS specific award year (may differ from base)
+  const dept = getVoterDeptForYear(voter, cat.year);
+  const unit = getVoterUnitForYear(voter, cat.year);
   const scope = cat.scope || 'global';
   if(scope === 'global')  return true;
   if(scope === 'dept' || scope === 'deptcat'){
     if(!cat.linkedDept) return true; // no restriction set → show all
-    return voter.dept === cat.linkedDept;
+    return dept === cat.linkedDept;
   }
   if(scope === 'unit'){
     if(!cat.linkedUnit) return true; // no restriction set → show all
-    return voter.unit === cat.linkedUnit;
+    return unit === cat.linkedUnit;
   }
   return true;
 }
@@ -3480,11 +3503,51 @@ function openEditVoterModal(pin){
       <select class="modal-sel" id="ev-unit"></select>
     </div>
     ${eligibilityBlock}
+    <div class="modal-field" style="margin-top:8px;">
+      <label class="modal-lbl">Per-Year Dept/Unit Overrides <span style="color:var(--text3);font-weight:400;">(only if they changed unit/dept between years)</span></label>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.5;">Set a different department or unit for a specific year's ballot. Leave blank to use the base dept/unit above.</div>
+      ${YEARS.map(yr=>`
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;margin-bottom:8px;">
+          <div style="font-size:11px;font-weight:700;color:var(--gold);font-family:monospace;margin-bottom:8px;">${yr} override</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select class="modal-sel" id="ev-dept-yr-${yr}" onchange="fillEditVoterYrUnits('${pin}','${yr}')" style="flex:1;min-width:120px;">
+              <option value="">— same as base —</option>
+              ${DATA.departments.map(d=>`<option value="${d.id}" ${(v.deptOverrides&&v.deptOverrides['${yr}']===d.id)?'selected':''}>${d.name}</option>`).join('')}
+            </select>
+            <select class="modal-sel" id="ev-unit-yr-${yr}" style="flex:1;min-width:120px;">
+              <option value="">— same as base —</option>
+            </select>
+          </div>
+        </div>`).join('')}
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-confirm" onclick="saveEditVoter('${pin}')">Save Changes</button>
     </div>`);
   fillEditVoterUnits(pin, v.unit);
+  // Pre-populate year override unit dropdowns
+  YEARS.forEach(yr=>{
+    const deptSel=document.getElementById('ev-dept-yr-'+yr);
+    const unitSel=document.getElementById('ev-unit-yr-'+yr);
+    const savedDept=v.deptOverrides?.[yr]||'';
+    const savedUnit=v.unitOverrides?.[yr]||'';
+    if(deptSel && savedDept) deptSel.value=savedDept;
+    fillEditVoterYrUnits('${pin}',yr,savedUnit);
+  });
+}
+
+function fillEditVoterYrUnits(pin, yr, preselect){
+  const deptSel=document.getElementById('ev-dept-yr-'+yr);
+  const unitSel=document.getElementById('ev-unit-yr-'+yr);
+  if(!unitSel) return;
+  const deptId=deptSel?.value||'';
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  if(!dept){
+    unitSel.innerHTML='<option value="">— same as base —</option>';
+    return;
+  }
+  unitSel.innerHTML='<option value="">— same as base —</option>'+
+    dept.units.map(u=>`<option value="${u.id}" ${u.id===(preselect||'')?'selected':''}>${u.name}</option>`).join('');
 }
 
 // ── Migration helper: split a legacy multi-year voter into independent rosters ──
@@ -3546,12 +3609,23 @@ async function saveEditVoter(pin){
     v.excl2025 = !(document.getElementById('ev-elig-2025')?.checked??true);
     expected = {excl2024:v.excl2024, excl2025:v.excl2025, name:v.name, dept:v.dept, unit:v.unit};
   }
+  // Read per-year dept/unit overrides from the modal
+  const deptOverrides = {}, unitOverrides = {};
+  YEARS.forEach(yr=>{
+    const d=document.getElementById('ev-dept-yr-'+yr)?.value||'';
+    const u=document.getElementById('ev-unit-yr-'+yr)?.value||'';
+    if(d) deptOverrides[yr]=d;
+    if(u) unitOverrides[yr]=u;
+  });
+  if(Object.keys(deptOverrides).length) v.deptOverrides=deptOverrides;
+  else delete v.deptOverrides;
+  if(Object.keys(unitOverrides).length) v.unitOverrides=unitOverrides;
+  else delete v.unitOverrides;
+
   cacheData();
   closeModal();
   renderVoterList(); renderAdminVoterList();
-  // Write eligibility overrides via the proven setConfig pathway first —
-  // this is the reliable route. updateVoter also writes to the Voters sheet
-  // as a secondary backup, but eligibility is controlled by the Config key.
+  // Write eligibility + dept/unit overrides via the proven setConfig pathway
   saveVoterEligOverrides();
   await writeToSheets('updateVoter',{voter:v});
   showToast(`${v.name} updated`,'ok');
@@ -4734,8 +4808,29 @@ function getCategoriesForAward(name, year){
 }
 function getCompatibleStaffForCategory(cat){
   if(!cat) return [];
-  if((cat.scope==='dept'||cat.scope==='deptcat') && cat.linkedDept) return DATA.staff.filter(s=>s.dept===cat.linkedDept);
-  if(cat.scope==='unit' && cat.linkedUnit) return DATA.staff.filter(s=>s.unit===cat.linkedUnit);
+  const yr = String(cat.year||'');
+
+  if(cat.scope==='unit' && cat.linkedUnit){
+    return DATA.staff.filter(s=>{
+      if(s.unit===cat.linkedUnit) return true; // base unit matches
+      // Check if this staff member has a voter record with a unit override for this year
+      const voter = DATA.voters.find(v=>
+        (v.empId && (v.empId===s.empId||v.empId===s.id)) ||
+        v.name.toLowerCase()===s.name.toLowerCase()
+      );
+      return voter && voter.unitOverrides && voter.unitOverrides[yr]===cat.linkedUnit;
+    });
+  }
+  if((cat.scope==='dept'||cat.scope==='deptcat') && cat.linkedDept){
+    return DATA.staff.filter(s=>{
+      if(s.dept===cat.linkedDept) return true; // base dept matches
+      const voter = DATA.voters.find(v=>
+        (v.empId && (v.empId===s.empId||v.empId===s.id)) ||
+        v.name.toLowerCase()===s.name.toLowerCase()
+      );
+      return voter && voter.deptOverrides && voter.deptOverrides[yr]===cat.linkedDept;
+    });
+  }
   return DATA.staff; // company-wide
 }
 
@@ -5000,6 +5095,12 @@ async function addNom(){
     const s=DATA.staff.find(x=>x.id===staffId);
     if(!s){ showToast('Staff member not found','err'); return; }
     name=s.name; dept=s.dept; unit=s.unit;
+    // If the category has a specific linked unit/dept, use that for the nominee
+    // record — it represents where they're competing this year, which may differ
+    // from their current staff unit (e.g. unit transfer between years)
+    const nomCat=DATA.categories.find(c=>c.id===catId);
+    if(nomCat?.scope==='unit' && nomCat.linkedUnit) unit=nomCat.linkedUnit;
+    if((nomCat?.scope==='dept'||nomCat?.scope==='deptcat') && nomCat.linkedDept) dept=nomCat.linkedDept;
   } else {
     name=(document.getElementById('mn-name')?.value||'').trim();
     dept=document.getElementById('mn-dept')?.value||'';
