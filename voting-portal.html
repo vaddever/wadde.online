@@ -1286,7 +1286,7 @@ async function fetchFromSheets() {
     'Votes!A2:D',
     'Admins!A2:E',
     'Categories!A2:F',
-    'Departments!A2:D',
+    'Departments!A2:E',
     'Config!A1:B20',
     'Staff!A2:D'
   ];
@@ -1433,7 +1433,7 @@ if (vD.length) DATA.voters = vD.map(parseVoterRow).filter(v=>v && v.pin);
       const looksLikeId = c0.startsWith('dept_') || /^[a-z_]+\d{8,}$/.test(c0);
       let did, dname, dcolor, uname;
       if(looksLikeId){
-        // Portal format: DeptID | DeptName | Color | UnitName
+        // Portal format: DeptID | DeptName | Color | UnitName | UnitID(col E)
         did=c0; dname=c1||c0; dcolor=c2||''; uname=c3;
       } else {
         // Human format: DeptName | UnitName | Color(optional)
@@ -1447,7 +1447,13 @@ if (vD.length) DATA.voters = vD.map(parseVoterRow).filter(v=>v && v.pin);
       // Update color if provided later
       if(dcolor && !dMap[did].color.startsWith('#')) dMap[did].color=dcolor;
       if(uname){
-        const uid = did+'_'+toId(uname);
+        // Use the actual stored unitId from col E if present (portal format uses timestamp IDs).
+        // Fall back to name-slug for human-entered rows that have no ID in col E.
+        // This is critical: without reading col E, the portal generates name-based IDs locally
+        // that don't match the timestamp-based IDs written by addUnit, so updateUnit can never
+        // find the right row to update in the Apps Script.
+        const c4=(r[4]||'').trim();
+        const uid = (c4 && looksLikeId) ? c4 : did+'_'+toId(uname);
         if(!dMap[did].units.find(u=>u.id===uid)){
           dMap[did].units.push({id:uid, name:uname});
         }
