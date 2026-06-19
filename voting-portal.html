@@ -808,6 +808,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <div style="display:flex;gap:7px;flex-wrap:wrap;">
           <button class="btn-sm green" onclick="openAddVoterModal()">+ Add voter</button>
           <button class="btn-sm gold" onclick="syncStaffToVoters()">⟳ Sync staff to voters</button>
+          <button class="btn-sm" onclick="openDedupModal()">🧹 Remove duplicates</button>
           <button class="btn-sm red" onclick="resetAllVotes()">Reset all votes</button>
         </div>
       </div>
@@ -3766,46 +3767,155 @@ function generatePin(){
   return pin;
 }
 
-async function syncStaffToVoters(){
-  if(!DATA.staff.length){
-    showToast('No staff found — add staff first','err'); return;
-  }
-  const year = prompt(`Sync all staff to which year's independent roster? Enter ${YEARS.join(' or ')}:`, DEFAULT_YEAR);
-  if(!year) return;
-  if(!YEARS.includes(year)){ showToast(`Please enter ${YEARS.join(' or ')}`,'err'); return; }
+function findDuplicateVoters(){
+  // Groups voters by empId (or name+dept+unit as fallback), returns groups with >1 entry
+  const groups = {};
+  DATA.voters.forEach((v,i)=>{
+    const key = v.empId
+      ? v.empId.toUpperCase()
+      : `${v.name.toLowerCase()}|${v.dept}|${v.unit}`;
+    if(!groups[key]) groups[key]=[];
+    groups[key].push({...v, _index:i});
+  });
+  return Object.values(groups).filter(g=>g.length>1);
+}
 
+function openDedupModal(){
+  const dupes = findDuplicateVoters();
+  if(!dupes.length){
+    showToast('No duplicate voters found — list is clean ✓','ok');
+    return;
+  }
+  const totalDupes = dupes.reduce((s,g)=>s+(g.length-1), 0);
+  const rows = dupes.map(group=>{
+    const names = group.map(v=>`PIN ${v.pin}${v.year?' ('+v.year+')':''}${v.hasVoted?' ✓voted':''}`).join(', ');
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
+      <div style="font-weight:500;">${group[0].name} <span style="color:var(--text3);font-weight:400;">${getDeptName(group[0].dept)} · ${getUnitName(group[0].unit)}</span></div>
+      <div style="color:var(--text3);margin-top:3px;">${names}</div>
+    </div>`;
+  }).join('');
+  openModal(`<div class="modal-title">🧹 Remove Duplicate Voters</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
+      Found <strong style="color:var(--red);">${totalDupes} duplicate</strong> voter ${totalDupes===1?'entry':'entries'} across ${dupes.length} ${dupes.length===1?'person':'people'}.<br>
+      For each duplicate group, the entry that has already voted (or the first one added) will be kept. The rest will be removed.
+    </div>
+    <div style="max-height:200px;overflow-y:auto;margin-bottom:14px;">${rows}</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm red" onclick="dedupVoters()">Remove ${totalDupes} duplicate${totalDupes===1?'':'s'}</button>
+    </div>`);
+}
+
+async function dedupVoters(){
+  const dupes = findDuplicateVoters();
+  if(!dupes.length){ closeModal(); return; }
+  const pinsToRemove = [];
+  dupes.forEach(group=>{
+    // Keep: the one that has already voted, else the one with the lowest PIN (first added)
+    const sorted = [...group].sort((a,b)=>{
+      if(a.hasVoted && !b.hasVoted) return -1;
+      if(!a.hasVoted && b.hasVoted) return 1;
+      return String(a.pin).localeCompare(String(b.pin));
+    });
+    // Remove all except the first (keeper)
+    sorted.slice(1).forEach(v=>pinsToRemove.push(v.pin));
+  });
+  // Remove from local DATA
+  DATA.voters = DATA.voters.filter(v=>!pinsToRemove.includes(v.pin));
+  DATA.votes  = DATA.votes.filter(v=>!pinsToRemove.includes(v.pin));
+  cacheData();
+  closeModal();
+  renderVoterList(); renderAdminVoterList(); renderStats('sa'); renderStats('admin');
+  // Remove from sheet
+  showSyncBadge('syncing',`Removing ${pinsToRemove.length} duplicate${pinsToRemove.length===1?'':'s'}…`);
+  let allOk=true;
+  for(const pin of pinsToRemove){
+    const ok = await writeToSheets('removeVoter',{pin});
+    if(!ok) allOk=false;
+  }
+  showSyncBadge(allOk?'ok':'err', allOk?'Cleaned ✓':'Some failed — check Script URL');
+  showToast(`${pinsToRemove.length} duplicate voter${pinsToRemove.length===1?'':'s'} removed`,'ok');
+}
+
+function openSyncStaffModal(){
+  if(!DATA.staff.length){ showToast('No staff found — add staff first','err'); return; }
+  const yrOpts = YEARS.map(y=>`<option value="${y}" ${y===DEFAULT_YEAR?'selected':''}>${y}</option>`).join('');
+  // Preview: count how many would actually be added vs skipped
+  openModal(`<div class="modal-title">⟳ Sync Staff to Voters</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">
+      Adds any staff members not yet in the voters list. Existing voters are never duplicated.
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Add to which year's roster?</label>
+      <select class="modal-sel" id="sync-year" onchange="previewStaffSync()">${yrOpts}</select>
+    </div>
+    <div id="sync-preview" style="font-size:12px;margin-top:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);line-height:1.7;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" id="sync-confirm-btn" onclick="doSyncStaffToVoters()">Sync</button>
+    </div>`);
+  previewStaffSync();
+}
+
+function voterExistsForStaff(s, year){
+  // A staff member is considered already in the voter list if ANY voter record
+  // matches them — regardless of model (year-based or legacy single-PIN).
+  return !!DATA.voters.find(v=>{
+    const empMatch = v.empId && s.empId && v.empId.toUpperCase()===s.empId.toUpperCase();
+    const nameMatch = v.name.toLowerCase()===s.name.toLowerCase() &&
+                      v.dept===s.dept && v.unit===s.unit;
+    if(!empMatch && !nameMatch) return false;
+    // For year-based voters: only count as existing if same year
+    if(v.year) return String(v.year)===String(year);
+    // For legacy/single-PIN voters: count as existing for ALL years
+    return true;
+  });
+}
+
+function previewStaffSync(){
+  const year = document.getElementById('sync-year')?.value||DEFAULT_YEAR;
+  let toAdd=[], toSkip=[];
+  DATA.staff.forEach(s=>{
+    if(voterExistsForStaff(s, year)) toSkip.push(s.name);
+    else toAdd.push(s.name);
+  });
+  const el = document.getElementById('sync-preview');
+  const btn = document.getElementById('sync-confirm-btn');
+  if(el){
+    el.innerHTML = toAdd.length
+      ? `<span style="color:var(--green);">✓ ${toAdd.length} staff will be added</span>${toSkip.length?`<br><span style="color:var(--text3);">${toSkip.length} already in voters list — skipped</span>`:''}`
+      : `<span style="color:var(--text3);">All ${toSkip.length} staff are already in the voters list — nothing to add.</span>`;
+  }
+  if(btn) btn.disabled = !toAdd.length;
+}
+
+async function doSyncStaffToVoters(){
+  const year = document.getElementById('sync-year')?.value||DEFAULT_YEAR;
   let added=0, skipped=0;
   const newVoters=[];
   DATA.staff.forEach(s=>{
-    // Skip if already a voter for THIS year (match by empId or name+dept within the same roster year)
-    const exists=DATA.voters.find(v=>
-      String(v.year)===String(year) &&
-      ((v.empId && v.empId===s.empId) ||
-       (v.name.toLowerCase()===s.name.toLowerCase() && v.dept===s.dept && v.unit===s.unit))
-    );
-    if(exists){ skipped++; return; }
+    if(voterExistsForStaff(s, year)){ skipped++; return; }
     const pin=generatePin();
-    const voter={pin, empId:s.empId||s.id, name:s.name, dept:s.dept, unit:s.unit, hasVoted:false, year};
+    const voter={pin, empId:s.empId||s.id, name:s.name, dept:s.dept, unit:s.unit, hasVoted:false};
     DATA.voters.push(voter);
     newVoters.push(voter);
     added++;
   });
-  if(!added){
-    showToast(`All staff already in the ${year} roster (${skipped} skipped)`,'ok'); return;
-  }
+  if(!added){ closeModal(); showToast(`All staff already in voters list (${skipped} skipped)`,'ok'); return; }
   cacheData();
-  renderVoterList(); renderStats('sa');
-  // Write all new voters to sheet in batch
+  closeModal();
+  renderVoterList(); renderAdminVoterList(); renderStats('sa'); renderStats('admin');
   showSyncBadge('syncing','Syncing to Sheets…');
   let allOk=true;
   for(const voter of newVoters){
     const ok=await writeToSheets('addVoter',{voter});
     if(!ok) allOk=false;
   }
-  showSyncBadge(allOk?'ok':'err', allOk?`Synced ✓`:'Some failed — check Script URL');
-  renderAdminVoterList();
-  showToast(`${added} staff synced to the ${year} roster${skipped?' ('+skipped+' already existed)':''}`, 'ok');
+  showSyncBadge(allOk?'ok':'err', allOk?'Synced ✓':'Some failed — check Script URL');
+  showToast(`${added} staff added to voters${skipped?' ('+skipped+' already existed)':''}`, 'ok');
 }
+
+async function syncStaffToVoters(){ openSyncStaffModal(); }
 
 async function resetVoter(pin){
   const v=DATA.voters.find(v=>v.pin===pin);if(!v)return;
@@ -4296,7 +4406,8 @@ function renderDeptUnitManager(){
     const c=dept.color||COLORS[di%COLORS.length];
     const units=dept.units.map(u=>`
       <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:5px;">
-        <span style="flex:1;font-size:12px;">${u.name}</span>
+        <span style="flex:1;font-size:12px;" id="unit-label-${u.id}">${u.name}</span>
+        <button class="btn-sm gold" onclick="openEditUnitModal('${dept.id}','${u.id}')">✎</button>
         <button class="btn-sm red" onclick="removeUnit('${dept.id}','${u.id}')">✕</button>
       </div>`).join('');
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;">
@@ -4314,6 +4425,59 @@ function renderDeptUnitManager(){
       </div>
     </div>`;
   }).join('');
+}
+
+function openEditUnitModal(deptId, unitId){
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const unit=dept?.units.find(u=>u.id===unitId);
+  if(!unit){showToast('Unit not found','err');return;}
+  openModal(`<div class="modal-title">Rename Unit</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">
+      Renaming will update this unit everywhere — voters, nominees, categories, and results.
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Unit Name</label>
+      <input class="modal-inp" id="eu-name" value="${unit.name}" placeholder="Unit name">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="saveEditUnit('${deptId}','${unitId}')">Save</button>
+    </div>`);
+  setTimeout(()=>{
+    const inp=document.getElementById('eu-name');
+    if(inp){inp.focus();inp.select();}
+  },50);
+}
+
+async function saveEditUnit(deptId, unitId){
+  const newName=(document.getElementById('eu-name')?.value||'').trim();
+  if(!newName){showToast('Enter a unit name','err');return;}
+  const dept=DATA.departments.find(d=>d.id===deptId);
+  const unit=dept?.units.find(u=>u.id===unitId);
+  if(!unit){showToast('Unit not found','err');return;}
+  if(unit.name===newName){closeModal();return;}
+
+  const oldName=unit.name;
+  // Update in DATA — unit object itself
+  unit.name=newName;
+  // Cascade: unit name is stored in Departments sheet only;
+  // everywhere else references by ID, so only the display name changes.
+  // But deptOverrides/unitOverrides in voters use IDs not names, so no cascade needed there.
+  cacheData();
+  closeModal();
+  // Re-render everything that displays unit names
+  renderDeptUnitManager();
+  renderVoterList();
+  renderAdminVoterList();
+  renderNominees();
+  renderStaff();
+  renderAdminStaff();
+  renderCatList();
+  renderSAResults();
+  renderAdminResults();
+  showToast(`"${oldName}" renamed to "${newName}"`, 'ok');
+  // Persist to sheet
+  await writeToSheets('updateUnit',{deptId, unitId, name:newName});
 }
 
 async function addUnit(deptId){
@@ -4575,7 +4739,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v6';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v7';
 
 async function diagnoseVoterPin(){
   const pin=(document.getElementById('diag-voter-pin')?.value||'').trim();
@@ -5331,7 +5495,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v6';
+var SCRIPT_VERSION = '2026-06-17-v7';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -5512,6 +5676,21 @@ function handleRequest(raw) {
     }
     else if (action === 'removeDept') {
       deleteRowsByValue(ss.getSheetByName('Departments'), data.deptId, 0);
+    }
+    else if (action === 'updateUnit') {
+      // Rename a unit in the Departments sheet — all other sheets use unit IDs,
+      // so only the name column needs updating here.
+      var ds = ss.getSheetByName('Departments');
+      if (ds && ds.getLastRow() > 1) {
+        var drows = ds.getDataRange().getValues();
+        for (var i = 1; i < drows.length; i++) {
+          if (String(drows[i][0]).trim() === String(data.deptId).trim() &&
+              String(drows[i][4]).trim() === String(data.unitId).trim()) {
+            ds.getRange(i + 1, 4).setValue(data.name); // col D = unit name
+            break;
+          }
+        }
+      }
     }
     else if (action === 'removeUnit') {
       var s = ss.getSheetByName('Departments');
