@@ -642,27 +642,31 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div class="tab-panel" id="admin-results">
       <!-- Global filter bar -->
       <div class="rf" style="margin-bottom:20px;">
+        <select class="fsel" id="ar-fcat" onchange="renderAdminResults()"><option value="">All categories</option></select>
         <select class="fsel" id="ar-fdept" onchange="arDeptChanged()"><option value="">All departments</option></select>
         <select class="fsel" id="ar-funit" onchange="renderAdminResults()"><option value="">All units</option></select>
       </div>
 
-      <!-- Section 1: By Award Category -->
-      <div class="ar-section-hdr" id="ar-cat-hdr">
-        <span class="ar-section-title">🏆 By Award Category</span>
+      <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+        <button id="ar-rtab-cat" class="rtab-btn on" onclick="switchResultTab('ar','cat')">By Category</button>
+        <button id="ar-rtab-dept" class="rtab-btn" onclick="switchResultTab('ar','dept')">By Department</button>
+        <button id="ar-rtab-unit" class="rtab-btn" onclick="switchResultTab('ar','unit')">By Unit</button>
       </div>
+      <!-- Section 1: By Award Category -->
+      <div class="ar-section-hdr" id="ar-cat-hdr" style="display:none;"></div>
       <div id="ar-by-category"></div>
 
       <!-- Section 2: By Department -->
       <div class="ar-section-hdr" style="margin-top:24px;" id="ar-dept-hdr">
         <span class="ar-section-title">🏢 By Department</span>
       </div>
-      <div id="ar-by-department"></div>
+      <div id="ar-by-department" style="display:none;"></div>
 
       <!-- Section 3: By Unit -->
       <div class="ar-section-hdr" style="margin-top:24px;" id="ar-unit-hdr">
         <span class="ar-section-title">📍 By Unit</span>
       </div>
-      <div id="ar-by-unit"></div>
+      <div id="ar-by-unit" style="display:none;"></div>
     </div>
 
     <!-- Admin: Voters (read-only) -->
@@ -800,7 +804,14 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         </div>
         <button class="btn-sm gold" onclick="exportResultsPDF()" style="white-space:nowrap;">📄 Export PDF</button>
       </div>
-      <div id="sa-results-container"></div>
+      <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+        <button id="sa-rtab-cat" class="rtab-btn on" onclick="switchResultTab('sa','cat')">By Category</button>
+        <button id="sa-rtab-dept" class="rtab-btn" onclick="switchResultTab('sa','dept')">By Department</button>
+        <button id="sa-rtab-unit" class="rtab-btn" onclick="switchResultTab('sa','unit')">By Unit</button>
+      </div>
+      <div id="sa-by-category"></div>
+      <div id="sa-by-department" style="display:none;"></div>
+      <div id="sa-by-unit" style="display:none;"></div>
     </div>
 
     <div class="tab-panel" id="superadmin-voters">
@@ -2325,49 +2336,8 @@ function adminNomDeptChanged(){
   renderAdminNominees();
 }
 function renderAdminNominees(){
-  const catF  = document.getElementById('admin-nom-fcat')?.value||'';
-  const deptF = document.getElementById('admin-nom-fdept')?.value||'';
-  const unitF = document.getElementById('admin-nom-funit')?.value||'';
-  const catEl = document.getElementById('admin-nom-fcat');
-  const deptEl= document.getElementById('admin-nom-fdept');
-  if(catEl&&catEl.options.length<=1) catEl.innerHTML=`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  if(deptEl&&deptEl.options.length<=1) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  const filtered = DATA.nominees.filter(n=>(!catF||n.category===catF)&&(!deptF||n.dept===deptF)&&(!unitF||n.unit===unitF));
-  const container = document.getElementById('admin-nom-list');
-  if(!container) return;
-  if(!filtered.length){
-    container.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏅</div>No nominees found.</div>';
-    return;
-  }
-  // Group by category
-  const grouped={};
-  filtered.forEach(n=>{ const k=n.category||'__none__'; if(!grouped[k])grouped[k]=[]; grouped[k].push(n); });
-  const catOrder = DATA.categories.map(c=>c.id);
-  const sortedKeys = Object.keys(grouped).sort((a,b)=>catOrder.indexOf(a)-catOrder.indexOf(b));
-  container.innerHTML = sortedKeys.map(catId=>{
-    const cat=getCat(catId); const noms=grouped[catId];
-    const rows=noms.map(nom=>{
-      const votes=getVotes(nom.id,nom.name); const empId=getStaffId(nom.name);
-      return `<div class="nom-list-row">
-        <div class="nom-list-avatar" style="background:${stringToColor(nom.name)}22;color:${stringToColor(nom.name)};">${nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
-        <div class="nom-list-info">
-          <div class="nom-list-name">${nom.name}${empId?` <span style="font-size:10px;color:var(--gold);font-family:monospace;padding:1px 5px;background:var(--gold-dim);border-radius:4px;">${empId}</span>`:''}</div>
-          <div class="nom-list-meta">${getDeptName(nom.dept)} · ${getUnitName(nom.unit)}</div>
-        </div>
-        <div class="nom-list-votes">${votes}v</div>
-      </div>`;
-    }).join('');
-    const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
-    return `<div class="nom-cat-group">
-      <div class="nom-cat-group-hdr">
-        <div style="flex:1;">
-          <span class="nom-cat-group-title">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></span>
-          <span style="font-size:12px;color:var(--text2);font-weight:500;margin-left:6px;">(${scopeTag[cat.scope]||cat.scope})</span>
-        </div>
-        <span class="nom-cat-group-count">${noms.length} nominee${noms.length!==1?'s':''}</span>
-      </div>${rows}
-    </div>`;
-  }).join('');
+  // Reuse the shared SA nominees renderer — same layout, admin-specific container IDs
+  renderNominees('admin-nom-fcat','admin-nom-fdept','admin-nom-funit','admin-nom-list', false);
 }
 
 function selectNom(catId,nomId){
@@ -2853,15 +2823,28 @@ function arDeptChanged(){
   renderAdminResults();
 }
 
-function renderAdminResults(){
-  const deptEl = document.getElementById('ar-fdept');
+// Single shared results renderer used by both Admin and SuperAdmin.
+// prefix: 'ar' (admin results tab) or 'sar' (SA results tab)
+// yearElId: element ID for year filter (null if not used)
+function renderSharedResults(prefix, yearElId){
+  const deptEl = document.getElementById(prefix+'-fdept');
   if(deptEl && deptEl.options.length<=1)
     deptEl.innerHTML = `<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const unitEl = document.getElementById(prefix+'-funit');
+  if(unitEl && unitEl.options.length<=1){
+    let units=[]; DATA.departments.forEach(d=>units.push(...d.units));
+    unitEl.innerHTML = `<option value="">All units</option>`+units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  }
+  const catEl = document.getElementById(prefix+'-fcat');
+  if(catEl && catEl.options.length<=1)
+    catEl.innerHTML = `<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
 
-  const deptF = document.getElementById('ar-fdept')?.value||'';
-  const unitF = document.getElementById('ar-funit')?.value||'';
+  const catF  = catEl?.value||'';
+  const deptF = deptEl?.value||'';
+  const unitF = unitEl?.value||'';
+  const yearF = yearElId ? (document.getElementById(yearElId)?.value||'') : '';
 
-  // Only show nominees that have at least 1 vote — results page is for actual results
+  // Filter nominees: matches filters, at least 1 vote
   const filterNoms = (noms) => noms
     .filter(n=>(!deptF||n.dept===deptF)&&(!unitF||n.unit===unitF))
     .map(n=>({...n, votes:getVotes(n.id,n.name)}))
@@ -2869,79 +2852,103 @@ function renderAdminResults(){
     .sort((a,b)=>b.votes-a.votes)
     .map((n,i,arr)=>({...n, _rank:i, _maxV:arr[0]?.votes||1}));
 
-  // If no votes at all, show empty state across all sections
+  const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
+
   if(!DATA.votes.length){
-    ['ar-by-category','ar-by-department','ar-by-unit'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.innerHTML='<div class="empty-state"><div class="empty-state-icon">📊</div>No votes have been cast yet.</div>';
-    });
-    return;
+    [prefix+'-by-category',prefix+'-by-department',prefix+'-by-unit'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.innerHTML='<div class="empty-state"><div class="empty-state-icon">📊</div>No votes have been cast yet.</div>';
+    }); return;
   }
 
-  // ─── SECTION 1: By Award Category ───────────────────────
-  const catEl = document.getElementById('ar-by-category');
-  if(catEl){
-    const scopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
-    catEl.innerHTML = DATA.categories.map((cat,ci)=>{
-      const c = COLORS[ci%COLORS.length];
-      const noms = filterNoms(DATA.nominees.filter(n=>n.category===cat.id));
+  // ─── By Category ─────────────────────────────────────────
+  const byCatEl = document.getElementById(prefix+'-by-category');
+  if(byCatEl){
+    let cats = catF ? DATA.categories.filter(c=>c.id===catF) : DATA.categories;
+    if(yearF) cats = cats.filter(c=>String(c.year)===String(yearF));
+    let lastYear=null;
+    byCatEl.innerHTML = cats.map((cat,ci)=>{
+      const c=COLORS[ci%COLORS.length];
+      const noms=filterNoms(DATA.nominees.filter(n=>n.category===cat.id));
       if(!noms.length) return '';
-      const totalVotes = noms.reduce((s,n)=>s+n.votes,0);
-      const scopeTxt = scopeTag[cat.scope]||'';
-      const linkedTxt = (cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
-      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;">
-        <div style="padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
-          <div style="width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0;"></div>
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
-            <div style="font-size:12px;color:var(--text2);font-weight:500;margin-top:3px;">${scopeTxt}${linkedTxt} · ${noms.length} nominee${noms.length!==1?'s':''} · ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
+      const totalVotes=noms.reduce((s,n)=>s+n.votes,0);
+      const scopeTxt=scopeTag[cat.scope]||'';
+      const linkedTxt=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
+      let yearHdr='';
+      if(String(cat.year)!==lastYear){ lastYear=String(cat.year);
+        yearHdr=`<div class="year-divider" style="margin:${ci===0?'0':' 16px'} 0 10px;"><span class="year-divider-line"></span><span class="year-divider-label">${cat.year} Awards</span><span class="year-divider-line"></span></div>`;
+      }
+      return yearHdr+`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;">
+        <div style="padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0;"></div>
+            <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${cat.name} <span style="color:var(--gold);font-weight:400;">${cat.year||''}</span></div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px;">${scopeTxt}${linkedTxt} · ${noms.length} nominee${noms.length!==1?'s':''} · ${totalVotes} vote${totalVotes!==1?'s':''} cast</div>
+            </div>
           </div>
         </div>
-        ${noms.map(n=>buildNomRow(n,c,true)).join('')}
+        ${noms.map((nom,rank)=>{
+          const isWinner=rank===0&&nom.votes>0;
+          const barPct=Math.round(nom.votes/nom._maxV*100);
+          const initials=nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+          const empId=getStaffId(nom.name);
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);${isWinner?'background:rgba(201,168,76,.06);':''}">
+            <div style="width:22px;text-align:center;flex-shrink:0;">${isWinner?'<span style="font-size:14px;">🏆</span>':`<span style="font-size:11px;font-weight:600;color:var(--text3);">${rank+1}</span>`}</div>
+            <div style="width:34px;height:34px;border-radius:50%;background:${c}22;color:${c};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${initials}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:500;">${nom.name}</div>
+              ${empId?`<div style="font-size:10px;font-family:monospace;color:var(--gold);font-weight:600;margin-top:1px;">${empId}</div>`:''}
+              <div style="font-size:11px;color:var(--text3);margin-top:1px;">${getDeptName(nom.dept)} · ${getUnitName(nom.unit)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <div style="width:60px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;"><div style="width:${barPct}%;height:100%;background:${isWinner?'var(--gold)':c};border-radius:3px;min-width:${nom.votes>0?3:0}px;"></div></div>
+              <span style="font-size:14px;font-weight:600;color:${isWinner?'var(--gold2)':'var(--text2)'};min-width:28px;text-align:right;">${nom.votes}</span>
+            </div>
+          </div>`;
+        }).join('')}
       </div>`;
-    }).filter(Boolean).join('') || '<div class="empty-state">No results yet.</div>';
+    }).filter(Boolean).join('') || '<div class="empty-state">No results match the filters.</div>';
   }
 
-  // ─── SECTION 2: By Department ────────────────────────────
-  const deptEl2 = document.getElementById('ar-by-department');
-  if(deptEl2){
+  // ─── By Department ────────────────────────────────────────
+  const byDeptEl = document.getElementById(prefix+'-by-department');
+  if(byDeptEl){
     const depts = deptF ? DATA.departments.filter(d=>d.id===deptF) : DATA.departments;
-    deptEl2.innerHTML = depts.map((dept,di)=>{
-      const c = dept.color||COLORS[di%COLORS.length];
-      const noms = filterNoms(DATA.nominees.filter(n=>n.dept===dept.id));
-      const totalVoters = DATA.voters.filter(v=>v.dept===dept.id).length;
-      const voted = DATA.voters.filter(v=>v.dept===dept.id&&v.hasVoted).length;
-      const pct = totalVoters?Math.round(voted/totalVoters*100):0;
+    byDeptEl.innerHTML = depts.map((dept,di)=>{
+      const c=dept.color||COLORS[di%COLORS.length];
+      const noms=filterNoms(DATA.nominees.filter(n=>n.dept===dept.id));
+      const totalV=DATA.voters.filter(v=>v.dept===dept.id).length;
+      const voted=DATA.voters.filter(v=>v.dept===dept.id&&v.hasVoted).length;
+      const pct=totalV?Math.round(voted/totalV*100):0;
       return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;">
-        <div style="padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+        <div style="padding:11px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
           <div style="width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0;"></div>
           <span style="font-size:13px;font-weight:500;flex:1;">${dept.name}</span>
-          <span style="font-size:11px;color:var(--text2);">${voted}/${totalVoters} voted (${pct}%)</span>
+          <span style="font-size:11px;color:var(--text2);">${voted}/${totalV} voted (${pct}%)</span>
         </div>
-        ${noms.length?noms.map(n=>buildNomRow(n,c,true)).join(''):`<div style="padding:14px;font-size:12px;color:var(--text3);">No nominees</div>`}
+        ${noms.length?noms.map(n=>buildNomRow(n,c,true)).join(''):`<div style="padding:14px;font-size:12px;color:var(--text3);">No results yet</div>`}
       </div>`;
-    }).join('') || '<div class="empty-state">No departments found.</div>';
+    }).join('') || '<div class="empty-state">No departments.</div>';
   }
 
-  // ─── SECTION 3: By Unit ──────────────────────────────────
-  const unitEl2 = document.getElementById('ar-by-unit');
-  if(unitEl2){
+  // ─── By Unit ─────────────────────────────────────────────
+  const byUnitEl = document.getElementById(prefix+'-by-unit');
+  if(byUnitEl){
     const depts = deptF ? DATA.departments.filter(d=>d.id===deptF) : DATA.departments;
-    unitEl2.innerHTML = depts.map((dept,di)=>{
-      const dc = dept.color||COLORS[di%COLORS.length];
-      const filteredUnits = unitF ? dept.units.filter(u=>u.id===unitF) : dept.units;
+    byUnitEl.innerHTML = depts.map((dept,di)=>{
+      const dc=dept.color||COLORS[di%COLORS.length];
+      const filteredUnits=unitF?dept.units.filter(u=>u.id===unitF):dept.units;
       if(!filteredUnits.length) return '';
-      const unitBlocks = filteredUnits.map(unit=>{
-        const noms = filterNoms(DATA.nominees.filter(n=>n.unit===unit.id));
-        const totalV = DATA.voters.filter(v=>v.unit===unit.id).length;
-        const voted = DATA.voters.filter(v=>v.unit===unit.id&&v.hasVoted).length;
-        const pct = totalV?Math.round(voted/totalV*100):0;
+      const unitBlocks=filteredUnits.map(unit=>{
+        const noms=filterNoms(DATA.nominees.filter(n=>n.unit===unit.id));
+        const totalV=DATA.voters.filter(v=>v.unit===unit.id).length;
+        const voted=DATA.voters.filter(v=>v.unit===unit.id&&v.hasVoted).length;
+        const pct=totalV?Math.round(voted/totalV*100):0;
         return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:7px;overflow:hidden;">
-          <div style="padding:8px 12px;background:var(--bg4);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <div style="padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
             <span style="font-size:12px;font-weight:500;flex:1;">📍 ${unit.name}</span>
             <span style="font-size:11px;color:var(--text2);">${voted}/${totalV} voted (${pct}%)</span>
           </div>
-          ${noms.length?noms.map(n=>buildNomRow(n,dc,false)).join(''):`<div style="padding:12px;font-size:11px;color:var(--text3);">No nominees in this unit</div>`}
+          ${noms.length?noms.map(n=>buildNomRow(n,dc,false)).join(''):`<div style="padding:12px;font-size:11px;color:var(--text3);">No nominees</div>`}
         </div>`;
       }).join('');
       if(!unitBlocks.trim()) return '';
@@ -2952,9 +2959,20 @@ function renderAdminResults(){
         </div>
         <div style="padding:8px;">${unitBlocks}</div>
       </div>`;
-    }).filter(Boolean).join('') || '<div class="empty-state">No units found.</div>';
+    }).filter(Boolean).join('') || '<div class="empty-state">No units.</div>';
   }
 }
+
+function switchResultTab(prefix, tab){
+  ['cat','dept','unit'].forEach(t=>{
+    const btn=document.getElementById(prefix+'-rtab-'+t);
+    const panel=document.getElementById(prefix+'-by-'+({'cat':'category','dept':'department','unit':'unit'}[t]));
+    if(btn) btn.classList.toggle('on', t===tab);
+    if(panel) panel.style.display = t===tab ? '' : 'none';
+  });
+}
+
+function renderAdminResults(){ renderSharedResults('ar', null); }
 
 // ── Admin results (table view) ──
 function renderResults(who){
@@ -3225,6 +3243,8 @@ function exportResultsPDF(){
 
 // ── SA results (category-grouped card view) ──
 function renderSAResults(){
+  renderSharedResults('sa', 'sa-fyear'); return; }
+function _renderSAResults_unused(){
   const catF=document.getElementById('sa-fcat')?.value||'';
   const deptF=document.getElementById('sa-fdept')?.value||'';
   const unitF=document.getElementById('sa-funit')?.value||'';
@@ -4074,12 +4094,24 @@ function nomDeptChanged(){
   populateNomUnitFilter();
   renderNominees();
 }
-function renderNominees(){
-  const catEl=document.getElementById('nom-fcat');
-  const deptEl=document.getElementById('nom-fdept');
-  const unitEl=document.getElementById('nom-funit');
-  if(catEl && catEl.options.length<=1) populateNomFilters();
-  const catF=catEl?.value||'';
+function renderNominees(catElId, deptElId, unitElId, containerId, showEdit){
+  // Defaults: SA panel IDs + edit buttons enabled
+  catElId    = catElId    || 'nom-fcat';
+  deptElId   = deptElId   || 'nom-fdept';
+  unitElId   = unitElId   || 'nom-funit';
+  containerId= containerId|| 'nom-mgr-list';
+  showEdit   = showEdit===undefined ? true : showEdit;
+
+  const catEl =document.getElementById(catElId);
+  const deptEl=document.getElementById(deptElId);
+  const unitEl=document.getElementById(unitElId);
+  if(catEl  && catEl.options.length<=1)  catEl.innerHTML =`<option value="">All categories</option>`+DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if(deptEl && deptEl.options.length<=1) deptEl.innerHTML=`<option value="">All departments</option>`+DATA.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  if(unitEl && unitEl.options.length<=1){
+    let units=[]; DATA.departments.forEach(d=>units.push(...d.units));
+    unitEl.innerHTML=`<option value="">All units</option>`+units.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  }
+  const catF =catEl?.value||'';
   const deptF=deptEl?.value||'';
   const unitF=unitEl?.value||'';
   const filtered=DATA.nominees.filter(n=>
@@ -4087,7 +4119,7 @@ function renderNominees(){
     (!deptF||n.dept===deptF)&&
     (!unitF||n.unit===unitF)
   );
-  const container=document.getElementById('nom-mgr-list');
+  const container=document.getElementById(containerId);
   if(!container) return;
   if(!filtered.length){
     container.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏅</div>No nominees found. Add nominees or adjust filters.</div>';
@@ -4116,8 +4148,8 @@ function renderNominees(){
           <div class="nom-list-meta">${getDeptName(nom.dept)} · ${getUnitName(nom.unit)}</div>
         </div>
         <div class="nom-list-votes">${votes}v</div>
-        <button class="btn-sm gold" onclick="openEditNomModal('${nom.id}')" style="padding:4px 9px;">✎</button>
-        <button class="btn-sm red" onclick="removeNom('${nom.id}')" style="padding:4px 9px;">✕</button>
+        ${showEdit?`<button class="btn-sm gold" onclick="openEditNomModal('${nom.id}')" style="padding:4px 9px;">✎</button>
+        <button class="btn-sm red" onclick="removeNom('${nom.id}')" style="padding:4px 9px;">✕</button>`:''}
       </div>`;
     }).join('');
     const nomScopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
@@ -4130,7 +4162,7 @@ function renderNominees(){
           <span style="font-size:12px;color:var(--text2);font-weight:500;margin-left:6px;">(${nomScopeTxt}${nomLinkedTxt})</span>
         </div>
         <span class="nom-cat-group-count">${noms.length} nominee${noms.length!==1?'s':''}</span>
-        <button class="btn-sm green" onclick="openAddNomModal('${catId}')" style="padding:4px 10px;font-size:10px;">+ Add</button>
+        ${showEdit?`<button class="btn-sm green" onclick="openAddNomModal('${catId}')" style="padding:4px 10px;font-size:10px;">+ Add</button>`:''}
       </div>
       ${rows}
     </div>`;
@@ -4552,6 +4584,18 @@ function openEditUnitModal(deptId, unitId){
   },50);
 }
 
+function buildDeptSheetRows(){
+  // Serialise all departments + units into portal-format rows ready for the sheet.
+  // DeptID | DeptName | Color | (empty) | (empty)   ← department header row
+  // DeptID | (empty)  | (empty) | UnitName | UnitID  ← unit row
+  const rows=[];
+  DATA.departments.forEach(d=>{
+    rows.push([d.id, d.name, d.color||'', '', '']);
+    d.units.forEach(u=>rows.push([d.id, '', '', u.name, u.id]));
+  });
+  return rows;
+}
+
 async function saveEditUnit(deptId, unitId){
   const newName=(document.getElementById('eu-name')?.value||'').trim();
   if(!newName){showToast('Enter a unit name','err');return;}
@@ -4561,26 +4605,17 @@ async function saveEditUnit(deptId, unitId){
   if(unit.name===newName){closeModal();return;}
 
   const oldName=unit.name;
-  // Update in DATA — unit object itself
-  unit.name=newName;
-  // Cascade: unit name is stored in Departments sheet only;
-  // everywhere else references by ID, so only the display name changes.
-  // But deptOverrides/unitOverrides in voters use IDs not names, so no cascade needed there.
+  unit.name=newName; // update in-memory
   cacheData();
   closeModal();
-  // Re-render everything that displays unit names
-  renderDeptUnitManager();
-  renderVoterList();
-  renderAdminVoterList();
-  renderNominees();
-  renderStaff();
-  renderAdminStaff();
-  renderCatList();
-  renderSAResults();
-  renderAdminResults();
+  renderDeptUnitManager(); renderVoterList(); renderAdminVoterList();
+  renderNominees(); renderStaff(); renderAdminStaff();
+  renderCatList(); renderSAResults(); renderAdminResults();
   showToast(`"${oldName}" renamed to "${newName}"`, 'ok');
-  // Persist to sheet
-  await writeToSheets('updateUnit',{deptId, unitId, name:newName, oldName, deptName:getDeptName(deptId)});
+
+  // Rewrite the entire Departments sheet in one shot — avoids all row-format
+  // matching issues (human format vs portal format mixed rows).
+  await writeToSheets('setDepartments', {rows: buildDeptSheetRows()});
 }
 
 async function addUnit(deptId){
@@ -4842,7 +4877,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v8';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v9';
 
 async function diagnoseVoterPin(){
   const pin=(document.getElementById('diag-voter-pin')?.value||'').trim();
@@ -5661,7 +5696,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v8';
+var SCRIPT_VERSION = '2026-06-17-v9';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -5844,44 +5879,27 @@ function handleRequest(raw) {
       deleteRowsByValue(ss.getSheetByName('Departments'), data.deptId, 0);
     }
     else if (action === 'updateUnit') {
-      // Rename a unit in the Departments sheet.
-      // The sheet may have rows in two different formats:
-      //  - Portal format:  col A = deptId slug, col D = unit name, col E = unit ID (timestamp)
-      //  - Human format:   col A = dept name,   col B = unit name, cols C-E = empty
-      // We try to match in the order most likely to succeed.
+      // Legacy single-row update — kept for backward compatibility.
+      // New flow uses setDepartments which rewrites the whole sheet atomically.
       var ds = ss.getSheetByName('Departments');
       if (ds && ds.getLastRow() > 1) {
         var drows = ds.getDataRange().getValues();
         var updated = false;
-        // Pass 1 — portal format: match deptId (col A) + unitId (col E)
         for (var i = 1; i < drows.length && !updated; i++) {
-          if (String(drows[i][0]).trim() === String(data.deptId).trim() &&
-              String(drows[i][4]).trim() === String(data.unitId).trim()) {
-            ds.getRange(i + 1, 4).setValue(data.name);
-            updated = true;
-          }
-        }
-        // Pass 2 — portal format but match by old name in col D (unitId may differ)
-        if (!updated && data.oldName) {
-          for (var i = 1; i < drows.length && !updated; i++) {
-            if (String(drows[i][0]).trim() === String(data.deptId).trim() &&
-                String(drows[i][3]).trim().toLowerCase() === String(data.oldName).trim().toLowerCase()) {
-              ds.getRange(i + 1, 4).setValue(data.name);
-              updated = true;
-            }
-          }
-        }
-        // Pass 3 — human format: match dept name (col A) + old unit name (col B)
-        if (!updated && data.oldName && data.deptName) {
-          for (var i = 1; i < drows.length && !updated; i++) {
-            if (String(drows[i][0]).trim().toLowerCase() === String(data.deptName).trim().toLowerCase() &&
-                String(drows[i][1]).trim().toLowerCase() === String(data.oldName).trim().toLowerCase()) {
-              ds.getRange(i + 1, 2).setValue(data.name);
-              updated = true;
-            }
-          }
+          var colA = String(drows[i][0]).trim(), colB = String(drows[i][1]).trim();
+          var colD = String(drows[i][3]).trim(), colE = String(drows[i][4]).trim();
+          if (colA === data.deptId && colE === data.unitId) { ds.getRange(i+1,4).setValue(data.name); updated=true; }
+          else if (colA === data.deptId && colD.toLowerCase() === (data.oldName||'').toLowerCase()) { ds.getRange(i+1,4).setValue(data.name); updated=true; }
+          else if (colA.toLowerCase() === (data.deptName||'').toLowerCase() && colB.toLowerCase() === (data.oldName||'').toLowerCase()) { ds.getRange(i+1,2).setValue(data.name); updated=true; }
         }
       }
+    }
+    else if (action === 'setDepartments') {
+      // Atomically rewrite the entire Departments sheet in portal format.
+      // Called after any unit/dept rename — eliminates all row-format ambiguity.
+      var ds = getOrCreate(ss, 'Departments');
+      ds.clearContents();
+      data.rows.forEach(function(row) { ds.appendRow(row); });
     }
     else if (action === 'removeUnit') {
       var s = ss.getSheetByName('Departments');
