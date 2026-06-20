@@ -1521,10 +1521,11 @@ if (vD.length) DATA.voters = vD.map(parseVoterRow).filter(v=>v && v.pin);
   }
 
   // ── VOTES: PIN | NomineeID | CategoryID | Timestamp ──
-  if (vtD.length) DATA.votes = vtD.map(r=>({
-    pin:(r[0]||'').trim(), nomineeId:(r[1]||'').trim(),
-    category:(r[2]||'').trim(), timestamp:(r[3]||'').trim()
-  })).filter(v=>v.pin);
+  if (vtD.length) DATA.votes = (()=>{
+    const seen=new Set();
+    return vtD.map(r=>({pin:(r[0]||'').trim(),nomineeId:(r[1]||'').trim(),category:(r[2]||'').trim(),timestamp:(r[3]||'').trim()}))
+      .filter(v=>{if(!v.pin)return false;const k=v.pin+'|'+v.category;if(seen.has(k))return false;seen.add(k);return true;});
+  })();
 
   // ── Config tab — rows of [key, value] ──
   if (cfgD.length) {
@@ -1625,7 +1626,6 @@ async function writeToSheets(action, payload) {
   if (!CFG.scriptUrl) { return false; }
   showSyncBadge('syncing','Syncing…');
   try {
-    // Use GET + no-cors to bypass CORS preflight from GitHub Pages
     const encoded = encodeURIComponent(JSON.stringify({action, ...payload}));
     const url = CFG.scriptUrl + '?data=' + encoded;
     await fetch(url, { method:'GET', mode:'no-cors' });
@@ -2544,28 +2544,45 @@ function voterCanSeeCategory(cat, voter){
 }
 
 async function submitVotes(){
+  // ── Guard 1: disable button IMMEDIATELY to block double-click ──
+  // This is the primary fix for duplicate sheet rows. Two clicks fire two
+  // concurrent async calls; both reach Apps Script before either finishes
+  // writing, so both see an empty existingKeys set and both write the rows.
+  const btn = document.getElementById('btn-submit');
+  if(btn) btn.disabled = true;
+
+  // ── Guard 2: check local vote lock (device-level safety net) ──
+  const votedYear = currentVotingYear;
+  if(hasLocalVoted(currentUser.pin, votedYear)){
+    // Already voted on this device — show success without re-submitting
+    showScreen('screen-success');
+    return;
+  }
+
   const newVotes=Object.entries(selections).map(([catId,nomId])=>({
     pin:currentUser.pin, nomineeId:nomId, category:catId, timestamp:new Date().toISOString()
   }));
-  newVotes.forEach(v=>DATA.votes.push(v));
-  const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
-  const votedYear=currentVotingYear;
 
-  // Lock this device IMMEDIATELY, before attempting the cloud write — this is
-  // what actually prevents re-voting on this device even if the sheet sync fails.
+  const voter=DATA.voters.find(v=>v.pin===currentUser.pin);
+
+  // Lock this device IMMEDIATELY before the cloud write
   markLocalVoted(currentUser.pin, votedYear);
 
   if(voter){
     if(voter.year){
-      voter.hasVoted=true; // separate-PIN model — one flag is enough
+      voter.hasVoted=true;
     } else {
       if(votedYear==='2024') voter.voted2024=true;
       else if(votedYear==='2025') voter.voted2025=true;
     }
   }
+
+  // Add votes to local DATA only AFTER the button is disabled, preventing
+  // a second call from pushing the same votes again
+  newVotes.forEach(v=>DATA.votes.push(v));
   cacheData();
 
-  // Write to Sheets — pass which year was just voted on
+  // Write to Sheets
   await writeToSheets('submitVotes',{
     pin:currentUser.pin,
     votes:newVotes,
@@ -2753,11 +2770,15 @@ function initAdmin(){
 }
 
 function renderStats(who){
-  const total=DATA.voters.length, voted=DATA.voters.filter(v=>v.hasVoted).length;
+  const total=DATA.voters.length;
+  // Count voters who have actually voted (any year)
+  const voted=DATA.voters.filter(v=>voterHasVotedAny(v)).length;
+  // Unique ballots: distinct voters who appear in the Votes sheet
+  const uniqueVotersVoted=new Set(DATA.votes.map(v=>v.pin)).size;
   const pct=total?Math.round(voted/total*100):0;
   const id=who==='admin'?'admin-stats':'sa-stats';
   document.getElementById(id).innerHTML=`
-    <div class="stat-card gold"><div class="stat-lbl">Votes Cast</div><div class="stat-val">${DATA.votes.length}</div><div class="stat-sub">total vote records</div></div>
+    <div class="stat-card gold"><div class="stat-lbl">Votes Cast</div><div class="stat-val">${uniqueVotersVoted}</div><div class="stat-sub">${DATA.votes.length} total vote records</div></div>
     <div class="stat-card"><div class="stat-lbl">Registered Voters</div><div class="stat-val">${total}</div><div class="stat-sub">${voted} voted · ${total-voted} pending</div></div>
     <div class="stat-card green"><div class="stat-lbl">Turnout</div><div class="stat-val">${pct}%</div><div class="stat-sub">${CFG.votingOpen?'🟢 Voting open':'🔴 Closed'}</div></div>
     <div class="stat-card"><div class="stat-lbl">Departments</div><div class="stat-val">${DATA.departments.length}</div><div class="stat-sub">${DATA.categories.length} categories</div></div>`;
@@ -5036,7 +5057,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v11';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v12';
 
 async function diagnoseVoterPin(){
   const pin=(document.getElementById('diag-voter-pin')?.value||'').trim();
@@ -5855,7 +5876,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v11';
+var SCRIPT_VERSION = '2026-06-17-v12';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -5881,26 +5902,37 @@ function handleRequest(raw) {
 
     // ── VOTES ──
     else if (action === 'submitVotes') {
-      const vSheet = getOrCreate(ss, 'Votes');
-      // Duplicate-vote guard: never let the same pin+category combo get
-      // recorded twice, even if this same submission is somehow sent more
-      // than once (flaky network retry, double-click, re-login, etc.).
-      // This protects the integrity of the actual vote count regardless of
-      // any other sync issues.
-      var existingRows = vSheet.getLastRow() > 1
-        ? vSheet.getRange(2, 1, vSheet.getLastRow() - 1, 3).getValues()
-        : [];
-      var existingKeys = {};
-      existingRows.forEach(function(r) {
-        existingKeys[String(r[0]).trim() + '|' + String(r[2]).trim()] = true;
-      });
-      data.votes.forEach(function(v) {
-        var key = String(v.pin).trim() + '|' + String(v.category).trim();
-        if (existingKeys[key]) return; // already voted in this category — skip duplicate
-        vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]);
-        existingKeys[key] = true;
-      });
-      markVoterDone(ss, data.pin, true, data.year);
+      // Use a spreadsheet-level lock so two concurrent requests (e.g. from a
+      // double-click) can't both read existingKeys as empty and both write.
+      // Without this, the client-side button-disable guard can still fail if
+      // two requests hit the server before the first one writes anything.
+      var lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(8000); // wait up to 8s for the lock
+      } catch(lockErr) {
+        // Couldn't get lock — another submission is in progress, skip this one
+        Logger.log('submitVotes: could not acquire lock — ' + lockErr.message);
+        return buildResponse(JSON.stringify({status:'locked', version:SCRIPT_VERSION}));
+      }
+      try {
+        var vSheet = getOrCreate(ss, 'Votes');
+        var existingRows = vSheet.getLastRow() > 1
+          ? vSheet.getRange(2, 1, vSheet.getLastRow() - 1, 3).getValues()
+          : [];
+        var existingKeys = {};
+        existingRows.forEach(function(r) {
+          existingKeys[String(r[0]).trim() + '|' + String(r[2]).trim()] = true;
+        });
+        data.votes.forEach(function(v) {
+          var key = String(v.pin).trim() + '|' + String(v.category).trim();
+          if (existingKeys[key]) return;
+          vSheet.appendRow([v.pin, v.nomineeId, v.category, v.timestamp]);
+          existingKeys[key] = true;
+        });
+        markVoterDone(ss, data.pin, true, data.year);
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     // ── VOTERS ──
