@@ -838,7 +838,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
           <button class="btn-sm green" onclick="openAddVoterModal()">+ Add voter</button>
           <button class="btn-sm gold" onclick="syncStaffToVoters()">⟳ Sync staff to voters</button>
           <button class="btn-sm" onclick="openDedupModal()">🧹 Remove duplicates</button>
-          <button class="btn-sm red" onclick="resetAllVotes()">Reset all votes</button>
+          <button class="btn-sm red" onclick="resetAllVotes()">↺ Reset all votes</button>
+          <button class="btn-sm red" onclick="confirmBulkAction('resetPins')">🔑 Reset all PINs</button>
+          <button class="btn-sm red" onclick="confirmBulkAction('deleteAllVoters')">🗑 Delete all voters</button>
+          <button class="btn-sm red" onclick="confirmBulkAction('deleteAllNominees')">🗑 Delete all nominees</button>
+          <button class="btn-sm red" onclick="confirmBulkAction('deleteAllStaff')">🗑 Delete all staff</button>
         </div>
       </div>
       <div class="nom-search-wrap" style="margin-bottom:10px;">
@@ -2288,14 +2292,16 @@ function renderAdminVoterList(){
     <div class="vrow">
       <div class="vavatar" style="background:${ac}22;color:${ac};">${v.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div class="vinfo">
-        <div class="vname">${v.name}</div>
+        <div class="vmeta" style="margin-bottom:3px;">
+          <span class="vname" style="margin-bottom:0;">${v.name}</span>
+          ${v.empId?`<span class="vempid">${v.empId}</span>`:''}
+        </div>
         <div class="vmeta">
           <span class="vpin">${v.pin}</span>
-          ${v.empId?`<span class="vempid">${v.empId}</span>`:''}
-          <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
-        </div>
-        <div class="vmeta" style="margin-top:4px;">
           <span class="vyears">${voterYearBadges(v)}</span>
+        </div>
+        <div class="vmeta" style="margin-top:2px;">
+          <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
         </div>
       </div>
       <div class="vside">
@@ -2346,7 +2352,10 @@ function renderAdminStaff(){
     <div class="staff-row">
       <div class="staff-avatar" style="background:${stringToColor(s.name)}22;color:${stringToColor(s.name)};">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div style="flex:1;min-width:0;">
-        <div class="staff-name">${s.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">
+          <span class="staff-name">${s.name}</span>
+          <span class="vempid">${s.empId||s.id}</span>
+        </div>
         <div class="staff-dept">${getDeptName(s.dept)} · ${getUnitName(s.unit)}</div>
       </div>
       <span style="font-size:11px;color:var(--gold);font-family:monospace;font-weight:600;padding:2px 8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:5px;flex-shrink:0;">${s.empId||s.id}</span>
@@ -3634,14 +3643,16 @@ function renderVoterList(){
     <div class="vrow">
       <div class="vavatar" style="background:${ac}22;color:${ac};">${v.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
       <div class="vinfo">
-        <div class="vname">${v.name}</div>
+        <div class="vmeta" style="margin-bottom:3px;">
+          <span class="vname" style="margin-bottom:0;">${v.name}</span>
+          ${v.empId?`<span class="vempid">${v.empId}</span>`:''}
+        </div>
         <div class="vmeta">
           <span class="vpin">${v.pin}</span>
-          ${v.empId?`<span class="vempid">${v.empId}</span>`:''}
-          <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
-        </div>
-        <div class="vmeta" style="margin-top:4px;">
           <span class="vyears">${voterYearBadges(v)}</span>
+        </div>
+        <div class="vmeta" style="margin-top:2px;">
+          <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
         </div>
       </div>
       <div class="vside">
@@ -3652,7 +3663,7 @@ function renderVoterList(){
         <div class="vactions">
           ${dupBtn}
           <button class="vact-btn gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
-          <button class="vact-btn" onclick="resetVoter('${v.pin}')">↺</button>
+          <button class="vact-btn" onclick="confirmResetVoter('${v.pin}')">↺</button>
           <button class="vact-btn red" onclick="removeVoter('${v.pin}')">✕</button>
         </div>
       </div>
@@ -4083,6 +4094,66 @@ async function doSyncStaffToVoters(){
 
 async function syncStaffToVoters(){ openSyncStaffModal(); }
 
+function confirmResetVoter(pin){
+  const v=DATA.voters.find(x=>x.pin===pin);if(!v)return;
+  openModal(`<div class="modal-title">↺ Reset Votes</div>
+    <div style="font-size:13px;margin-bottom:16px;">Reset all votes for <strong>${v.name}</strong>?<br>
+    <span style="font-size:12px;color:var(--text2);">They will be able to vote again. This cannot be undone.</span></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm red" onclick="closeModal();resetVoter('${pin}')">Reset votes</button>
+    </div>`);
+}
+
+async function confirmBulkAction(action){
+  const configs = {
+    resetPins:        { title:'🔑 Reset all voter PINs',    msg:'Generate new random PINs for every voter? Old PINs will stop working immediately.',  btn:'Reset all PINs', cls:'red' },
+    deleteAllVoters:  { title:'🗑 Delete all voters',       msg:'This will permanently delete ALL voter records and their votes. This cannot be undone.', btn:'Delete all voters', cls:'red' },
+    deleteAllNominees:{ title:'🗑 Delete all nominees',     msg:'This will permanently delete ALL nominees. This cannot be undone.', btn:'Delete all nominees', cls:'red' },
+    deleteAllStaff:   { title:'🗑 Delete all staff',        msg:'This will permanently delete ALL staff records. This cannot be undone.', btn:'Delete all staff', cls:'red' },
+  };
+  const c=configs[action]; if(!c) return;
+  openModal(`<div class="modal-title">${c.title}</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">${c.msg}</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm red" onclick="closeModal();executeBulkAction('${action}')">⚠ ${c.btn}</button>
+    </div>`);
+}
+
+async function executeBulkAction(action){
+  if(action==='resetPins'){
+    DATA.voters.forEach(v=>{ v.pin=generatePin(); });
+    cacheData(); renderVoterList(); renderAdminVoterList();
+    // Rewrite Voters sheet via setConfig-based approach isn't ideal here — 
+    // we write each voter individually
+    showToast('Regenerating PINs…','ok');
+    for(const v of DATA.voters) await writeToSheets('updateVoter',{voter:v});
+    showToast(`${DATA.voters.length} voter PINs regenerated`,'ok');
+  }
+  else if(action==='deleteAllVoters'){
+    const count=DATA.voters.length;
+    DATA.voters=[]; DATA.votes=[];
+    cacheData(); renderVoterList(); renderAdminVoterList(); renderStats('sa'); renderStats('admin');
+    await writeToSheets('deleteAllVoters',{});
+    showToast(`${count} voters deleted`,'ok');
+  }
+  else if(action==='deleteAllNominees'){
+    const count=DATA.nominees.length;
+    DATA.nominees=[];
+    cacheData(); renderNominees(); renderAdminNominees();
+    await writeToSheets('deleteAllNominees',{});
+    showToast(`${count} nominees deleted`,'ok');
+  }
+  else if(action==='deleteAllStaff'){
+    const count=DATA.staff.length;
+    DATA.staff=[];
+    cacheData(); renderStaff(); renderAdminStaff();
+    await writeToSheets('deleteAllStaff',{});
+    showToast(`${count} staff deleted`,'ok');
+  }
+}
+
 async function resetVoter(pin){
   const v=DATA.voters.find(v=>v.pin===pin);if(!v)return;
   v.hasVoted=false;
@@ -4257,7 +4328,6 @@ function renderStaff(){
         <div class="staff-name">${s.name}</div>
         <div class="staff-dept">${getDeptName(s.dept)} · ${getUnitName(s.unit)}</div>
       </div>
-      <span style="font-size:11px;color:var(--gold);font-family:monospace;font-weight:600;padding:2px 8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:5px;flex-shrink:0;" title="Staff ID">${s.empId||s.id}</span>
       <button class="btn-sm green" onclick="nomStaffFor('${s.id}')" style="margin-left:auto;">+ Nominate</button>
       <button class="btn-sm gold" onclick="openEditStaffModal('${s.id}')">✎</button>
       <button class="btn-sm red" onclick="removeStaff('${s.id}')">✕</button>
@@ -4920,7 +4990,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v9';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v10';
 
 async function diagnoseVoterPin(){
   const pin=(document.getElementById('diag-voter-pin')?.value||'').trim();
@@ -5739,7 +5809,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v9';
+var SCRIPT_VERSION = '2026-06-17-v10';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -6018,6 +6088,20 @@ function handleRequest(raw) {
     }
     else if (action === 'removeStaff') {
       deleteRowByValue(ss.getSheetByName('Staff'), data.id, 0);
+    }
+    else if (action === 'deleteAllVoters') {
+      var vs = ss.getSheetByName('Voters');
+      if (vs && vs.getLastRow() > 1) vs.deleteRows(2, vs.getLastRow() - 1);
+      var vts = ss.getSheetByName('Votes');
+      if (vts && vts.getLastRow() > 1) vts.deleteRows(2, vts.getLastRow() - 1);
+    }
+    else if (action === 'deleteAllNominees') {
+      var ns = ss.getSheetByName('Nominees');
+      if (ns && ns.getLastRow() > 1) ns.deleteRows(2, ns.getLastRow() - 1);
+    }
+    else if (action === 'deleteAllStaff') {
+      var sf = ss.getSheetByName('Staff');
+      if (sf && sf.getLastRow() > 1) sf.deleteRows(2, sf.getLastRow() - 1);
     }
     else {
       result = { status: 'error', message: 'Unknown action: ' + action };
