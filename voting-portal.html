@@ -2620,18 +2620,33 @@ const toId = str => (str||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').re
 // never get double-counted in results — one voter's vote in a category only
 // ever counts once, no matter how many rows happen to exist for it.
 const getVotes = (nomId, nomName) => {
-  const seenPinCategory = new Set();
+  // Resolve the category for this nominee so the name-slug fallback is
+  // scoped to the correct category. Without this, if Adam Naushad is
+  // nominated in both 2024 and 2025, a vote for his 2025 entry would also
+  // be matched (and counted) on his 2024 card — causing phantom double-votes
+  // even when the Votes sheet itself is perfectly correct.
+  const nom = DATA.nominees.find(n => n.id === nomId);
+  const nomCategory = nom ? nom.category : '';
+
+  const seenPin = new Set(); // one vote per unique voter per nominee
   let count = 0;
   DATA.votes.forEach(v => {
-    let matches = v.nomineeId === nomId;
+    // Primary: exact nominee ID match (always most reliable)
+    let matches = (v.nomineeId === nomId);
+
     if (!matches && nomName) {
+      // Name-slug fallback (handles ID mismatches from hand-edited sheets)
+      // CRITICAL: also require the vote's category to match this nominee's
+      // category — otherwise cross-year votes for the same person double-count
       const nameSlug = 'nom_' + toId(nomName);
-      matches = v.nomineeId.startsWith(nameSlug);
+      if (v.nomineeId.startsWith(nameSlug) && (!nomCategory || v.category === nomCategory)) {
+        matches = true;
+      }
     }
+
     if (!matches) return;
-    const key = v.pin + '|' + v.category;
-    if (seenPinCategory.has(key)) return; // duplicate row — already counted
-    seenPinCategory.add(key);
+    if (seenPin.has(v.pin)) return; // guard against duplicate sheet rows
+    seenPin.add(v.pin);
     count++;
   });
   return count;
@@ -2748,40 +2763,61 @@ function renderStats(who){
     <div class="stat-card"><div class="stat-lbl">Departments</div><div class="stat-val">${DATA.departments.length}</div><div class="stat-sub">${DATA.categories.length} categories</div></div>`;
 }
 
+function voterHasVotedAny(v){
+  return !!(v.hasVoted || v.voted2024 || v.voted2025);
+}
+
 function renderDeptBars(containerId){
   const el=document.getElementById(containerId);
   if(!el||!DATA.departments.length){if(el)el.innerHTML='<div class="empty-state">No departments configured yet.</div>';return;}
   el.innerHTML=DATA.departments.map((dept,i)=>{
     const total=DATA.voters.filter(v=>v.dept===dept.id).length;
-    const voted=DATA.voters.filter(v=>v.dept===dept.id&&v.hasVoted).length;
+    const voted=DATA.voters.filter(v=>v.dept===dept.id&&voterHasVotedAny(v)).length;
     const pct=total?Math.round(voted/total*100):0;
     const c=dept.color||COLORS[i%COLORS.length];
-    return `<div class="db-row" style="margin-bottom:6px;">
-      <div class="db-name" style="font-weight:500;">${dept.name}</div>
-      <div class="db-track"><div class="db-fill" style="width:${pct}%;background:${c}33;color:${c};">${voted}/${total}</div></div>
-      <div class="db-pct">${pct}%</div>
+    const sc=pct>=75?'var(--green)':pct>=40?'var(--gold)':'var(--text2)';
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:600;flex:1;">${dept.name}</span>
+        <span style="font-size:20px;font-weight:700;color:${sc};">${pct}%</span>
+      </div>
+      <div style="height:7px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:7px;">
+        <div style="height:100%;width:${pct}%;background:${c};border-radius:4px;min-width:${voted>0?4:0}px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:11px;color:var(--green);font-weight:500;">${voted} voted ✓</span>
+        <span style="font-size:11px;color:var(--text3);">${total-voted} pending · ${total} total</span>
+      </div>
     </div>`;
   }).join('');
 }
 
-// Unit-only bars (flat list across all depts)
 function renderUnitBars(containerId){
   const el=document.getElementById(containerId);
   if(!el) return;
   const allUnits=DATA.departments.flatMap((dept,di)=>dept.units.map(u=>({...u,deptName:dept.name,color:dept.color||COLORS[di%COLORS.length]})));
   if(!allUnits.length){el.innerHTML='<div class="empty-state">No units configured yet.</div>';return;}
-  const maxVoters=Math.max(...allUnits.map(u=>DATA.voters.filter(v=>v.unit===u.id).length),1);
   el.innerHTML=allUnits.map(u=>{
     const total=DATA.voters.filter(v=>v.unit===u.id).length;
-    const voted=DATA.voters.filter(v=>v.unit===u.id&&v.hasVoted).length;
+    const voted=DATA.voters.filter(v=>v.unit===u.id&&voterHasVotedAny(v)).length;
     const pct=total?Math.round(voted/total*100):0;
-    return `<div class="db-row" style="margin-bottom:6px;">
-      <div class="db-name" style="font-size:11px;max-width:110px;">
-        <div style="font-weight:500;color:var(--text);">${u.name}</div>
-        <div style="color:var(--text3);font-size:10px;">${u.deptName}</div>
+    const sc=pct>=75?'var(--green)':pct>=40?'var(--gold)':'var(--text3)';
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 14px;margin-bottom:7px;">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${u.color};flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;">${u.name}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px;">${u.deptName}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:17px;font-weight:700;color:${sc};line-height:1;">${pct}%</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">${voted}/${total}</div>
+        </div>
       </div>
-      <div class="db-track"><div class="db-fill" style="width:${pct}%;background:${u.color}33;color:${u.color};">${voted}/${total}</div></div>
-      <div class="db-pct">${pct}%</div>
+      <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${u.color};border-radius:3px;min-width:${voted>0?3:0}px;"></div>
+      </div>
     </div>`;
   }).join('');
 }
