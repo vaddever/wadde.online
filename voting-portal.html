@@ -272,18 +272,30 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
 /* VOTER TABLE */
 .voter-tbl{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;max-height:440px;overflow-y:auto;}
-.vrow{display:flex;flex-direction:column;gap:0;padding:12px 14px;border-bottom:1px solid var(--border);}
+.vrow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);}
 .vrow:last-child{border-bottom:none;}
-.vrow:hover{background:rgba(255,255,255,.015);}
-.vrow-top{display:flex;align-items:center;gap:9px;width:100%;}
-.vrow-bottom{display:flex;align-items:center;gap:6px;margin-top:7px;flex-wrap:wrap;}
-.vpin{font-family:monospace;color:var(--gold);background:var(--gold-dim);padding:2px 8px;border-radius:4px;font-size:11px;flex-shrink:0;}
-.vyears{display:inline-flex;gap:3px;flex-shrink:0;}
-.vname{flex:1;font-weight:600;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.vdept{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vrow:hover{background:rgba(255,255,255,.02);}
+.vavatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.vinfo{flex:1;min-width:0;}
+.vname{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;}
+.vmeta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.vpin{font-family:monospace;color:var(--gold);background:var(--gold-dim);padding:1px 6px;border-radius:4px;font-size:10px;flex-shrink:0;}
 .vempid{font-size:10px;color:var(--gold);font-family:monospace;font-weight:600;padding:1px 6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:4px;flex-shrink:0;}
-.vstatus{display:flex;align-items:center;gap:4px;flex-shrink:0;}
-.vactions{display:flex;align-items:center;gap:5px;margin-left:auto;flex-shrink:0;}
+.vdept{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vyears{display:inline-flex;gap:3px;flex-shrink:0;}
+.vside{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
+.vstatus{display:flex;align-items:center;gap:4px;}
+.vactions{display:flex;align-items:center;gap:4px;}
+.vact-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:var(--rs);padding:4px 9px;font-size:11px;cursor:pointer;white-space:nowrap;}
+.vact-btn:hover{background:var(--bg4);color:var(--text);}
+.vact-btn.gold{background:var(--gold-dim);border-color:rgba(201,168,76,.3);color:var(--gold);}
+.vact-btn.red{background:var(--red-dim);border-color:rgba(220,80,80,.2);color:var(--red);}
+/* Results tab strip */
+.rtab-strip{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px;}
+.rtab-btn{flex:1;padding:10px 8px;font-size:12px;font-weight:500;background:transparent;border:none;border-right:1px solid var(--border);color:var(--text2);cursor:pointer;transition:background .15s,color .15s;}
+.rtab-btn:last-child{border-right:none;}
+.rtab-btn.on{background:var(--gold-dim);color:var(--gold);font-weight:600;}
+.rtab-btn:hover:not(.on){background:var(--bg4);color:var(--text);}
 .vdot{width:7px;height:7px;border-radius:50%;}
 .vdot.yes{background:var(--green);} .vdot.no{background:var(--border2);}
 .vlbl{font-size:10px;color:var(--text2);}
@@ -652,7 +664,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <select class="fsel" id="ar-funit" onchange="renderAdminResults()"><option value="">All units</option></select>
       </div>
 
-      <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+      <div class="rtab-strip">
         <button id="ar-rtab-cat" class="rtab-btn on" onclick="switchResultTab('ar','cat')">By Category</button>
         <button id="ar-rtab-dept" class="rtab-btn" onclick="switchResultTab('ar','dept')">By Department</button>
         <button id="ar-rtab-unit" class="rtab-btn" onclick="switchResultTab('ar','unit')">By Unit</button>
@@ -809,7 +821,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         </div>
         <button class="btn-sm gold" onclick="exportResultsPDF()" style="white-space:nowrap;">📄 Export PDF</button>
       </div>
-      <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+      <div class="rtab-strip">
         <button id="sa-rtab-cat" class="rtab-btn on" onclick="switchResultTab('sa','cat')">By Category</button>
         <button id="sa-rtab-dept" class="rtab-btn" onclick="switchResultTab('sa','dept')">By Department</button>
         <button id="sa-rtab-unit" class="rtab-btn" onclick="switchResultTab('sa','unit')">By Unit</button>
@@ -2271,29 +2283,29 @@ function renderAdminVoterList(){
     return;
   }
   el.innerHTML = DATA.voters.map(v=>{
-    const si=voterStatusInfo(v);
+    const si=voterStatusInfo(v);const ac=stringToColor(v.name);
     return `
     <div class="vrow">
-      <div class="vrow-top">
-        <div style="width:36px;height:36px;border-radius:50%;background:${stringToColor(v.name)}22;color:${stringToColor(v.name)};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${v.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="vname">${v.name}</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap;">
-            <span class="vpin">${v.pin}</span>
-            ${v.empId?`<span class="vempid">${v.empId}</span>`:''}
-            <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
-          </div>
+      <div class="vavatar" style="background:${ac}22;color:${ac};">${v.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div class="vinfo">
+        <div class="vname">${v.name}</div>
+        <div class="vmeta">
+          <span class="vpin">${v.pin}</span>
+          ${v.empId?`<span class="vempid">${v.empId}</span>`:''}
+          <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
         </div>
-        <div class="vstatus">
-          <div class="vdot ${si.cls==='yes'?'yes':si.cls==='partial'?'':'no'}" style="${si.cls==='partial'?'background:var(--gold);':''}"></div>
-          <span class="vlbl" style="font-size:11px;${si.cls==='partial'?'color:var(--gold);':''}">${si.txt}</span>
+        <div class="vmeta" style="margin-top:4px;">
+          <span class="vyears">${voterYearBadges(v)}</span>
         </div>
       </div>
-      <div class="vrow-bottom">
-        <span class="vyears">${voterYearBadges(v)}</span>
+      <div class="vside">
+        <div class="vstatus">
+          <div class="vdot ${si.cls==='yes'?'yes':si.cls==='partial'?'':'no'}" style="${si.cls==='partial'?'background:var(--gold);':''}"></div>
+          <span style="font-size:10px;color:${si.cls==='partial'?'var(--gold)':'var(--text2)'};">${si.txt}</span>
+        </div>
         <div class="vactions">
-          <button class="btn-sm gold" onclick="openEditVoterModal('${v.pin}')">✎ Edit</button>
-          <button class="btn-sm red" onclick="adminRemoveVoter('${v.pin}')">✕</button>
+          <button class="vact-btn gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
+          <button class="vact-btn red" onclick="adminRemoveVoter('${v.pin}')">✕</button>
         </div>
       </div>
     </div>`;
@@ -3617,31 +3629,31 @@ function renderVoterList(){
   el.innerHTML=filtered.map(v=>{
     const otherYear = v.year ? YEARS.find(y=>y!==v.year) : null;
     const dupBtn = v.year ? `<button class="btn-sm" onclick="duplicateVoterToOtherYear('${v.pin}')" title="Add this person to the ${otherYear} roster too">➕${otherYear}</button>` : '';
-    const si=voterStatusInfo(v);
+    const si=voterStatusInfo(v);const ac=stringToColor(v.name);
     return `
     <div class="vrow">
-      <div class="vrow-top">
-        <div style="width:36px;height:36px;border-radius:50%;background:${stringToColor(v.name)}22;color:${stringToColor(v.name)};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${v.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="vname">${v.name}</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap;">
-            <span class="vpin">${v.pin}</span>
-            ${v.empId?`<span class="vempid">${v.empId}</span>`:''}
-            <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
-          </div>
+      <div class="vavatar" style="background:${ac}22;color:${ac};">${v.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div class="vinfo">
+        <div class="vname">${v.name}</div>
+        <div class="vmeta">
+          <span class="vpin">${v.pin}</span>
+          ${v.empId?`<span class="vempid">${v.empId}</span>`:''}
+          <span class="vdept">${getDeptName(v.dept)} · ${getUnitName(v.unit)}</span>
         </div>
-        <div class="vstatus">
-          <div class="vdot ${si.cls==='yes'?'yes':si.cls==='partial'?'':'no'}" style="${si.cls==='partial'?'background:var(--gold);':''}"></div>
-          <span class="vlbl" style="font-size:11px;${si.cls==='partial'?'color:var(--gold);':''}">${si.txt}</span>
+        <div class="vmeta" style="margin-top:4px;">
+          <span class="vyears">${voterYearBadges(v)}</span>
         </div>
       </div>
-      <div class="vrow-bottom">
-        <span class="vyears">${voterYearBadges(v)}</span>
+      <div class="vside">
+        <div class="vstatus">
+          <div class="vdot ${si.cls==='yes'?'yes':si.cls==='partial'?'':'no'}" style="${si.cls==='partial'?'background:var(--gold);':''}"></div>
+          <span style="font-size:10px;color:${si.cls==='partial'?'var(--gold)':'var(--text2)'};">${si.txt}</span>
+        </div>
         <div class="vactions">
           ${dupBtn}
-          <button class="btn-sm gold" onclick="openEditVoterModal('${v.pin}')">✎ Edit</button>
-          <button class="btn-sm" onclick="resetVoter('${v.pin}')">↺ Reset</button>
-          <button class="btn-sm red" onclick="removeVoter('${v.pin}')">✕</button>
+          <button class="vact-btn gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
+          <button class="vact-btn" onclick="resetVoter('${v.pin}')">↺</button>
+          <button class="vact-btn red" onclick="removeVoter('${v.pin}')">✕</button>
         </div>
       </div>
     </div>`;
