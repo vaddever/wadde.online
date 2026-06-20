@@ -1273,6 +1273,37 @@ function loadVoterEligOverrides(){
   }catch(e){ return {}; }
 }
 
+function deriveVotedStatusFromVotes(){
+  // Cross-reference the actual Votes sheet rows to determine who has voted
+  // for which year. This is more reliable than the Voters tab's voted2024/
+  // voted2025 flag columns because:
+  //  - Vote rows are written via appendRow (always works)
+  //  - markVoterDone (which sets the flag columns) can fail silently if the
+  //    PIN type in the Voters sheet doesn't match (number vs string)
+  // This function is called after every fetchFromSheets so the voted state
+  // always reflects what's actually in the Votes tab.
+  const pins2024 = new Set();
+  const pins2025 = new Set();
+  const pinsAny  = new Set();
+  DATA.votes.forEach(v=>{
+    const cat = DATA.categories.find(c=>c.id===v.category);
+    const yr  = cat ? String(cat.year||'') : '';
+    pinsAny.add(v.pin);
+    if(yr==='2024') pins2024.add(v.pin);
+    else if(yr==='2025') pins2025.add(v.pin);
+  });
+  DATA.voters.forEach(v=>{
+    if(pins2024.has(v.pin)) v.voted2024 = true;
+    if(pins2025.has(v.pin)) v.voted2025 = true;
+    // Legacy / separate-PIN model: hasVoted = voted in any year
+    if(pinsAny.has(v.pin)) v.hasVoted = true;
+    // Also set the local device lock so the same device is protected
+    // even before the next fetchFromSheets
+    if(pins2024.has(v.pin)) markLocalVoted(v.pin, '2024');
+    if(pins2025.has(v.pin)) markLocalVoted(v.pin, '2025');
+  });
+}
+
 function applyVoterEligOverrides(){
   // Merge overrides on top of whatever the Voters sheet says —
   // called once after fetchFromSheets completes
@@ -1667,7 +1698,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   const hadCache = loadCachedData();
   try {
     await fetchFromSheets();
-    applyVoterEligOverrides(); // apply eligibility overrides on top of sheet data
+    deriveVotedStatusFromVotes(); // set voted flags from Votes sheet (most reliable)
+    applyVoterEligOverrides();    // apply eligibility overrides
     cacheData();
   } catch(e) {
     console.error('[Boot] Sync failed:', e);
@@ -1934,6 +1966,20 @@ function restoreSession(){
       currentUser={...voter,type:'voter'};selections={};
       currentVotingYear = votable.length===1 ? votable[0] : null;
       showScreen('screen-voter');initVoter();return true;
+    }
+    // Voter is in session but has no votable years — already voted all years
+    // Show the success screen rather than the login page so they see a friendly message
+    const eligible = YEARS.filter(y=>voterEligibleForYear(voter,y));
+    if(eligible.length && eligible.every(y=>voterHasVotedForYear(voter,y))){
+      currentUser={...voter,type:'voter'};
+      const titleEl=document.getElementById('suc-title');
+      const msgEl=document.getElementById('suc-msg');
+      const wrap=document.getElementById('suc-next-year-wrap');
+      if(titleEl) titleEl.textContent='Already voted';
+      if(msgEl) msgEl.textContent='Your vote has already been recorded. Thank you for participating! 🏆';
+      if(wrap) wrap.style.display='none';
+      showScreen('screen-success');
+      return true;
     }
   }
   clearSession();
@@ -2464,7 +2510,7 @@ function updateVProg(){
 // never show that voter's ballot again for that year. It does not protect
 // against voting from a different device with the same PIN — only the
 // server-side duplicate-vote guard (in Apps Script) protects against that.
-const LOCAL_VOTE_LOCK_MS = 90*1000; // 90s — enough to cover sync lag, short enough that a deliberate admin reset isn't blocked for long
+const LOCAL_VOTE_LOCK_MS = 7*24*60*60*1000; // 7 days — covers the entire voting event; admin reset explicitly clears the key
 function localVoteKey(pin, year){ return 'voted_local_'+pin+'_'+year; }
 function markLocalVoted(pin, year){ try{ localStorage.setItem(localVoteKey(pin,year), String(Date.now())); }catch(e){} }
 function hasLocalVoted(pin, year){
@@ -2502,8 +2548,10 @@ function voterEligibleForYear(voter, year){
 // Has this voter already voted in this specific year?
 function voterHasVotedForYear(voter, year){
   if(!voter) return false;
-  if(hasLocalVoted(voter.pin, year)) return true; // local safety net — always wins, even if cloud sync is broken
-  if(voter.year) return !!voter.hasVoted; // separate-PIN model — one flag is enough
+  // Check local device lock first (instant, no network needed)
+  if(hasLocalVoted(voter.pin, year)) return true;
+  // Check flags derived from the Votes sheet (most reliable source of truth)
+  if(voter.year) return !!voter.hasVoted; // separate-PIN model
   return String(year)==='2024' ? !!voter.voted2024 : !!voter.voted2025;
 }
 
@@ -5057,7 +5105,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v12';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v13';
 
 async function diagnoseVoterPin(){
   const pin=(document.getElementById('diag-voter-pin')?.value||'').trim();
@@ -5189,6 +5237,7 @@ async function manualSync(){
   showToast('Syncing from Sheets…');
   try{
     await fetchFromSheets();
+    deriveVotedStatusFromVotes();
     applyVoterEligOverrides();
     cacheData();
     initSA();
@@ -5876,7 +5925,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v12';
+var SCRIPT_VERSION = '2026-06-17-v13';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
