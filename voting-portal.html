@@ -4160,6 +4160,8 @@ async function resetVoter(pin){
   v.voted2024=false;
   v.voted2025=false;
   DATA.votes=DATA.votes.filter(x=>x.pin!==pin);
+  // Clear local device vote lock so they can vote again on this device immediately
+  YEARS.forEach(yr=>{ try{ localStorage.removeItem(localVoteKey(v.pin,yr)); }catch(e){} });
   cacheData();
   renderVoterList();renderAdminVoterList();renderStats('sa');renderStats('admin');
   await writeToSheets('resetVoter',{pin});
@@ -4177,8 +4179,16 @@ async function removeVoter(pin){
 }
 async function resetAllVotes(){
   if(!confirm('Reset ALL votes? This cannot be undone.'))return;
-  DATA.votes=[];DATA.voters.forEach(v=>v.hasVoted=false);
-  renderVoterList();renderStats('sa');
+  DATA.votes=[];
+  DATA.voters.forEach(v=>{
+    v.hasVoted=false;
+    v.voted2024=false;
+    v.voted2025=false;
+    // Also clear local device vote locks so voters can vote again on this device
+    YEARS.forEach(yr=>{ try{ localStorage.removeItem(localVoteKey(v.pin,yr)); }catch(e){} });
+  });
+  cacheData();
+  renderVoterList();renderAdminVoterList();renderStats('sa');renderStats('admin');
   await writeToSheets('resetAllVotes',{});
   showToast('All votes reset','ok');
 }
@@ -4990,7 +5000,7 @@ async function setVoting(open){
   await writeToSheets('setVotingStatus',{open});
   showToast(`Voting ${open?'opened':'closed'}`,'ok');
 }
-const EXPECTED_SCRIPT_VERSION = '2026-06-17-v10';
+const EXPECTED_SCRIPT_VERSION = '2026-06-17-v11';
 
 async function diagnoseVoterPin(){
   const pin=(document.getElementById('diag-voter-pin')?.value||'').trim();
@@ -5809,7 +5819,7 @@ function showScriptHelp(){
 // ── Version fingerprint — bump this whenever this script changes ──
 // The portal's diagnostic test checks this directly so you get a
 // definitive answer on whether your deployment is actually current.
-var SCRIPT_VERSION = '2026-06-17-v10';
+var SCRIPT_VERSION = '2026-06-17-v11';
 
 // ── ID helper — matches the portal's toId() function ──
 function toId(str) {
@@ -5878,7 +5888,10 @@ function handleRequest(raw) {
       if (vs && vs.getLastRow() > 1) vs.deleteRows(2, vs.getLastRow() - 1);
       var voterSheet = ss.getSheetByName('Voters');
       if (voterSheet && voterSheet.getLastRow() > 1) {
-        voterSheet.getRange(2, 5, voterSheet.getLastRow() - 1, 1).setValue('FALSE');
+        var numVoterRows = voterSheet.getLastRow() - 1;
+        voterSheet.getRange(2, 5,  numVoterRows, 1).setValue('FALSE'); // col E  — HasVoted
+        voterSheet.getRange(2, 10, numVoterRows, 1).setValue('FALSE'); // col J  — Voted2024
+        voterSheet.getRange(2, 11, numVoterRows, 1).setValue('FALSE'); // col K  — Voted2025
       }
     }
 
