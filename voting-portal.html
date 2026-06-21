@@ -298,6 +298,13 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .rtab-btn:hover:not(.on){background:var(--bg4);color:var(--text);}
 .vdot{width:7px;height:7px;border-radius:50%;}
 .vdot.yes{background:var(--green);} .vdot.no{background:var(--border2);}
+.countdown-live{display:inline-flex;align-items:center;gap:6px;background:rgba(80,200,80,.12);border:1px solid rgba(80,200,80,.3);color:#5dc87a;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;}
+.countdown-soon{display:inline-flex;align-items:center;gap:6px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;}
+.countdown-closed{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:12px;}
+.countdown-units{display:flex;gap:6px;margin-top:8px;justify-content:center;}
+.countdown-unit{text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;min-width:44px;}
+.countdown-unit span:first-child{display:block;font-size:18px;font-weight:700;color:var(--gold);font-family:monospace;line-height:1.2;}
+.countdown-unit span:last-child{display:block;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
 .vlbl{font-size:10px;color:var(--text2);}
 
 /* NOMINEES MANAGE */
@@ -478,6 +485,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <!-- Voter login (default) -->
     <div id="login-voter-panel">
       <p class="login-sub">Enter your Staff ID and Voter PIN</p>
+      <div id="login-countdown" style="margin:10px 0 4px;"></div>
       <div class="login-form">
         <label class="form-lbl">Staff ID</label>
         <input class="form-inp" id="voter-empid-inp" type="text" placeholder="e.g. EMP001" autocomplete="off" style="text-transform:uppercase;letter-spacing:.05em;" onkeydown="if(event.key==='Enter')document.getElementById('voter-pin-inp').focus()">
@@ -658,17 +666,16 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <!-- Results — single unified page -->
     <div class="tab-panel" id="admin-results">
       <!-- Global filter bar -->
-      <div class="rf" style="margin-bottom:20px;">
-        <select class="fsel" id="ar-fcat" onchange="renderAdminResults()"><option value="">All categories</option></select>
-        <select class="fsel" id="ar-fdept" onchange="arDeptChanged()"><option value="">All departments</option></select>
-        <select class="fsel" id="ar-funit" onchange="renderAdminResults()"><option value="">All units</option></select>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <div class="rf" style="margin-bottom:0;flex:1;">
+          <select class="fsel" id="ar-fcat" onchange="renderAdminResults()"><option value="">All categories</option></select>
+          <select class="fsel" id="ar-fdept" onchange="arDeptChanged()"><option value="">All departments</option></select>
+          <select class="fsel" id="ar-funit" onchange="renderAdminResults()"><option value="">All units</option></select>
+        </div>
+        <button class="btn-sm gold" onclick="exportResultsPDF()" style="white-space:nowrap;">📄 Export PDF</button>
       </div>
 
-      <div class="rtab-strip">
-        <button id="ar-rtab-cat" class="rtab-btn on" onclick="switchResultTab('ar','cat')">By Category</button>
-        <button id="ar-rtab-dept" class="rtab-btn" onclick="switchResultTab('ar','dept')">By Department</button>
-        <button id="ar-rtab-unit" class="rtab-btn" onclick="switchResultTab('ar','unit')">By Unit</button>
-      </div>
+      
       <!-- Section 1: By Award Category -->
       <div class="ar-section-hdr" id="ar-cat-hdr" style="display:none;"></div>
       <div id="ar-by-category"></div>
@@ -723,7 +730,17 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div class="tab-panel" id="admin-noms">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:500;">Nominees</div>
-        <div style="display:flex;gap:7px;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:4px 10px;">
+            <span style="font-size:11px;color:var(--text2);">Show</span>
+            <select id="nom-display-limit" onchange="renderNominees()" style="background:transparent;border:none;color:var(--gold);font-weight:600;font-size:11px;cursor:pointer;">
+              <option value="3">Top 3</option>
+              <option value="5">Top 5</option>
+              <option value="10">Top 10</option>
+              <option value="all" selected>All</option>
+            </select>
+            <span style="font-size:11px;color:var(--text2);">per category</span>
+          </div>
           <button class="btn-sm gold" onclick="openBulkUploadModal('nominees')">⬆ Bulk upload</button>
           <button class="btn-sm green" onclick="openAddNomModal()">+ Add nominee</button>
           <button class="btn-sm" onclick="printNomineesList()">🖨 Print</button>
@@ -821,11 +838,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         </div>
         <button class="btn-sm gold" onclick="exportResultsPDF()" style="white-space:nowrap;">📄 Export PDF</button>
       </div>
-      <div class="rtab-strip">
-        <button id="sa-rtab-cat" class="rtab-btn on" onclick="switchResultTab('sa','cat')">By Category</button>
-        <button id="sa-rtab-dept" class="rtab-btn" onclick="switchResultTab('sa','dept')">By Department</button>
-        <button id="sa-rtab-unit" class="rtab-btn" onclick="switchResultTab('sa','unit')">By Unit</button>
-      </div>
+      
       <div id="sa-by-category"></div>
       <div id="sa-by-department" style="display:none;"></div>
       <div id="sa-by-unit" style="display:none;"></div>
@@ -1749,7 +1762,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   applyOrgName();
   // Try to restore previous session before showing login
   if(!restoreSession()){
-    showScreen('screen-login');
+    showScreen('screen-login'); startLoginCountdown();
   }
 });
 
@@ -2040,7 +2053,7 @@ function doLogout(){
   for(let i=0;i<6;i++) document.getElementById('pd'+i)?.classList.remove('on');
   setLoginErr('');
   showVoterLogin(); // reset to voter panel
-  showScreen('screen-login');
+  showScreen('screen-login'); startLoginCountdown();
 }
 function goToSettings(){
   // Show admin login panel — SuperAdmin logs in via Employee ID + Password
@@ -2156,6 +2169,59 @@ function initVoter(){
     container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div>No nominees available for your department/unit yet. Please contact the administrator.</div>`;
   }
   updateVProg();
+}
+
+function renderLoginCountdown(){
+  const el = document.getElementById('login-countdown');
+  if(!el) return;
+  const now  = Date.now();
+  const start = CFG.votingStart ? new Date(CFG.votingStart).getTime() : 0;
+  const end   = CFG.votingEnd   ? new Date(CFG.votingEnd).getTime()   : 0;
+
+  if(CFG.votingOpen && (!end || now < end)){
+    // Voting is currently live
+    let html = '<span class="countdown-live">🟢 Voting is Live</span>';
+    if(end && now < end){
+      const rem = end - now;
+      const d=Math.floor(rem/86400000), h=Math.floor(rem%86400000/3600000),
+            m=Math.floor(rem%3600000/60000), s=Math.floor(rem%60000/1000);
+      html += '<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--text2);">Closes in</div>';
+      html += '<div class="countdown-units">';
+      if(d) html += `<div class="countdown-unit"><span>${d}</span><span>Days</span></div>`;
+      html += `<div class="countdown-unit"><span>${String(h).padStart(2,'0')}</span><span>Hours</span></div>`;
+      html += `<div class="countdown-unit"><span>${String(m).padStart(2,'0')}</span><span>Min</span></div>`;
+      html += `<div class="countdown-unit"><span>${String(s).padStart(2,'0')}</span><span>Sec</span></div>`;
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  } else if(!CFG.votingOpen && start && now < start){
+    // Voting hasn't started yet — show countdown to start
+    const rem = start - now;
+    const d=Math.floor(rem/86400000), h=Math.floor(rem%86400000/3600000),
+          m=Math.floor(rem%3600000/60000), s=Math.floor(rem%60000/1000);
+    let html = '<div class="countdown-soon">⏳ Voting Opens In</div>';
+    html += '<div class="countdown-units">';
+    if(d) html += `<div class="countdown-unit"><span>${d}</span><span>Days</span></div>`;
+    html += `<div class="countdown-unit"><span>${String(h).padStart(2,'0')}</span><span>Hours</span></div>`;
+    html += `<div class="countdown-unit"><span>${String(m).padStart(2,'0')}</span><span>Min</span></div>`;
+    html += `<div class="countdown-unit"><span>${String(s).padStart(2,'0')}</span><span>Sec</span></div>`;
+    html += '</div>';
+    el.innerHTML = html;
+  } else if(!CFG.votingOpen){
+    el.innerHTML = '<span class="countdown-closed">🔴 Voting is Closed</span>';
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+let _cdTimer = null;
+function startLoginCountdown(){
+  renderLoginCountdown();
+  if(_cdTimer) clearInterval(_cdTimer);
+  _cdTimer = setInterval(renderLoginCountdown, 1000);
+}
+function stopLoginCountdown(){
+  if(_cdTimer){ clearInterval(_cdTimer); _cdTimer=null; }
 }
 
 function showNotEligibleScreen(voter){
@@ -2360,7 +2426,7 @@ function renderAdminCatList(){
     return `<div style="margin-bottom:16px;">
       <div class="year-divider" style="margin-bottom:10px;"><span class="year-divider-line"></span><span class="year-divider-label">${yr} Awards</span><span class="year-divider-line"></span></div>
       <div style="display:flex;flex-direction:column;gap:7px;">${rows}</div>
-    </div>`;
+    ${showMoreBtn}</div>`;
   }).join('');
 }
 
@@ -4388,6 +4454,8 @@ function renderNominees(catElId, deptElId, unitElId, containerId, showEdit){
     (!deptF||n.dept===deptF)&&
     (!unitF||n.unit===unitF)
   );
+  const limitVal = document.getElementById('nom-display-limit')?.value || 'all';
+  const nomLimit = limitVal==='all' ? Infinity : parseInt(limitVal,10);
   const container=document.getElementById(containerId);
   if(!container) return;
   if(!filtered.length){
@@ -4407,7 +4475,9 @@ function renderNominees(catElId, deptElId, unitElId, containerId, showEdit){
   container.innerHTML=sortedKeys.map(catId=>{
     const cat=getCat(catId);
     const noms=grouped[catId];
-    const rows=noms.map(nom=>{
+    const displayNoms = noms.slice(0, nomLimit);
+    const hiddenCount = noms.length - displayNoms.length;
+    const rows=displayNoms.map(nom=>{
       const votes=getVotes(nom.id,nom.name);
       const empId=getStaffId(nom.name);
       return `<div class="nom-list-row">
@@ -4424,6 +4494,12 @@ function renderNominees(catElId, deptElId, unitElId, containerId, showEdit){
     const nomScopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
     const nomScopeTxt=nomScopeTag[cat.scope]||cat.scope;
     const nomLinkedTxt=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
+    const showMoreBtn = hiddenCount > 0
+      ? `<div style="text-align:center;padding:8px 0;">
+          <button class="btn-sm" onclick="document.getElementById('nom-display-limit').value='all';renderNominees('${catElId}','${deptElId}','${unitElId}','${containerId}',${showEdit});">
+            Show ${hiddenCount} more nominee${hiddenCount!==1?'s':''}
+          </button>
+        </div>` : '';
     return `<div class="nom-cat-group">
       <div class="nom-cat-group-hdr">
         <div style="flex:1;">
