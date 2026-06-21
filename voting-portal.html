@@ -377,7 +377,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .nom-search-inp:focus{border-color:var(--gold);}
 .nom-search-inp::placeholder{color:var(--text3);}
 .nom-search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none;}
-.noms-collapsed .nom-card:nth-child(n+4){display:none !important;}
+.noms-collapsed .nom-card{display:none !important;}.noms-collapsed .nom-card.nom-visible{display:flex !important;}
 .show-more-btn{width:100%;margin-top:8px;background:var(--red);border:1px solid var(--red);border-radius:var(--rs);padding:9px;font-size:12px;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600;letter-spacing:.02em;}
 .show-more-btn:hover{background:var(--red);border-color:var(--red);color:#fff;}
 .nom-no-results{font-size:12px;color:var(--text3);padding:12px 0;text-align:center;}
@@ -726,16 +726,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:500;">Nominees</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          <div style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:4px 10px;">
-            <span style="font-size:11px;color:var(--text2);">Show</span>
-            <select id="nom-display-limit" onchange="renderNominees()" style="background:transparent;border:none;color:var(--gold);font-weight:600;font-size:11px;cursor:pointer;">
-              <option value="3">Top 3</option>
-              <option value="5">Top 5</option>
-              <option value="10">Top 10</option>
-              <option value="all" selected>All</option>
-            </select>
-            <span style="font-size:11px;color:var(--text2);">per category</span>
-          </div>
           <button class="btn-sm gold" onclick="openBulkUploadModal('nominees')">⬆ Bulk upload</button>
           <button class="btn-sm green" onclick="openAddNomModal()">+ Add nominee</button>
           <button class="btn-sm" onclick="printNomineesList()">🖨 Print</button>
@@ -957,7 +947,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       <div class="ss-section">
         <div class="ss-title">Nominees Display</div>
         <div class="gs-card">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">How many nominees to show per category in the list. Admins can still expand to see all.</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">How many nominees voters see per category on the ballot before tapping <strong>Show all</strong>. Keeps the ballot clean — voters can always expand to see everyone.</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <label class="gs-lbl" style="width:auto;">Show per category</label>
             <select class="gs-inp" id="sa-nom-limit-sel" style="max-width:140px;">
@@ -2146,7 +2136,8 @@ function initVoter(){
   yrCats.forEach(cat=>{
     const noms=DATA.nominees.filter(n=>n.category===cat.id);
     idx++;
-    const hasMany = noms.length > 3;
+    const _ballotLimit = parseInt(CFG._nomDisplayLimit || localStorage.getItem('_nomDisplayLimit') || '3', 10);
+    const hasMany = !isNaN(_ballotLimit) && noms.length > _ballotLimit;
     const voterScopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
     const voterLinked=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
     const voterScopeTxt=voterScopeTag[cat.scope]||'';
@@ -2175,7 +2166,7 @@ function initVoter(){
       const initials=nom.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
       const color=COLORS[ni%COLORS.length];
       const card=document.createElement('div');
-      card.className='nom-card';card.dataset.id=nom.id;card.dataset.cat=cat.id;card.dataset.name=nom.name.toLowerCase();
+      card.className='nom-card'+(hasMany && ni<_ballotLimit?' nom-visible':'');card.dataset.id=nom.id;card.dataset.cat=cat.id;card.dataset.name=nom.name.toLowerCase();
       const unitLabel=(() => { for(const d of DATA.departments){const u=d.units.find(u=>u.id===nom.unit);if(u)return u.name;} return nom.unit||''; })();
       const deptLabel=(DATA.departments.find(d=>d.id===nom.dept)||{name:nom.dept||''}).name;
       const nomEmpId=getStaffId(nom.name);
@@ -2654,21 +2645,21 @@ function filterNomSearch(catId){
 function toggleNomExpand(catId, total){
   const grid=document.getElementById('ng-'+catId);
   const btn=document.getElementById('showbtn-'+catId);
-  const icon=document.getElementById('showbtn-icon-'+catId);
   if(!grid) return;
   const collapsed=grid.classList.contains('noms-collapsed');
   if(collapsed){
+    // Expand — mark all cards as visible
+    grid.querySelectorAll('.nom-card').forEach(c=>c.classList.add('nom-visible'));
     grid.classList.remove('noms-collapsed');
-    if(icon) icon.textContent='▲';
-    if(btn) btn.querySelector('span+span') && (btn.lastChild.textContent=` Show less`);
-    if(btn){ btn.innerHTML=`<span id="showbtn-icon-${catId}">▲</span> Show less`; }
+    if(btn) btn.innerHTML=`<span>▲</span> Show fewer`;
   } else {
+    // Collapse — keep only first N visible
+    const limit=parseInt(CFG._nomDisplayLimit||localStorage.getItem('_nomDisplayLimit')||'3',10)||3;
+    grid.querySelectorAll('.nom-card').forEach((c,i)=>c.classList.toggle('nom-visible',i<limit));
     grid.classList.add('noms-collapsed');
-    if(btn){ btn.innerHTML=`<span id="showbtn-icon-${catId}">▼</span> Show all ${total} nominees`; }
-    // Clear search when collapsing
+    if(btn) btn.innerHTML=`<span>▼</span> Show all ${total} nominees`;
     const inp=document.getElementById('search-'+catId);
-    if(inp) inp.value='';
-    grid.querySelectorAll('.nom-card').forEach(c=>c.style.display='');
+    if(inp){inp.value='';filterNomSearch(catId);}
   }
 }
 
@@ -4540,8 +4531,7 @@ function renderNominees(catElId, deptElId, unitElId, containerId, showEdit){
     (!deptF||n.dept===deptF)&&
     (!unitF||n.unit===unitF)
   );
-  const limitVal = CFG._nomDisplayLimit || document.getElementById('nom-display-limit')?.value || localStorage.getItem('_nomDisplayLimit') || 'all';
-  const nomLimit = limitVal==='all' ? Infinity : parseInt(limitVal,10);
+  const nomLimit = Infinity; // No limit in management view — limit only applies to voter ballot
   const container=document.getElementById(containerId);
   if(!container) return;
   if(!filtered.length){
@@ -4580,12 +4570,7 @@ function renderNominees(catElId, deptElId, unitElId, containerId, showEdit){
     const nomScopeTag={global:'Company Wide',dept:'Department Wise',unit:'Unit Wise',deptcat:'Department Wise'};
     const nomScopeTxt=nomScopeTag[cat.scope]||cat.scope;
     const nomLinkedTxt=(cat.scope==='dept'&&cat.linkedDept)?' — '+getDeptName(cat.linkedDept):(cat.scope==='unit'&&cat.linkedUnit)?' — '+getUnitName(cat.linkedUnit):'';
-    const showMoreBtn = hiddenCount > 0
-      ? `<div style="text-align:center;padding:8px 0;">
-          <button class="btn-sm" onclick="document.getElementById('nom-display-limit').value='all';renderNominees('${catElId}','${deptElId}','${unitElId}','${containerId}',${showEdit});">
-            Show ${hiddenCount} more nominee${hiddenCount!==1?'s':''}
-          </button>
-        </div>` : '';
+    const showMoreBtn = ''; // No expand needed in management view
     return `<div class="nom-cat-group">
       <div class="nom-cat-group-hdr">
         <div style="flex:1;">
