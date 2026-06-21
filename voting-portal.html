@@ -693,9 +693,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:500;">Voters</div>
         <div style="display:flex;gap:7px;flex-wrap:wrap;">
-          <button class="btn-sm green" onclick="openAddVoterModal()">+ Add voter</button>
-          <button class="btn-sm gold" onclick="syncStaffToVoters()">⟳ Sync staff</button>
-          <button class="btn-sm gold" onclick="openBulkUploadModal('voters')">⬆ Bulk upload</button>
+          <button class="btn-sm green" data-perm="addVoter" onclick="openAddVoterModal()">+ Add voter</button>
+          <button class="btn-sm gold" data-perm="syncStaff" onclick="syncStaffToVoters()">⟳ Sync staff</button>
+          <button class="btn-sm gold" data-perm="addVoter" onclick="openBulkUploadModal('voters')">⬆ Bulk upload</button>
         </div>
       </div>
       <div class="voter-tbl" id="admin-voter-list"></div>
@@ -726,8 +726,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:500;">Nominees</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          <button class="btn-sm gold" onclick="openBulkUploadModal('nominees')">⬆ Bulk upload</button>
-          <button class="btn-sm green" onclick="openAddNomModal()">+ Add nominee</button>
+          <button class="btn-sm gold" data-perm="manageNominees" onclick="openBulkUploadModal('nominees')">⬆ Bulk upload</button>
+          <button class="btn-sm green" data-perm="manageNominees" onclick="openAddNomModal()">+ Add nominee</button>
           <button class="btn-sm" onclick="printNomineesList()">🖨 Print</button>
         </div>
       </div>
@@ -2231,6 +2231,7 @@ function saveAdminPerms(){
   // Also write to Config sheet so it persists across devices
   writeToSheets('setConfig',{key:'_adminPerms',value:JSON.stringify(perms)});
   showToast('Admin permissions saved','ok');
+  applyAdminPermissions(); // apply immediately
 }
 function saveNomDisplayLimit(){
   const val = document.getElementById('sa-nom-limit-sel')?.value||'all';
@@ -2460,6 +2461,18 @@ function applyAdminPageVisibility(){
   if(sBtn) sBtn.style.display = CFG.adminShowStaff  ? '' : 'none';
   if(nBtn) nBtn.style.display = CFG.adminShowNoms   ? '' : 'none';
   if(cBtn) cBtn.style.display = CFG.adminShowCats   ? '' : 'none';
+  // Also enforce tool-level permissions
+  applyAdminPermissions();
+}
+
+function applyAdminPermissions(){
+  // Show/hide all [data-perm] buttons based on adminCan()
+  document.querySelectorAll('[data-perm]').forEach(el=>{
+    const perm = el.getAttribute('data-perm');
+    el.style.display = adminCan(perm) ? '' : 'none';
+  });
+  // Re-render the voter list so per-row buttons reflect current permissions
+  renderAdminVoterList();
 }
 
 function renderAdminCatList(){
@@ -2538,7 +2551,8 @@ function renderAdminVoterList(){
         </div>
         <div class="vactions">
           <button class="vact-btn gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
-          <button class="vact-btn red" onclick="adminRemoveVoter('${v.pin}')">✕</button>
+          ${adminCan('resetVoterVotes')?`<button class="vact-btn" onclick="confirmResetVoter('${v.pin}')">↺</button>`:''}
+          ${adminCan('deleteVoter')?`<button class="vact-btn red" onclick="adminRemoveVoter('${v.pin}')">✕</button>`:''}
         </div>
       </div>
     </div>`;
@@ -2993,7 +3007,7 @@ function initAdmin(){
   renderDeptBars('admin-dept-bars');
   renderUnitBars('admin-unit-bars');
   renderVoterStats();
-  applyAdminPageVisibility();
+  applyAdminPageVisibility(); // also calls applyAdminPermissions()
   renderVotingPeriodBanner('admin-voting-period-banner', false);
   applyOrgName();
 }
