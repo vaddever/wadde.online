@@ -696,6 +696,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
           <button class="btn-sm green" data-perm="addVoter" onclick="openAddVoterModal()">+ Add voter</button>
           <button class="btn-sm gold" data-perm="syncStaff" onclick="syncStaffToVoters()">⟳ Sync staff</button>
           <button class="btn-sm gold" data-perm="addVoter" onclick="openBulkUploadModal('voters')">⬆ Bulk upload</button>
+          <button class="btn-sm red" data-perm="resetAllVotes" onclick="resetAllVotes()">↺ Reset all votes</button>
+          <button class="btn-sm red" data-perm="resetAllPins" onclick="confirmBulkAction('resetPins')">🔑 Reset all PINs</button>
+          <button class="btn-sm red" data-perm="bulkDeleteVoters" onclick="confirmBulkAction('deleteAllVoters')">🗑 Delete all voters</button>
         </div>
       </div>
       <div class="voter-tbl" id="admin-voter-list"></div>
@@ -728,6 +731,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <button class="btn-sm gold" data-perm="manageNominees" onclick="openBulkUploadModal('nominees')">⬆ Bulk upload</button>
           <button class="btn-sm green" data-perm="manageNominees" onclick="openAddNomModal()">+ Add nominee</button>
+          <button class="btn-sm red" data-perm="bulkDeleteNoms" onclick="confirmBulkAction('deleteAllNominees')">🗑 Delete all nominees</button>
           <button class="btn-sm" onclick="printNomineesList()">🖨 Print</button>
         </div>
       </div>
@@ -2460,7 +2464,7 @@ function applyAdminPageVisibility(){
   if(vBtn) vBtn.style.display = CFG.adminShowVoters ? '' : 'none';
   if(sBtn) sBtn.style.display = CFG.adminShowStaff  ? '' : 'none';
   if(nBtn) nBtn.style.display = CFG.adminShowNoms   ? '' : 'none';
-  if(cBtn) cBtn.style.display = CFG.adminShowCats   ? '' : 'none';
+  if(cBtn) cBtn.style.display = (CFG.adminShowCats || adminCan('manageCats')) ? '' : 'none';
   // Also enforce tool-level permissions
   applyAdminPermissions();
 }
