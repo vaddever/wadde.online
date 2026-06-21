@@ -1107,23 +1107,44 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
 <script>
 ;(function(){
-  var B='2026-06-17-v13';
-  var stored=localStorage.getItem('_portalBuild');
+  var BUILD='2026-06-17-v13';
+  var KEY='_portalBuild';
+
+  // ── Layer 1: instant localStorage check ─────────────────────────────────
+  // Works once the new HTML has been loaded at least once on this device.
+  var stored=localStorage.getItem(KEY);
   var u=new URL(location.href);
-  var vp=u.searchParams.get('_v');
-  if(vp===B){
-    // Just arrived via cache-busting redirect — clean up URL and continue
-    localStorage.setItem('_portalBuild',B);
+  if(u.searchParams.get('_v')===BUILD){
+    localStorage.setItem(KEY,BUILD);
     u.searchParams.delete('_v');
     history.replaceState(null,'',u.toString());
-  } else if(stored!==null && stored!==B){
-    // New version detected — redirect to versioned URL (forces cache miss)
-    localStorage.setItem('_portalBuild',B);
-    u.searchParams.set('_v',B.replace(/[^a-z0-9]/gi,''));
-    location.replace(u.toString());
+  } else if(stored!==null && stored!==BUILD){
+    localStorage.setItem(KEY,BUILD);
+    u.searchParams.set('_v',BUILD.replace(/[^a-z0-9]/gi,''));
+    location.replace(u.toString()); return;
   } else {
-    localStorage.setItem('_portalBuild',B);
+    localStorage.setItem(KEY,BUILD);
   }
+
+  // ── Layer 2: background network check ───────────────────────────────────
+  // Fetches the page FRESH from the server on every load (bypasses HTTP
+  // cache). If the server copy has a newer BUILD constant, redirects to a
+  // versioned URL — a guaranteed cache miss in every browser including
+  // Edge mobile. Runs after 1.5s so it doesn't slow down the initial render.
+  setTimeout(function(){
+    var baseUrl=location.href.split('?')[0];
+    fetch(baseUrl,{cache:'reload',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}})
+      .then(function(r){return r.text();})
+      .then(function(html){
+        var m=html.match(/var BUILD='([^']+)'/);
+        if(!m) m=html.match(/BUILD='([^']+)'/);
+        if(m && m[1] && m[1]!==BUILD){
+          localStorage.setItem(KEY,m[1]);
+          location.replace(baseUrl+'?_v='+m[1].replace(/[^a-z0-9]/gi,''));
+        }
+      })
+      .catch(function(){});
+  },1500);
 })();
 // ═══════════════════════════════════════════════════════════
 // CONFIG — all persisted in localStorage
