@@ -548,9 +548,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         Great to have you on the team!
       </div>
       <div style="font-size:13px;color:var(--text2);line-height:1.7;">
-        The current awards cover the <strong id="ne-years" style="color:var(--text);"></strong> cycle, 
-        which was open to staff who joined before this year. Since you recently joined us, 
-        you're not yet eligible for these awards — but your contributions are already valued.
+        The current awards cover the <strong id="ne-years" style="color:var(--text);"></strong> cycle.
+        Unfortunately you're not eligible to vote this time around — but your contributions are already valued.
         <br><br>
         <span style="color:var(--gold);font-weight:500;">Stay tuned for future awards where you'll be able to participate and shine! ✨</span>
       </div>
@@ -681,15 +680,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
       <div id="ar-by-category"></div>
 
       <!-- Section 2: By Department -->
-      <div class="ar-section-hdr" style="margin-top:24px;" id="ar-dept-hdr">
-        <span class="ar-section-title">🏢 By Department</span>
-      </div>
+      
       <div id="ar-by-department" style="display:none;"></div>
 
       <!-- Section 3: By Unit -->
-      <div class="ar-section-hdr" style="margin-top:24px;" id="ar-unit-hdr">
-        <span class="ar-section-title">📍 By Unit</span>
-      </div>
+      
       <div id="ar-by-unit" style="display:none;"></div>
     </div>
 
@@ -957,7 +952,35 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
             Skipping step 3 is the #1 reason a redeploy "doesn't work": the portal keeps using the old URL pointing at old code. Always finish by clicking <b>🔍 Test Apps Script Connection</b> below to confirm.
           </div>
         </div>
+      
+      <!-- ── Nominees Display Config ───────────────────── -->
+      <div class="ss-section">
+        <div class="ss-title">Nominees Display</div>
+        <div class="gs-card">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">How many nominees to show per category in the list. Admins can still expand to see all.</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label class="gs-lbl" style="width:auto;">Show per category</label>
+            <select class="gs-inp" id="sa-nom-limit-sel" style="max-width:140px;">
+              <option value="3">Top 3</option>
+              <option value="5">Top 5</option>
+              <option value="10">Top 10</option>
+              <option value="all">All nominees</option>
+            </select>
+            <button class="btn-sm gold" onclick="saveNomDisplayLimit()">Save</button>
+          </div>
+        </div>
       </div>
+
+      <!-- ── Admin Tool Permissions ─────────────────────── -->
+      <div class="ss-section">
+        <div class="ss-title">Admin Tool Permissions</div>
+        <div class="gs-card">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Control which tools are available to Admins. SuperAdmins always have full access regardless of these settings.</div>
+          <div id="admin-perms-list"></div>
+          <button class="btn-sm gold" onclick="saveAdminPerms()" style="margin-top:12px;">Save Permissions</button>
+        </div>
+      </div>
+</div>
       <div class="ss-section">
         <div class="ss-title">Organisation Name</div>
         <div style="display:flex;gap:8px;">
@@ -1616,7 +1639,9 @@ if (vD.length) DATA.voters = vD.map(parseVoterRow).filter(v=>v && v.pin);
     cfgD.forEach(r=>{
       const key=(typeof r[0]==='boolean'?String(r[0]):(r[0]||'')).trim().toLowerCase();
       const val=(typeof r[1]==='boolean'?(r[1]?'TRUE':'FALSE'):(r[1]||'')).trim();
-      if (key===ELIG_CONFIG_KEY.toLowerCase()) CFG._voterEligRaw = val; // store raw JSON for applyVoterEligOverrides
+      if (key===ELIG_CONFIG_KEY.toLowerCase()) CFG._voterEligRaw = val;
+      if (key==='_adminperms') { try{ localStorage.setItem('_adminPerms',val); }catch(e){} }
+      if (key==='_nomdisplaylimit') { CFG._nomDisplayLimit = val; }
       if (key==='votingopen')        CFG.votingOpen  = (val.toUpperCase()!=='FALSE');
       if (key==='orgname'   && val)  CFG.orgName    = val;
       if (key==='scripturl' && val)  CFG.scriptUrl  = val;
@@ -2171,47 +2196,106 @@ function initVoter(){
   updateVProg();
 }
 
+// ── Admin permissions ────────────────────────────────────────────────────
+const ADMIN_TOOLS = [
+  {id:'resetVoterVotes',  label:'Reset individual voter votes',  default:true},
+  {id:'resetAllVotes',    label:'Reset all votes',               default:false},
+  {id:'resetAllPins',     label:'Reset all voter PINs',          default:false},
+  {id:'deleteVoter',      label:'Delete individual voter',       default:true},
+  {id:'addVoter',         label:'Add voter',                     default:true},
+  {id:'syncStaff',        label:'Sync staff to voters',          default:true},
+  {id:'manageNominees',   label:'Add / remove nominees',        default:true},
+  {id:'manageCats',       label:'Manage award categories',       default:false},
+  {id:'bulkDeleteVoters', label:'Bulk delete all voters',        default:false},
+  {id:'bulkDeleteNoms',   label:'Bulk delete all nominees',      default:false},
+];
+
+function getAdminPerms(){
+  try{ return JSON.parse(localStorage.getItem('_adminPerms')||'{}'); }catch(e){ return {}; }
+}
+function adminCan(tool){
+  if(currentUser?.role==='superadmin') return true;
+  const perms = getAdminPerms();
+  const t = ADMIN_TOOLS.find(x=>x.id===tool);
+  return perms[tool] !== undefined ? !!perms[tool] : (t?.default ?? false);
+}
+function renderAdminPermsUI(){
+  const el = document.getElementById('admin-perms-list');
+  if(!el) return;
+  const perms = getAdminPerms();
+  el.innerHTML = ADMIN_TOOLS.map(t=>{
+    const on = perms[t.id]!==undefined ? !!perms[t.id] : t.default;
+    return `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+      <input type="checkbox" id="perm-${t.id}" ${on?'checked':''} style="width:15px;height:15px;accent-color:var(--gold);">
+      <span style="font-size:13px;">${t.label}</span>
+    </label>`;
+  }).join('');
+}
+function saveAdminPerms(){
+  const perms={};
+  ADMIN_TOOLS.forEach(t=>{
+    perms[t.id] = !!document.getElementById('perm-'+t.id)?.checked;
+  });
+  localStorage.setItem('_adminPerms', JSON.stringify(perms));
+  // Also write to Config sheet so it persists across devices
+  writeToSheets('setConfig',{key:'_adminPerms',value:JSON.stringify(perms)});
+  showToast('Admin permissions saved','ok');
+}
+function saveNomDisplayLimit(){
+  const val = document.getElementById('sa-nom-limit-sel')?.value||'all';
+  localStorage.setItem('_nomDisplayLimit', val);
+  writeToSheets('setConfig',{key:'_nomDisplayLimit',value:val});
+  showToast('Display setting saved','ok');
+  renderNominees();
+}
+function loadNomDisplayLimit(){
+  const stored = CFG._nomDisplayLimit || localStorage.getItem('_nomDisplayLimit') || 'all';
+  const sel = document.getElementById('sa-nom-limit-sel');
+  if(sel) sel.value = stored;
+  const inline = document.getElementById('nom-display-limit');
+  if(inline) inline.value = stored;
+  return stored;
+}
+
 function renderLoginCountdown(){
   const el = document.getElementById('login-countdown');
   if(!el) return;
-  const now  = Date.now();
+  const now   = Date.now();
   const start = CFG.votingStart ? new Date(CFG.votingStart).getTime() : 0;
   const end   = CFG.votingEnd   ? new Date(CFG.votingEnd).getTime()   : 0;
 
-  if(CFG.votingOpen && (!end || now < end)){
-    // Voting is currently live
-    let html = '<span class="countdown-live">🟢 Voting is Live</span>';
-    if(end && now < end){
-      const rem = end - now;
-      const d=Math.floor(rem/86400000), h=Math.floor(rem%86400000/3600000),
-            m=Math.floor(rem%3600000/60000), s=Math.floor(rem%60000/1000);
-      html += '<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--text2);">Closes in</div>';
-      html += '<div class="countdown-units">';
-      if(d) html += `<div class="countdown-unit"><span>${d}</span><span>Days</span></div>`;
-      html += `<div class="countdown-unit"><span>${String(h).padStart(2,'0')}</span><span>Hours</span></div>`;
-      html += `<div class="countdown-unit"><span>${String(m).padStart(2,'0')}</span><span>Min</span></div>`;
-      html += `<div class="countdown-unit"><span>${String(s).padStart(2,'0')}</span><span>Sec</span></div>`;
-      html += '</div>';
-    }
-    el.innerHTML = html;
-  } else if(!CFG.votingOpen && start && now < start){
-    // Voting hasn't started yet — show countdown to start
-    const rem = start - now;
+  function unitBlocks(rem){
     const d=Math.floor(rem/86400000), h=Math.floor(rem%86400000/3600000),
           m=Math.floor(rem%3600000/60000), s=Math.floor(rem%60000/1000);
-    let html = '<div class="countdown-soon">⏳ Voting Opens In</div>';
-    html += '<div class="countdown-units">';
-    if(d) html += `<div class="countdown-unit"><span>${d}</span><span>Days</span></div>`;
-    html += `<div class="countdown-unit"><span>${String(h).padStart(2,'0')}</span><span>Hours</span></div>`;
-    html += `<div class="countdown-unit"><span>${String(m).padStart(2,'0')}</span><span>Min</span></div>`;
-    html += `<div class="countdown-unit"><span>${String(s).padStart(2,'0')}</span><span>Sec</span></div>`;
-    html += '</div>';
-    el.innerHTML = html;
-  } else if(!CFG.votingOpen){
-    el.innerHTML = '<span class="countdown-closed">🔴 Voting is Closed</span>';
-  } else {
-    el.innerHTML = '';
+    let html='<div class="countdown-units">';
+    if(d) html+=`<div class="countdown-unit"><span>${d}</span><span>Days</span></div>`;
+    html+=`<div class="countdown-unit"><span>${String(h).padStart(2,'0')}</span><span>Hours</span></div>`;
+    html+=`<div class="countdown-unit"><span>${String(m).padStart(2,'0')}</span><span>Min</span></div>`;
+    html+=`<div class="countdown-unit"><span>${String(s).padStart(2,'0')}</span><span>Sec</span></div>`;
+    return html+'</div>';
   }
+
+  // PRIORITY 1: Future start time set → always show countdown to start,
+  // even if admin has toggled votingOpen=true (scheduled open overrides manual flag)
+  if(start && now < start){
+    el.innerHTML = '<div class="countdown-soon" style="margin-bottom:6px;">⏳ Voting Opens In</div>'
+                 + unitBlocks(start - now);
+    return;
+  }
+
+  // PRIORITY 2: Voting is live (start passed OR no start set, and not yet ended)
+  if(CFG.votingOpen && (!end || now < end)){
+    let html = '<span class="countdown-live" style="margin-bottom:6px;">🟢 Voting is Live</span>';
+    if(end && now < end){
+      html += '<div style="margin-top:6px;text-align:center;font-size:11px;color:var(--text2);">Closes in</div>';
+      html += unitBlocks(end - now);
+    }
+    el.innerHTML = html;
+    return;
+  }
+
+  // PRIORITY 3: Closed (end has passed, or not open and no future start)
+  el.innerHTML = '<span class="countdown-closed">🔴 Voting is Closed</span>';
 }
 
 let _cdTimer = null;
@@ -3801,6 +3885,8 @@ function initSA(){
   loadDisplaySettings();
   fillResultFilters('sa');
   renderSAResults();
+  renderAdminPermsUI();
+  loadNomDisplayLimit();
   renderVoterList();
   renderNominees();
   renderCatList();
@@ -3874,7 +3960,7 @@ function renderVoterList(){
         <div class="vactions">
           ${dupBtn}
           <button class="vact-btn gold" onclick="openEditVoterModal('${v.pin}')">✎</button>
-          <button class="vact-btn" onclick="confirmResetVoter('${v.pin}')">↺</button>
+          ${adminCan('resetVoterVotes')?`<button class="vact-btn" onclick="confirmResetVoter('${v.pin}')">↺</button>`:''}
           <button class="vact-btn red" onclick="removeVoter('${v.pin}')">✕</button>
         </div>
       </div>
@@ -4454,7 +4540,7 @@ function renderNominees(catElId, deptElId, unitElId, containerId, showEdit){
     (!deptF||n.dept===deptF)&&
     (!unitF||n.unit===unitF)
   );
-  const limitVal = document.getElementById('nom-display-limit')?.value || 'all';
+  const limitVal = CFG._nomDisplayLimit || document.getElementById('nom-display-limit')?.value || localStorage.getItem('_nomDisplayLimit') || 'all';
   const nomLimit = limitVal==='all' ? Infinity : parseInt(limitVal,10);
   const container=document.getElementById(containerId);
   if(!container) return;
