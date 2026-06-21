@@ -1106,6 +1106,25 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 <div class="toast" id="toast"></div>
 
 <script>
+;(function(){
+  var B='2026-06-17-v13';
+  var stored=localStorage.getItem('_portalBuild');
+  var u=new URL(location.href);
+  var vp=u.searchParams.get('_v');
+  if(vp===B){
+    // Just arrived via cache-busting redirect — clean up URL and continue
+    localStorage.setItem('_portalBuild',B);
+    u.searchParams.delete('_v');
+    history.replaceState(null,'',u.toString());
+  } else if(stored!==null && stored!==B){
+    // New version detected — redirect to versioned URL (forces cache miss)
+    localStorage.setItem('_portalBuild',B);
+    u.searchParams.set('_v',B.replace(/[^a-z0-9]/gi,''));
+    location.replace(u.toString());
+  } else {
+    localStorage.setItem('_portalBuild',B);
+  }
+})();
 // ═══════════════════════════════════════════════════════════
 // CONFIG — all persisted in localStorage
 // ═══════════════════════════════════════════════════════════
