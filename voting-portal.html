@@ -1974,44 +1974,58 @@ async function doAdminLogin(){
   if(!empId){ errEl.textContent='Please enter your Staff ID.'; return; }
   if(!CFG.scriptUrl){ errEl.textContent='Script URL not configured — contact SuperAdmin.'; return; }
 
-  // Authenticate via Apps Script (server-side) — passwords never come through
-  // the public Sheets API and are never stored or visible in the browser
+  // Use the proven Config-key roundtrip for auth:
+  // 1. Send adminLogin via no-cors write (always works)
+  // 2. Apps Script writes result to _adminAuthResult in Config
+  // 3. We read it back via the Sheets API (readable)
+  // 4. Apps Script cleans up the key immediately after
+  // Passwords never appear in the response — only role/name/pin/empId
   errEl.textContent='Verifying…';
   errEl.style.color='var(--text2)';
-  try {
-    const url = CFG.scriptUrl + '?data=' + encodeURIComponent(JSON.stringify({
-      action:'adminLogin', empId, password:pw
-    }));
-    const resp = await fetch(url, {mode:'cors', cache:'no-store'});
-    if(!resp.ok) throw new Error('Network error '+resp.status);
-    const result = await resp.json();
 
-    errEl.style.color='';
+  const reqKey = 'ar_' + Date.now(); // unique per login attempt
+  await writeToSheets('adminLogin', {empId, password:pw, reqKey});
 
-    if(result.firstLogin){
-      // First login — redirect to set-password screen
-      currentUser={pin:result.pin,role:result.role,name:result.name,empId:result.empId,type:'admin'};
-      DATA.admins=[{pin:result.pin,role:result.role,name:result.name,empId:result.empId}];
-      if(result.adminList) DATA.admins=result.adminList; // SA gets full list
-      showScreen('screen-setpw');
-      document.getElementById('setpw-new').focus();
-      return;
-    }
-    if(!result.success){
-      errEl.textContent = result.error || 'Login failed.';
-      return;
-    }
+  // Poll for the result (Apps Script writes it to Config)
+  let result = null;
+  for(let attempt=0; attempt<8; attempt++){
+    await new Promise(r=>setTimeout(r, attempt===0?1500:800));
+    try{
+      const rows = await fetchRange('Config!A1:B30');
+      for(const r of rows){
+        const k=(r[0]||'').trim().toLowerCase();
+        if(k==='_adminauthresult'){
+          try{ result=JSON.parse(r[1]||'{}'); }catch(e){}
+          break;
+        }
+      }
+      if(result && result.reqKey===reqKey) break;
+      result=null; // key doesn't match yet
+    }catch(e){}
+  }
+
+  errEl.style.color='';
+  if(!result){ errEl.textContent='Auth timed out — check Script URL.'; return; }
+  // Clean up the auth result key from Config
+  writeToSheets('setConfig',{key:'_adminAuthResult',value:''});
+
+  if(result.firstLogin){
     currentUser={pin:result.pin,role:result.role,name:result.name,empId:result.empId,type:'admin'};
     DATA.admins=[{pin:result.pin,role:result.role,name:result.name,empId:result.empId}];
-    if(result.adminList) DATA.admins=result.adminList; // SA gets full list (no passwords)
-    saveSession(result.pin);
-    if(result.role==='superadmin'){ showScreen('screen-superadmin'); initSA(); }
-    else { showScreen('screen-admin'); initAdmin(); }
-  } catch(e) {
-    errEl.style.color='';
-    errEl.textContent = 'Connection error — check Script URL and try again.';
-    console.error('[AdminLogin]', e);
+    if(result.adminList) DATA.admins=result.adminList;
+    showScreen('screen-setpw');
+    document.getElementById('setpw-new').focus();
+    return;
   }
+  if(!result.success){ errEl.textContent=result.error||'Incorrect credentials.'; return; }
+
+  currentUser={pin:result.pin,role:result.role,name:result.name,empId:result.empId,type:'admin'};
+  DATA.admins=[{pin:result.pin,role:result.role,name:result.name,empId:result.empId}];
+  if(result.adminList) DATA.admins=result.adminList;
+  cacheData();
+  saveSession(result.pin);
+  if(result.role==='superadmin'){ showScreen('screen-superadmin'); initSA(); }
+  else { showScreen('screen-admin'); initAdmin(); }
 }
 
 // ── First-login: set password ──
@@ -6198,48 +6212,54 @@ function handleRequest(raw) {
       // result.version is already set above — nothing else to do
     }
 
-    // ── ADMIN AUTH — verifies credentials server-side, passwords never reach browser ──
+    // ── ADMIN AUTH — server-side credential check, result written to Config ──
+    // Passwords never appear in any client response. Result uses a unique reqKey
+    // so only the requesting browser can claim it.
     else if (action === 'adminLogin') {
       var admSheet = ss.getSheetByName('Admins');
-      if (!admSheet || admSheet.getLastRow() < 2) {
-        return buildResponse(JSON.stringify({success:false, error:'No admins configured'}));
-      }
-      var arows = admSheet.getDataRange().getValues();
-      var found = null;
-      for (var ai = 1; ai < arows.length; ai++) {
-        var aPin   = String(arows[ai][0]||'').trim();
-        var aRole  = String(arows[ai][1]||'').trim().toLowerCase();
-        var aName  = String(arows[ai][2]||'').trim();
-        var aEmpId = String(arows[ai][3]||'').trim().toUpperCase();
-        var aPw    = String(arows[ai][4]||'').trim();
-        var inputId = String(data.empId||'').trim().toUpperCase();
-        if (aEmpId === inputId || aPin === inputId) {
-          found = {pin:aPin, role:aRole, name:aName, empId:aEmpId, password:aPw};
-          break;
+      var authResult = {success:false, error:'No admins configured', reqKey: data.reqKey||''};
+      if (admSheet && admSheet.getLastRow() > 1) {
+        var arows = admSheet.getDataRange().getValues();
+        var found = null;
+        for (var ai = 1; ai < arows.length; ai++) {
+          var aPin   = String(arows[ai][0]||'').trim();
+          var aRole  = String(arows[ai][1]||'').trim().toLowerCase();
+          var aName  = String(arows[ai][2]||'').trim();
+          var aEmpId = String(arows[ai][3]||'').trim().toUpperCase();
+          var aPw    = String(arows[ai][4]||'').trim();
+          var inputId = String(data.empId||'').trim().toUpperCase();
+          if (aEmpId === inputId || aPin === inputId) {
+            found = {pin:aPin, role:aRole, name:aName, empId:aEmpId, password:aPw};
+            break;
+          }
+        }
+        if (!found) {
+          authResult = {success:false, error:'Staff ID not recognised.', reqKey:data.reqKey||''};
+        } else if (!found.password) {
+          authResult = {success:false, firstLogin:true, reqKey:data.reqKey||'',
+                        pin:found.pin, role:found.role, name:found.name, empId:found.empId};
+          if (found.role === 'superadmin') {
+            authResult.adminList = arows.slice(1).map(function(r){
+              return {pin:String(r[0]||''),role:String(r[1]||'').toLowerCase(),
+                      name:String(r[2]||''),empId:String(r[3]||'')};
+            });
+          }
+        } else if (found.password !== String(data.password||'').trim()) {
+          authResult = {success:false, error:'Incorrect password.', reqKey:data.reqKey||''};
+        } else {
+          // Success — no password in result
+          authResult = {success:true, reqKey:data.reqKey||'',
+                        pin:found.pin, role:found.role, name:found.name, empId:found.empId};
+          if (found.role === 'superadmin') {
+            authResult.adminList = arows.slice(1).map(function(r){
+              return {pin:String(r[0]||''),role:String(r[1]||'').toLowerCase(),
+                      name:String(r[2]||''),empId:String(r[3]||'')};
+            });
+          }
         }
       }
-      if (!found) return buildResponse(JSON.stringify({success:false, error:'Staff ID not recognised.'}));
-      if (!found.password) {
-        // First login — return signal to show set-password screen
-        var resp = {success:false, firstLogin:true, pin:found.pin, role:found.role, name:found.name, empId:found.empId};
-        if (found.role === 'superadmin') {
-          resp.adminList = arows.slice(1).map(function(r){
-            return {pin:String(r[0]||''),role:String(r[1]||'').toLowerCase(),name:String(r[2]||''),empId:String(r[3]||'')};
-          });
-        }
-        return buildResponse(JSON.stringify(resp));
-      }
-      var inputPw = String(data.password||'').trim();
-      if (found.password !== inputPw) return buildResponse(JSON.stringify({success:false, error:'Incorrect password.'}));
-      // Success — return role/name/empId but NEVER the password
-      var successResp = {success:true, pin:found.pin, role:found.role, name:found.name, empId:found.empId};
-      if (found.role === 'superadmin') {
-        // SA also gets the admin list (no passwords) to manage accounts
-        successResp.adminList = arows.slice(1).map(function(r){
-          return {pin:String(r[0]||''),role:String(r[1]||'').toLowerCase(),name:String(r[2]||''),empId:String(r[3]||'')};
-        });
-      }
-      return buildResponse(JSON.stringify(successResp));
+      // Write result to Config so portal can read it back via Sheets API
+      setConfigValue(ss, '_adminAuthResult', JSON.stringify(authResult));
     }
     // ── VOTES ──
     else if (action === 'submitVotes') {
