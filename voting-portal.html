@@ -1235,42 +1235,48 @@ const DATA = { voters:[], admins:[], nominees:[], votes:[], categories:[], depar
 // Save DATA to localStorage so it survives refresh when Sheets sync hasn't happened
 function cacheData() {
   try {
-    LS.set('cached_staff',       DATA.staff);
-    LS.set('cached_nominees',    DATA.nominees);
-    LS.set('cached_categories',  DATA.categories);
-    LS.set('cached_departments', DATA.departments);
-    LS.set('cached_voters',      DATA.voters);
-    LS.set('cached_admins',      DATA.admins);
-    LS.set('cached_votes',       DATA.votes);
-    LS.set('cached_ts',          Date.now());
+    // Strip passwords before caching — they must never persist to localStorage
+    const safeAdmins = DATA.admins.map(a=>({pin:a.pin,role:a.role,name:a.name,empId:a.empId}));
+    // Obfuscate all cached values with base64 so they're not plain-text in DevTools
+    const enc = obj => { try{ return btoa(encodeURIComponent(JSON.stringify(obj))); }catch(e){return '';} };
+    localStorage.setItem('_c_staff',  enc(DATA.staff));
+    localStorage.setItem('_c_noms',   enc(DATA.nominees));
+    localStorage.setItem('_c_cats',   enc(DATA.categories));
+    localStorage.setItem('_c_depts',  enc(DATA.departments));
+    localStorage.setItem('_c_voters', enc(DATA.voters));
+    localStorage.setItem('_c_admins', enc(safeAdmins));
+    localStorage.setItem('_c_votes',  enc(DATA.votes));
+    localStorage.setItem('_c_ts',     String(Date.now()));
+    // Remove old plaintext keys from previous format
+    ['cached_staff','cached_nominees','cached_categories','cached_departments',
+     'cached_voters','cached_admins','cached_votes','cached_ts'].forEach(k=>localStorage.removeItem(k));
   } catch(e) { console.warn('Cache write failed:', e); }
 }
 function loadCachedData() {
+  const dec = str => { try{ return JSON.parse(decodeURIComponent(atob(str||''))); }catch(e){return null;} };
   try {
-    const ts = LS.get('cached_ts');
+    const ts = parseInt(localStorage.getItem('_c_ts')||'0',10);
     if (!ts) return false;
-    // Use cache if less than 24 hours old
-    if (Date.now() - ts > 24 * 60 * 60 * 1000) return false;
-    const s  = LS.get('cached_staff');
-    const n  = LS.get('cached_nominees');
-    const c  = LS.get('cached_categories');
-    const d  = LS.get('cached_departments');
-    const v  = LS.get('cached_voters');
-    const a  = LS.get('cached_admins');
-    const vt = LS.get('cached_votes');
-    if (a && a.length) {
-      if (s)  DATA.staff       = s;
-      if (n)  DATA.nominees    = n;
-      if (c)  DATA.categories  = c;
-      if (d)  DATA.departments = d;
-      if (v)  DATA.voters      = v;
-      if (a)  DATA.admins      = a;
-      if (vt) DATA.votes       = vt;
-      return true;
-    }
-    return false;
+    if (Date.now() - ts > 24*60*60*1000) return false;
+    const a = dec(localStorage.getItem('_c_admins'));
+    if (!a || !a.length) return false;
+    const s  = dec(localStorage.getItem('_c_staff'));
+    const n  = dec(localStorage.getItem('_c_noms'));
+    const c  = dec(localStorage.getItem('_c_cats'));
+    const d  = dec(localStorage.getItem('_c_depts'));
+    const v  = dec(localStorage.getItem('_c_voters'));
+    const vt = dec(localStorage.getItem('_c_votes'));
+    if (s)  DATA.staff      = s;
+    if (n)  DATA.nominees   = n;
+    if (c)  DATA.categories = c;
+    if (d)  DATA.departments= d;
+    if (v)  DATA.voters     = v;
+    if (a)  DATA.admins     = a;
+    if (vt) DATA.votes      = vt;
+    return true;
   } catch(e) { return false; }
 }
+
 // departments = [{id,name,color,units:[{id,name}]}]
 // categories  = [{id,name,scope}]  scope: 'dept'|'unit'|'global'
 // nominees    = [{id,name,dept,unit,category}]
@@ -2062,6 +2068,10 @@ function setLoginErr(m){
   if(el) el.textContent=m;
 }
 function doLogout(){
+  // Wipe all cached data so nothing sensitive stays in the browser
+  ['_c_staff','_c_noms','_c_cats','_c_depts','_c_voters','_c_admins','_c_votes','_c_ts',
+   'cached_staff','cached_nominees','cached_categories','cached_departments',
+   'cached_voters','cached_admins','cached_votes','cached_ts'].forEach(k=>localStorage.removeItem(k));
   currentUser=null;selections={};
   clearSession();
   // Clear voter login fields
