@@ -2005,7 +2005,39 @@ async function doAdminLogin(){
   }
 
   errEl.style.color='';
-  if(!result){ errEl.textContent='Auth timed out — check Script URL.'; return; }
+  if(!result){
+    // Roundtrip timed out — Apps Script may not have the new adminLogin action yet.
+    // Fall back to reading the Admins sheet directly so the user isn't locked out.
+    errEl.textContent='Trying fallback login…';
+    errEl.style.color='var(--text2)';
+    try {
+      const admRows = await fetchRange('Admins!A2:E');
+      const admin = admRows.map(r=>({
+        pin:(r[0]||'').trim(), role:(r[1]||'').trim().toLowerCase(),
+        name:(r[2]||'').trim(), empId:(r[3]||'').trim().toUpperCase(), password:(r[4]||'').trim()
+      })).find(a=>a.empId===empId||a.pin===empId);
+      errEl.style.color='';
+      if(!admin){ errEl.textContent='Staff ID not recognised.'; return; }
+      if(!admin.password){
+        currentUser={pin:admin.pin,role:admin.role,name:admin.name,empId:admin.empId,type:'admin'};
+        DATA.admins=[{pin:admin.pin,role:admin.role,name:admin.name,empId:admin.empId}];
+        showScreen('screen-setpw'); document.getElementById('setpw-new').focus(); return;
+      }
+      if(!pw){ errEl.textContent='Please enter your password.'; return; }
+      if(admin.password!==pw){ errEl.textContent='Incorrect password.'; return; }
+      // Fallback login succeeded — show warning about deploying new Apps Script
+      currentUser={pin:admin.pin,role:admin.role,name:admin.name,empId:admin.empId,type:'admin'};
+      DATA.admins=[{pin:admin.pin,role:admin.role,name:admin.name,empId:admin.empId}];
+      cacheData(); saveSession(admin.pin);
+      showToast('⚠ Deploy Apps Script v14 to enable secure login','err');
+      if(admin.role==='superadmin'){ showScreen('screen-superadmin'); initSA(); }
+      else { showScreen('screen-admin'); initAdmin(); }
+    } catch(fb){
+      errEl.style.color='';
+      errEl.textContent='Login failed. Click ⚙ Settings to check your Script URL.';
+    }
+    return;
+  }
   // Clean up the auth result key from Config
   writeToSheets('setConfig',{key:'_adminAuthResult',value:''});
 
@@ -2121,8 +2153,34 @@ function doLogout(){
   showScreen('screen-login'); startLoginCountdown();
 }
 function goToSettings(){
-  // Show admin login panel — SuperAdmin logs in via Employee ID + Password
-  showAdminLogin();
+  // Open a lightweight setup modal — accessible without login
+  // so the Script URL / Sheet ID can always be updated even when locked out
+  openModal(`<div class="modal-title">⚙ Connection Setup</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">
+      Update your Google Sheets connection details here. These are saved locally on this device.
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Sheet ID</label>
+      <input class="modal-inp" id="qs-sheet-id" value="${CFG.sheetId||''}" placeholder="1BxiMVs0XRA...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">API Key</label>
+      <input class="modal-inp" id="qs-api-key" value="${CFG.apiKey||''}" placeholder="AIzaSy...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-lbl">Apps Script URL</label>
+      <input class="modal-inp" id="qs-script-url" value="${CFG.scriptUrl||''}" placeholder="https://script.google.com/macros/s/.../exec">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Deploy a new version in Apps Script after pasting the latest code, then paste the new /exec URL here.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="
+        if(document.getElementById('qs-sheet-id').value.trim()) CFG.sheetId=document.getElementById('qs-sheet-id').value.trim();
+        if(document.getElementById('qs-api-key').value.trim()) CFG.apiKey=document.getElementById('qs-api-key').value.trim();
+        if(document.getElementById('qs-script-url').value.trim()) CFG.scriptUrl=document.getElementById('qs-script-url').value.trim();
+        closeModal(); showToast('Settings saved — try logging in again','ok');
+      ">Save & Close</button>
+    </div>`);
 }
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
