@@ -1584,7 +1584,10 @@ function SuperAdminApp() {
   // Data
   var uS  = useState({}); var saUsers = uS[0]; var setSaUsers = uS[1];
   var plS = useState([]); var predLog=plS[0]; var setPredLog=plS[1];
-  var plS = useState([]); var predLog  = plS[0]; var setPredLog  = plS[1];
+  var bPS = useState({}); var saBonusPts=bPS[0]; var setSaBonusPts=bPS[1];
+  var krS = useState({}); var saKoResults=krS[0]; var setSaKoResults=krS[1];
+  var rpS = useState({}); var saRoomPreds=rpS[0]; var setSaRoomPreds=rpS[1];
+  var rlS = useState({}); var saRoomLoading=rlS[0]; var setSaRoomLoading=rlS[1];
   var rS  = useState({}); var saRooms = rS[0]; var setSaRooms = rS[1];
   var prS = useState({}); var saPreds = prS[0]; var setSaPreds = prS[1];
   var reS = useState({}); var saResults = reS[0]; var setSaResults = reS[1];
@@ -1634,7 +1637,7 @@ function SuperAdminApp() {
 
   function loadAll() {
     setLoading(true);
-    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log'];
+    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log','wc26_bonus','wc26_koresults'];
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults,
@@ -1710,6 +1713,43 @@ function SuperAdminApp() {
       .then(function(d){ if (d.ok) setPwMsg('✓ Password updated (local + GAS)!'); })
       .catch(function(){});
   }
+
+  // Load per-user preds when a room is expanded — same as user view does
+  useEffect(function() {
+    if (!expandedRoom) return;
+    var r = saRooms[expandedRoom];
+    if (!r || saRoomLoading[expandedRoom]) return;
+    var members = r.members || [];
+    if (!members.length) return;
+
+    setSaRoomLoading(function(p){ var n=Object.assign({},p); n[expandedRoom]=true; return n; });
+
+    var base = Object.assign({}, saPreds);  // start with old global preds
+    var pending = members.length;
+
+    members.forEach(function(uid) {
+      var userKey = 'wc26_preds_' + uid;
+      fetch(GS_URL+'?action=get&key='+encodeURIComponent(userKey)+'&_='+Date.now(), {redirect:'follow'})
+      .then(function(res){ return res.json(); })
+      .then(function(d){
+        if (d.ok && d.value && typeof d.value === 'object') {
+          // Per-user format: {matchId: {h,a,ts}} → convert to {uid_matchId: {h,a,ts}}
+          Object.keys(d.value).forEach(function(mId){
+            base[uid+'_'+mId] = d.value[mId];
+          });
+        }
+      })
+      .catch(function(){})
+      .then(function(){
+        pending--;
+        if (pending === 0) {
+          setSaRoomPreds(function(p){ var n=Object.assign({},p); n[expandedRoom]=base; return n; });
+          setSaRoomLoading(function(p){ var n=Object.assign({},p); n[expandedRoom]=false; return n; });
+        }
+      });
+    });
+  }, [expandedRoom]);
+
 
   // ── Login screen ─────────────────────────────────────────────
   if (!authed) {
@@ -1930,6 +1970,15 @@ function SuperAdminApp() {
                             }}>${r.locked?'🔓 Unlock':'🔒 Lock'}</button>
                           <button class="btn" style=${{fontSize:11,padding:'3px 10px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
                             onClick=${function(e){e.stopPropagation();deleteRoom(r.id);}}>Delete Room</button>
+                          <button class="btn" style=${{fontSize:11,padding:'3px 10px',color:'#f59e0b',borderColor:'rgba(245,158,11,.3)'}}
+                            onClick=${function(e){
+                              e.stopPropagation();
+                              if(!confirm('Clear ALL announcements for "'+r.name+'"?')) return;
+                              fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                                body:JSON.stringify({action:'set',key:'wc26_ann_'+r.id,value:[]})})
+                              .then(function(res){return res.json();})
+                              .then(function(d){ if(d.ok!==false) alert('Announcements cleared ✓'); });
+                            }}>🗑 Clear Anns</button>
                         </div>
 
                         <!-- Quick add user by selecting from dropdown -->
@@ -1988,6 +2037,110 @@ function SuperAdminApp() {
                             </div>`
                         }
                       </div>`}
+
+                        <!-- ── Room Standings ─────────────────────── -->
+                        <div style=${{marginTop:12,padding:'10px 12px',background:'var(--bg2)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)'}}>
+                          <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:8,letterSpacing:.5}}>📊 ROOM STANDINGS</div>
+                          ${(function(){
+                            var members = r.members || [];
+                            var lbRows = members.map(function(uid){
+                              var u = (props.users&&props.users[uid]) || saUsers[uid] || {name:'User #'+uid.slice(-4), id:uid};
+                              // Use room-specific merged preds (per-user + global) — same as user view
+                              // Use live preds from App (same merged per-user+global data user view uses)
+                              var allPreds = props.preds || saRoomPreds[r.id] || Object.assign({}, saPreds);
+                              var grpPts = MS.reduce(function(tot,m){
+                                var p = allPreds[uid+'_'+m.id];
+                                return tot + (calcPts(p, (props.results||saResults||{})[m.id])||0);
+                              }, 0);
+                              var koPts = KO_MS.reduce(function(tot,m){
+                                var p = allPreds[uid+'_'+m.id];
+                                return tot + (calcPts(p, (props.koResults||saKoResults||{})[m.id])||0);
+                              }, 0);
+                              var bonusAmt = ((props.bonusPts||saBonusPts||{})[r.id]||{})[uid]||0;
+                              var total = grpPts + koPts + bonusAmt;
+                              var np = MS.concat(KO_MS).filter(function(m){return allPreds[uid+'_'+m.id];}).length;
+                              return {u:u, pts:total, grp:grpPts, ko:koPts, bonus:bonusAmt, np:np};
+                            }).sort(function(a,b){return b.pts-a.pts;});
+                            // Show loading indicator while per-user preds are being fetched
+                            if (saRoomLoading[r.id]) return html`<div style=${{fontSize:12,color:'var(--dm)',display:'flex',alignItems:'center',gap:8}}>
+                              <div style=${{width:14,height:14,border:'2px solid var(--bdr)',borderTopColor:'#f0b429',borderRadius:'50%',animation:'spin .8s linear infinite'}}></div>
+                              Loading standings…
+                            </div>`;
+                            if (lbRows.length===0) return html`<div style=${{fontSize:12,color:'var(--dm)'}}>No members.</div>`;
+                            return html`<div style=${{display:'flex',flexDirection:'column',gap:4}}>
+                              ${lbRows.map(function(row,i){
+                                return html`<div key=${row.u.id} style=${{display:'flex',justifyContent:'space-between',alignItems:'center',
+                                  padding:'5px 8px',borderRadius:'var(--rs)',
+                                  background:i===0?'rgba(240,180,41,.08)':i===1?'rgba(180,180,180,.05)':i===2?'rgba(184,115,51,.05)':'transparent',
+                                  fontSize:12}}>
+                                  <div style=${{display:'flex',alignItems:'center',gap:6}}>
+                                    <span style=${{fontSize:10,color:'var(--dm)',width:16,textAlign:'right'}}>${i+1}</span>
+                                    <span style=${{fontWeight:600}}>${row.u.name}</span>
+                                    ${row.bonus?html`<span style=${{fontSize:10,color:row.bonus>0?'#4ade80':'#f87171',fontWeight:600}}>${row.bonus>0?'+':''}${row.bonus}★</span>`:''}
+                                  </div>
+                                  <div style=${{display:'flex',gap:10,alignItems:'center'}}>
+                                    <span style=${{fontSize:10,color:'var(--dm)'}}>${row.np} preds</span>
+                                    <span style=${{fontWeight:700,color:row.pts>0?'#f0b429':'var(--dm)'}}>${row.pts} pts</span>
+                                  </div>
+                                </div>`;
+                              })}
+                            </div>`;
+                          })()}
+                        </div>
+
+                        <!-- ── Fix User Score (SA) ────────────────── -->
+                        <div style=${{marginTop:8,padding:'10px 12px',background:'var(--bg2)',borderRadius:'var(--rs)',border:'1px solid rgba(239,68,68,.2)'}}>
+                          <div style=${{fontSize:11,fontWeight:600,color:'#f87171',marginBottom:8,letterSpacing:.5}}>🔧 FIX USER SCORE</div>
+                          ${(function(){
+                            var fixId = 'sa_fix_'+r.id;
+                            return html`<div style=${{display:'flex',flexDirection:'column',gap:6}}>
+                              <div style=${{display:'flex',gap:6,flexWrap:'wrap'}}>
+                                <select id=${fixId+'_uid'} style=${{flex:'1 1 120px',padding:'6px 8px',fontSize:11,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                                  <option value="">User…</option>
+                                  ${(r.members||[]).map(function(uid){
+                                    return html`<option key=${uid} value=${uid}>${(saUsers[uid]||{}).name||uid.slice(-6)}</option>`;
+                                  })}
+                                </select>
+                                <select id=${fixId+'_mid'} style=${{flex:'2 1 160px',padding:'6px 8px',fontSize:11,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                                  <option value="">Match…</option>
+                                  ${MS.concat(KO_MS).map(function(m){
+                                    return html`<option key=${m.id} value=${m.id}>${m.id}: ${m.h} vs ${m.a}</option>`;
+                                  })}
+                                </select>
+                                <input id=${fixId+'_h'} type="number" min="0" max="20" placeholder="H" style=${{width:46,padding:'6px',fontSize:12,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                                <input id=${fixId+'_a'} type="number" min="0" max="20" placeholder="A" style=${{width:46,padding:'6px',fontSize:12,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                                <button class="btn" style=${{fontSize:11,padding:'6px 12px',color:'#f87171',borderColor:'rgba(239,68,68,.3)'}}
+                                  onClick=${function(){
+                                    var uid  = document.getElementById(fixId+'_uid').value;
+                                    var mid  = document.getElementById(fixId+'_mid').value;
+                                    var h    = document.getElementById(fixId+'_h').value;
+                                    var aVal = document.getElementById(fixId+'_a').value;
+                                    if(!uid||!mid||h===''||aVal===''){alert('Fill all fields');return;}
+                                    var userKey = 'wc26_preds_'+uid;
+                                    var newPred = {h:Number(h),a:Number(aVal),ts:new Date().toISOString(),adminEdit:true};
+                                    // Read existing user preds, merge, write
+                                    fetch(GS_URL+'?action=get&key='+encodeURIComponent(userKey)+'&_='+Date.now(),{redirect:'follow'})
+                                    .then(function(res){return res.json();})
+                                    .then(function(d){
+                                      var mp = (d.ok&&d.value&&typeof d.value==='object')?d.value:{};
+                                      mp[mid] = newPred;
+                                      // Also update global preds for SA view
+                                      var gp = Object.assign({},saPreds); gp[uid+'_'+mid]=newPred; setSaPreds(gp);
+                                      return fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                                        body:JSON.stringify({action:'set',key:userKey,value:mp})});
+                                    })
+                                    .then(function(res){return res.json();})
+                                    .then(function(d){
+                                      if(d&&d.ok) alert('Score fixed ✓ for '+(saUsers[uid]||{}).name+': '+mid+' '+h+'-'+aVal);
+                                      else alert('Error: '+(d&&d.error)||'failed');
+                                    })
+                                    .catch(function(e){alert('Network error: '+e.message);});
+                                  }}>Fix</button>
+                              </div>
+                            </div>`;
+                          })()}
+                        </div>
+
                     </td>
                   </tr>`;
                 })
@@ -4927,6 +5080,26 @@ function App() {
     Store.listen('rooms', function(v) {
       var rv = v||{};
       setRooms(rv);
+      // One-time cleanup: remove 'Hello GUYS' from room 8JK6MM
+      var csb = Object.values(rv).find(function(r){return r.code==='8JK6MM';});
+      if (csb && !window._csbAnnCleaned) {
+        window._csbAnnCleaned = true;
+        fetch(GS_URL+'?action=get&key=wc26_ann_'+csb.id+'&_='+Date.now(),{redirect:'follow'})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if (!d.ok || !Array.isArray(d.value) || !d.value.length) return;
+          var cleaned = d.value.filter(function(a){
+            return !(a.title||'').toLowerCase().includes('hello guys');
+          });
+          if (cleaned.length !== d.value.length) {
+            fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+              body:JSON.stringify({action:'set',key:'wc26_ann_'+csb.id,value:cleaned})
+            }).then(function(){
+              setAnnsByRoom(function(p){var n=Object.assign({},p);n[csb.id]=cleaned;return n;});
+            }).catch(function(){});
+          }
+        }).catch(function(){});
+      }
       setRoom(function(cur) {
         if (!cur || !rv[cur.id]) return cur;
         var gasRoom = rv[cur.id];
@@ -5465,7 +5638,7 @@ function getAchievements(uid, predsMap, resultsMap) {
   if (!Store._ready()) return html`<${SetupScreen} />`;
 
   // Route to super admin
-  if (isSuperAdmin) return html`<${SuperAdminApp} />`;
+  if (isSuperAdmin) return html`<${SuperAdminApp} preds=${preds} users=${users} rooms=${rooms} results=${results} koResults=${koResults} bonusPts=${bonusPts} />`;
 
   if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,background:'var(--bg)'}}>
     <svg viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg" width="56" height="64">
