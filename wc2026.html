@@ -2044,18 +2044,19 @@ function SuperAdminApp() {
                           ${(function(){
                             var members = r.members || [];
                             var lbRows = members.map(function(uid){
-                              var u = saUsers[uid] || {name:'User #'+uid.slice(-4), id:uid};
+                              var u = (props.users&&props.users[uid]) || saUsers[uid] || {name:'User #'+uid.slice(-4), id:uid};
                               // Use room-specific merged preds (per-user + global) — same as user view
-                              var allPreds = saRoomPreds[r.id] || Object.assign({}, saPreds);
+                              // Use live preds from App (same merged per-user+global data user view uses)
+                              var allPreds = props.preds || saRoomPreds[r.id] || Object.assign({}, saPreds);
                               var grpPts = MS.reduce(function(tot,m){
                                 var p = allPreds[uid+'_'+m.id];
-                                return tot + (calcPts(p, saResults[m.id])||0);
+                                return tot + (calcPts(p, (props.results||saResults||{})[m.id])||0);
                               }, 0);
                               var koPts = KO_MS.reduce(function(tot,m){
                                 var p = allPreds[uid+'_'+m.id];
-                                return tot + (calcPts(p, (saKoResults||{})[m.id])||0);
+                                return tot + (calcPts(p, (props.koResults||saKoResults||{})[m.id])||0);
                               }, 0);
-                              var bonusAmt = (saBonusPts&&saBonusPts[r.id]&&saBonusPts[r.id][uid])||0;
+                              var bonusAmt = ((props.bonusPts||saBonusPts||{})[r.id]||{})[uid]||0;
                               var total = grpPts + koPts + bonusAmt;
                               var np = MS.concat(KO_MS).filter(function(m){return allPreds[uid+'_'+m.id];}).length;
                               return {u:u, pts:total, grp:grpPts, ko:koPts, bonus:bonusAmt, np:np};
@@ -5079,6 +5080,26 @@ function App() {
     Store.listen('rooms', function(v) {
       var rv = v||{};
       setRooms(rv);
+      // One-time cleanup: remove 'Hello GUYS' from room 8JK6MM
+      var csb = Object.values(rv).find(function(r){return r.code==='8JK6MM';});
+      if (csb && !window._csbAnnCleaned) {
+        window._csbAnnCleaned = true;
+        fetch(GS_URL+'?action=get&key=wc26_ann_'+csb.id+'&_='+Date.now(),{redirect:'follow'})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if (!d.ok || !Array.isArray(d.value) || !d.value.length) return;
+          var cleaned = d.value.filter(function(a){
+            return !(a.title||'').toLowerCase().includes('hello guys');
+          });
+          if (cleaned.length !== d.value.length) {
+            fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+              body:JSON.stringify({action:'set',key:'wc26_ann_'+csb.id,value:cleaned})
+            }).then(function(){
+              setAnnsByRoom(function(p){var n=Object.assign({},p);n[csb.id]=cleaned;return n;});
+            }).catch(function(){});
+          }
+        }).catch(function(){});
+      }
       setRoom(function(cur) {
         if (!cur || !rv[cur.id]) return cur;
         var gasRoom = rv[cur.id];
@@ -5617,7 +5638,7 @@ function getAchievements(uid, predsMap, resultsMap) {
   if (!Store._ready()) return html`<${SetupScreen} />`;
 
   // Route to super admin
-  if (isSuperAdmin) return html`<${SuperAdminApp} />`;
+  if (isSuperAdmin) return html`<${SuperAdminApp} preds=${preds} users=${users} rooms=${rooms} results=${results} koResults=${koResults} bonusPts=${bonusPts} />`;
 
   if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,background:'var(--bg)'}}>
     <svg viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg" width="56" height="64">
@@ -5728,4 +5749,4 @@ try {
 </script>
 </body>
 </html>
-  All rights reserved by; Mohamed Waheed (7987999)
+      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
