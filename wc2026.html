@@ -1586,7 +1586,8 @@ function SuperAdminApp() {
   var plS = useState([]); var predLog=plS[0]; var setPredLog=plS[1];
   var bPS = useState({}); var saBonusPts=bPS[0]; var setSaBonusPts=bPS[1];
   var krS = useState({}); var saKoResults=krS[0]; var setSaKoResults=krS[1];
-  var plS = useState([]); var predLog  = plS[0]; var setPredLog  = plS[1];
+  var rpS = useState({}); var saRoomPreds=rpS[0]; var setSaRoomPreds=rpS[1];
+  var rlS = useState({}); var saRoomLoading=rlS[0]; var setSaRoomLoading=rlS[1];
   var rS  = useState({}); var saRooms = rS[0]; var setSaRooms = rS[1];
   var prS = useState({}); var saPreds = prS[0]; var setSaPreds = prS[1];
   var reS = useState({}); var saResults = reS[0]; var setSaResults = reS[1];
@@ -1712,6 +1713,43 @@ function SuperAdminApp() {
       .then(function(d){ if (d.ok) setPwMsg('✓ Password updated (local + GAS)!'); })
       .catch(function(){});
   }
+
+  // Load per-user preds when a room is expanded — same as user view does
+  useEffect(function() {
+    if (!expandedRoom) return;
+    var r = saRooms[expandedRoom];
+    if (!r || saRoomLoading[expandedRoom]) return;
+    var members = r.members || [];
+    if (!members.length) return;
+
+    setSaRoomLoading(function(p){ var n=Object.assign({},p); n[expandedRoom]=true; return n; });
+
+    var base = Object.assign({}, saPreds);  // start with old global preds
+    var pending = members.length;
+
+    members.forEach(function(uid) {
+      var userKey = 'wc26_preds_' + uid;
+      fetch(GS_URL+'?action=get&key='+encodeURIComponent(userKey)+'&_='+Date.now(), {redirect:'follow'})
+      .then(function(res){ return res.json(); })
+      .then(function(d){
+        if (d.ok && d.value && typeof d.value === 'object') {
+          // Per-user format: {matchId: {h,a,ts}} → convert to {uid_matchId: {h,a,ts}}
+          Object.keys(d.value).forEach(function(mId){
+            base[uid+'_'+mId] = d.value[mId];
+          });
+        }
+      })
+      .catch(function(){})
+      .then(function(){
+        pending--;
+        if (pending === 0) {
+          setSaRoomPreds(function(p){ var n=Object.assign({},p); n[expandedRoom]=base; return n; });
+          setSaRoomLoading(function(p){ var n=Object.assign({},p); n[expandedRoom]=false; return n; });
+        }
+      });
+    });
+  }, [expandedRoom]);
+
 
   // ── Login screen ─────────────────────────────────────────────
   if (!authed) {
@@ -2007,20 +2045,26 @@ function SuperAdminApp() {
                             var members = r.members || [];
                             var lbRows = members.map(function(uid){
                               var u = saUsers[uid] || {name:'User #'+uid.slice(-4), id:uid};
-                              var allPreds = Object.assign({}, saPreds);
+                              // Use room-specific merged preds (per-user + global) — same as user view
+                              var allPreds = saRoomPreds[r.id] || Object.assign({}, saPreds);
                               var grpPts = MS.reduce(function(tot,m){
                                 var p = allPreds[uid+'_'+m.id];
                                 return tot + (calcPts(p, saResults[m.id])||0);
                               }, 0);
                               var koPts = KO_MS.reduce(function(tot,m){
                                 var p = allPreds[uid+'_'+m.id];
-                                return tot + (calcPts(p, saKoResults&&saKoResults[m.id])||0);
+                                return tot + (calcPts(p, (saKoResults||{})[m.id])||0);
                               }, 0);
                               var bonusAmt = (saBonusPts&&saBonusPts[r.id]&&saBonusPts[r.id][uid])||0;
                               var total = grpPts + koPts + bonusAmt;
-                              var np = MS.filter(function(m){return allPreds[uid+'_'+m.id];}).length;
+                              var np = MS.concat(KO_MS).filter(function(m){return allPreds[uid+'_'+m.id];}).length;
                               return {u:u, pts:total, grp:grpPts, ko:koPts, bonus:bonusAmt, np:np};
                             }).sort(function(a,b){return b.pts-a.pts;});
+                            // Show loading indicator while per-user preds are being fetched
+                            if (saRoomLoading[r.id]) return html`<div style=${{fontSize:12,color:'var(--dm)',display:'flex',alignItems:'center',gap:8}}>
+                              <div style=${{width:14,height:14,border:'2px solid var(--bdr)',borderTopColor:'#f0b429',borderRadius:'50%',animation:'spin .8s linear infinite'}}></div>
+                              Loading standings…
+                            </div>`;
                             if (lbRows.length===0) return html`<div style=${{fontSize:12,color:'var(--dm)'}}>No members.</div>`;
                             return html`<div style=${{display:'flex',flexDirection:'column',gap:4}}>
                               ${lbRows.map(function(row,i){
@@ -5684,4 +5728,4 @@ try {
 </script>
 </body>
 </html>
-  All rights reserved by: Mohamed Waheed (7987999)
+  All rights reserved by; Mohamed Waheed (7987999)
