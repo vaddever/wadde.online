@@ -3968,7 +3968,7 @@ function RoomPage(props) {
               return html`<span style=${{fontSize:10,fontWeight:700,color:d>0?'#22c55e':'#ef4444',marginBottom:1}}>${d>0?'↑'+d:'↓'+Math.abs(d)}</span>`;
             })()}
             <div>
-              <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span></div>
+              <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:e.pts>0?'#22c55e':'var(--dm)'}}>${e.pts}<span style=${{fontSize:13,fontWeight:400}}> pts</span>${e.bonusPts?html`<span style=${{fontSize:10,padding:'1px 5px',borderRadius:6,marginLeft:3,background:e.bonusPts>0?'rgba(74,222,128,.15)':'rgba(248,113,113,.15)',color:e.bonusPts>0?'#4ade80':'#f87171',fontWeight:600}}>${e.bonusPts>0?'+':''}${e.bonusPts}</span>`:''}</div>
               ${e.livePts>0&&html`<div style=${{fontSize:10,color:'#ef4444',fontWeight:700,display:'flex',alignItems:'center',gap:3,justifyContent:'flex-end',marginTop:1}}>
               <span style=${{width:6,height:6,borderRadius:3,background:'#ef4444',display:'inline-block',animation:'pulse 1s infinite'}}></span>
               <span>+${e.livePts} live</span>
@@ -4040,7 +4040,93 @@ function RoomPage(props) {
               </p>
               <${APIKeyInput} apiKey=${props.apiKey} onSave=${props.onSaveAPIKey} />
             </div>
-      <!-- Room overview -->
+      <!-- Edit Prediction (Admin) -->
+            <div class="card" style=${{padding:'14px 16px'}}>
+              <h3 style=${{margin:'0 0 12px',fontSize:15}}>✏️ Edit User Prediction</h3>
+              ${(function(){
+                var ep = useState({uid:'', mid:'', h:'', a:''});
+                var epv = ep[0]; var setEpv = ep[1];
+                var allMs = MS.concat(KO_MS);
+                return html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
+                  <select style=${{width:'100%',padding:'7px 10px',borderRadius:'var(--rs)',border:'1px solid var(--bdr)',background:'var(--bg3)',color:'var(--tx)',fontSize:12}}
+                    value=${epv.uid} onChange=${function(e){setEpv(function(p){return Object.assign({},p,{uid:e.target.value});})}}>
+                    <option value="">— Select user —</option>
+                    ${(props.users?(Object.values(props.users).filter(function(u){return (props.room.members||[]).includes(u.id);})):[]).map(function(u){
+                      return html`<option key=${u.id} value=${u.id}>${u.name}</option>`;
+                    })}
+                  </select>
+                  <select style=${{width:'100%',padding:'7px 10px',borderRadius:'var(--rs)',border:'1px solid var(--bdr)',background:'var(--bg3)',color:'var(--tx)',fontSize:12}}
+                    value=${epv.mid} onChange=${function(e){setEpv(function(p){return Object.assign({},p,{mid:e.target.value});})}}>
+                    <option value="">— Select match —</option>
+                    ${allMs.map(function(m){
+                      return html`<option key=${m.id} value=${m.id}>${m.id}: ${m.h} vs ${m.a}</option>`;
+                    })}
+                  </select>
+                  <div style=${{display:'flex',gap:8,alignItems:'center'}}>
+                    <input type="number" min="0" max="20" placeholder="Home" value=${epv.h}
+                      style=${{flex:1,padding:'7px 10px',borderRadius:'var(--rs)',border:'1px solid var(--bdr)',background:'var(--bg3)',color:'var(--tx)',fontSize:13,textAlign:'center'}}
+                      onInput=${function(e){setEpv(function(p){return Object.assign({},p,{h:e.target.value});})}} />
+                    <span style=${{color:'var(--dm)',fontWeight:700}}>–</span>
+                    <input type="number" min="0" max="20" placeholder="Away" value=${epv.a}
+                      style=${{flex:1,padding:'7px 10px',borderRadius:'var(--rs)',border:'1px solid var(--bdr)',background:'var(--bg3)',color:'var(--tx)',fontSize:13,textAlign:'center'}}
+                      onInput=${function(e){setEpv(function(p){return Object.assign({},p,{a:e.target.value});})}} />
+                  </div>
+                  <button class="btn-p" style=${{fontSize:13,padding:'8px'}}
+                    onClick=${function(){
+                      if(!epv.uid||!epv.mid||epv.h===''||epv.a==='') return;
+                      props.onEditPred&&props.onEditPred(epv.uid, epv.mid, Number(epv.h), Number(epv.a));
+                      setEpv({uid:'',mid:'',h:'',a:''});
+                    }}>Save Prediction</button>
+                </div>`;
+              })()}
+            </div>
+
+            <!-- Bonus Points (Admin) -->
+            <div class="card" style=${{padding:'14px 16px'}}>
+              <h3 style=${{margin:'0 0 4px',fontSize:15}}>⭐ Bonus Points</h3>
+              <p style=${{margin:'0 0 10px',fontSize:11,color:'var(--dm)'}}>Award extra points to a user (can be negative to deduct).</p>
+              ${(function(){
+                var bp = useState({uid:'', pts:''});
+                var bpv = bp[0]; var setBpv = bp[1];
+                var roomMembers = props.users ? Object.values(props.users).filter(function(u){return (props.room.members||[]).includes(u.id);}) : [];
+                return html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
+                  <select style=${{width:'100%',padding:'7px 10px',borderRadius:'var(--rs)',border:'1px solid var(--bdr)',background:'var(--bg3)',color:'var(--tx)',fontSize:12}}
+                    value=${bpv.uid} onChange=${function(e){setBpv(function(p){return Object.assign({},p,{uid:e.target.value});})}}>
+                    <option value="">— Select user —</option>
+                    ${roomMembers.map(function(u){
+                      var existing = (props.bonusPts&&props.bonusPts[props.room.id]&&props.bonusPts[props.room.id][u.id])||0;
+                      return html`<option key=${u.id} value=${u.id}>${u.name}${existing?(' (current: '+(existing>0?'+':'')+existing+'pts)'):''}</option>`;
+                    })}
+                  </select>
+                  <div style=${{display:'flex',gap:8}}>
+                    <input type="number" placeholder="Points (e.g. 5 or -2)" value=${bpv.pts}
+                      style=${{flex:1,padding:'7px 10px',borderRadius:'var(--rs)',border:'1px solid var(--bdr)',background:'var(--bg3)',color:'var(--tx)',fontSize:13}}
+                      onInput=${function(e){setBpv(function(p){return Object.assign({},p,{pts:e.target.value});})}} />
+                    <button class="btn-p" style=${{fontSize:13,padding:'8px 14px',flexShrink:0}}
+                      onClick=${function(){
+                        if(!bpv.uid||bpv.pts==='') return;
+                        props.onSetBonus&&props.onSetBonus(bpv.uid, bpv.pts);
+                        setBpv({uid:'',pts:''});
+                      }}>Set</button>
+                  </div>
+                  ${(function(){
+                    var bonusMap = (props.bonusPts&&props.bonusPts[props.room&&props.room.id])||{};
+                    var hasBonuses = Object.values(bonusMap).some(function(v){return v!==0;});
+                    if(!hasBonuses) return null;
+                    return html`<div style=${{fontSize:11,color:'var(--dm)',marginTop:4}}>
+                      ${Object.keys(bonusMap).filter(function(uid){return bonusMap[uid]!==0;}).map(function(uid){
+                        var u=props.users&&props.users[uid];
+                        return html`<span key=${uid} style=${{marginRight:8}}>
+                          ${u?u.name:uid}: <strong style=${{color:bonusMap[uid]>0?'#4ade80':'#f87171'}}>${bonusMap[uid]>0?'+':''}${bonusMap[uid]}pts</strong>
+                        </span>`;
+                      })}
+                    </div>`;
+                  })()}
+                </div>`;
+              })()}
+            </div>
+
+<!-- Room overview -->
       <div class="card-dark" style=${{borderColor:'rgba(240,180,41,.2)',padding:'16px 18px'}}>
         <div style=${{fontSize:10,color:'var(--gold)',letterSpacing:2,fontFamily:'Barlow Condensed',fontWeight:700,marginBottom:10}}>⚙️ ROOM CONFIGURATION</div>
         <div style=${{display:'flex',flexDirection:'column',gap:8,fontSize:13}}>
@@ -4772,6 +4858,7 @@ function App() {
   var s_ss=useState('idle'); var syncStatus=s_ss[0]; var setSyncStatus=s_ss[1];
   var s_ga=useState([]); var globalAnns=s_ga[0]; var setGlobalAnns=s_ga[1];
   var s11i=useState({}); var annsByRoom=s11i[0]; var setAnnsByRoom=s11i[1];
+  var s11z=useState({}); var bonusPts=s11z[0]; var setBonusPts=s11z[1];
   var s11j=useState(null); var annModal=s11j[0]; var setAnnModal=s11j[1];
   var s11l=useState(null); var h2hUser=s11l[0]; var setH2hUser=s11l[1];
   var s11k=useState({}); var lastReadChat=s11k[0]; var setLastReadChat=s11k[1];
@@ -4850,6 +4937,7 @@ function App() {
         return Object.assign({}, gasRoom, {members: cur.members});
       });
     });
+    Store.listen('bonus', function(v){ setBonusPts(v||{}); });
     Store.listen('preds', function(v) {
       setPreds(function(prev) {
         var base = Object.assign({}, v || {});
@@ -5181,6 +5269,41 @@ function App() {
     notify('KO result saved!');
   }
   function markChatRead() {}
+
+  // Admin: edit any user's prediction
+  doPredict.forUser = function(uid, mId, h, a) {
+    if (!uid || !mId) return;
+    var key     = uid + '_' + mId;
+    var userKey = 'wc26_preds_' + uid;
+    var newPred = {h: Number(h), a: Number(a), ts: new Date().toISOString(), adminEdit: true};
+    var myPreds = Object.assign({}, _cache[userKey] || {});
+    // Extract from global preds if cache empty
+    if (!Object.keys(myPreds).length) {
+      Object.keys(preds).forEach(function(k){
+        if (k.indexOf(uid+'_') === 0) myPreds[k.slice(uid.length+1)] = preds[k];
+      });
+    }
+    myPreds[mId] = newPred;
+    var upd = Object.assign({}, preds); upd[key] = newPred;
+    setPreds(upd); _cache[userKey] = myPreds; _cache['wc26_preds'] = upd;
+    _lastWrite[userKey] = Date.now() + 300000;
+    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'set', key:userKey, value:myPreds})
+    }).catch(function(){});
+    notify('Prediction updated for ' + ((users[uid]||{}).name||uid) + ' ✓');
+  };
+
+  // Admin: set bonus points for a user in this room
+  function setUserBonus(uid, pts) {
+    if (!room) return;
+    var upd = Object.assign({}, bonusPts);
+    if (!upd[room.id]) upd[room.id] = {};
+    upd[room.id] = Object.assign({}, upd[room.id]);
+    upd[room.id][uid] = Number(pts) || 0;
+    setBonusPts(upd);
+    Store.set('bonus', upd);
+    notify('Bonus points updated ✓');
+  }
   function sendChatMessage(msg, cb) { if (cb) cb(); }
 
 
@@ -5264,7 +5387,8 @@ function getAchievements(uid, predsMap, resultsMap) {
           var lp = calcPts(preds[uid+'_'+mid], lv);
           if (lp > 0) livePts += lp;
         });
-        return {user:u, pts:basePts, livePts:livePts,
+        var bonus = (bonusPts[room.id]||{})[uid] || 0;
+        return {user:u, pts:basePts + bonus, basePts:basePts, bonusPts:bonus, livePts:livePts,
           np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length,
           acc:uAcc(uid), pick:(users[uid]||{}).champTeam||null,
           badges:getAchievements(uid, preds, results)};
@@ -5424,7 +5548,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey} announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
-          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(_ls.get('wc26_apikey','')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}}
+          onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(_ls.get('wc26_apikey','')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}} onDeleteAnn=${deleteAnnouncement} bonusPts=${bonusPts} onSetBonus=${setUserBonus} onEditPred=${function(uid,mId,h,a){doPredict.forUser(uid,mId,h,a);}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
           onDeleteAnn=${deleteAnnouncement}
           onKOResult=${function(km,h,a){
