@@ -160,34 +160,6 @@ var GS_URL = 'https://script.google.com/macros/s/AKfycby5N5jQoNDf-HjmOx22SbSH2ZN
 var GS_SHEET_ID = '1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw'; // View your data: https://docs.google.com/spreadsheets/d/1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw
 </script>
 
-<!-- Global crash net: if anything throws after the app has mounted (e.g. a
-     bad value coming back from a periodic GAS poll), React unmounts the
-     whole tree and #root goes blank with the only trace in devtools console.
-     This catches that moment and writes a visible banner instead, so the
-     page never just silently disappears. The AppErrorBoundary further down
-     handles in-render React errors; this covers everything else
-     (async callbacks, timers, promise rejections). -->
-<script>
-(function(){
-  function showCrashBanner(label, err){
-    try {
-      var msg = (err && (err.message || err.reason && err.reason.message)) || String(err && err.reason || err) || 'Unknown error';
-      var existing = document.getElementById('__crash_banner__');
-      if (existing) return; // only show the first one
-      var el = document.createElement('div');
-      el.id = '__crash_banner__';
-      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7a1212;color:#fff;' +
-        'font-family:monospace;font-size:12px;padding:10px 14px;white-space:pre-wrap;max-height:40vh;overflow:auto;' +
-        'border-bottom:2px solid #f0b429;';
-      el.textContent = '⚠ ' + label + ': ' + msg + '  (page kept your data — try reloading)';
-      document.body.appendChild(el);
-    } catch(e) { /* never let the error handler itself throw */ }
-  }
-  window.addEventListener('error', function(e){ showCrashBanner('Script error', e.error || e); });
-  window.addEventListener('unhandledrejection', function(e){ showCrashBanner('Unhandled promise rejection', e); });
-})();
-</script>
-
 <!-- React + ReactDOM + htm: INLINED (no CDN needed) -->
 <script>/* React 18 */
 /**
@@ -1613,7 +1585,7 @@ function SuperAdminApp() {
   var uS  = useState({}); var saUsers = uS[0]; var setSaUsers = uS[1];
   var plS = useState([]); var predLog=plS[0]; var setPredLog=plS[1];
   var bPS = useState({}); var saBonusPts=bPS[0]; var setSaBonusPts=bPS[1];
-  var rsC = useState({}); var resCollapsed=rsC[0]; var setResCollapsed=rsC[1];
+  var rsC = useState({gs:false,ko:false}); var resCollapsed=rsC[0]; var setResCollapsed=rsC[1];
   var bdG = useState(true); var showBadges=bdG[0]; var setShowBadges=bdG[1];
   var prR = useState([]); var pinRequests=prR[0]; var setPinRequests=prR[1];
   var krS = useState({}); var saKoResults=krS[0]; var setSaKoResults=krS[1];
@@ -1654,7 +1626,7 @@ function SuperAdminApp() {
     }
     // 2. Fall back to GAS verification (works once GAS is updated)
     setErr('Checking…');
-    fetch(GS_URL + '?action=superlogin&pass=' + encodeURIComponent(pass.trim()))
+    fetch(GS_URL + '?action=superlogin&pass=' + encodeURIComponent(pass.trim()), {redirect:'follow'})
       .then(function(r){ return r.json(); })
       .then(function(d){
         if (d.ok) {
@@ -1670,16 +1642,28 @@ function SuperAdminApp() {
     setLoading(true);
     var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log','wc26_bonus','wc26_koresults','wc26_pin_requests','wc26_settings'];
     var done = 0;
-    var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
-                   wc26_preds:setSaPreds, wc26_results:setSaResults,
-                   wc26_koresults:setSaKoResults, wc26_bonus:setSaBonusPts, wc26_pin_requests:function(v){setPinRequests(Array.isArray(v)?v:[]);}, wc26_settings:function(v){if(v&&typeof v.showBadges!=='undefined')setShowBadges(v.showBadges);},
-                   wc26_pred_log:function(v){setPredLog(Array.isArray(v)?v.slice(-300):[]);},
-                   wc26_global_anns:function(v){setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]);}};
+    var setters = {
+      wc26_users:      setSaUsers,
+      wc26_rooms:      setSaRooms,
+      wc26_preds:      setSaPreds,
+      wc26_results:    setSaResults,
+      wc26_koresults:  setSaKoResults,
+      wc26_bonus:      setSaBonusPts,
+      wc26_pin_requests: function(v){ setPinRequests(Array.isArray(v)?v:[]); },
+      wc26_settings:   function(v){ if(v&&typeof v.showBadges!=='undefined') setShowBadges(v.showBadges); },
+      wc26_pred_log:   function(v){ setPredLog(Array.isArray(v)?v.slice(-300):[]); },
+      wc26_global_anns:function(v){ setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]); }
+    };
     function tick() { done++; if (done >= keys.length) setLoading(false); }
+    // Safety timeout — clear loading after 15s regardless
+    var safetyTimer = setTimeout(function(){ setLoading(false); }, 15000);
     keys.forEach(function(k){
-      fetch(GS_URL + '?action=get&key=' + k)
+      fetch(GS_URL + '?action=get&key=' + encodeURIComponent(k) + '&_=' + Date.now(), {redirect:'follow'})
         .then(function(r){ return r.json(); })
-        .then(function(d){ setters[k](d.value||{}); tick(); })
+        .then(function(d){
+          try { if (setters[k]) setters[k](d.value||{}); } catch(e){}
+          tick();
+        })
         .catch(function(){ tick(); });
     });
   }
@@ -1850,6 +1834,13 @@ function SuperAdminApp() {
   ];
 
   return html`<div style=${{minHeight:'100vh',background:'var(--bg)'}}>
+    
+    <!-- Loading overlay while SA fetches from GAS -->
+    ${loading&&html`<div style=${{position:'fixed',inset:0,background:'rgba(0,0,0,.75)',zIndex:9999,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+      <div style=${{width:44,height:44,border:'4px solid rgba(255,255,255,.15)',borderTopColor:'#f0b429',borderRadius:'50%',animation:'spin .8s linear infinite'}}></div>
+      <div style=${{color:'#f0b429',fontWeight:700,fontSize:15}}>Loading dashboard data…</div>
+      <div style=${{color:'rgba(255,255,255,.4)',fontSize:12}}>Fetching from server, please wait</div>
+    </div>`}
     <!-- SA Topbar -->
     <div style=${{background:'#0a0f1e',borderBottom:'1px solid rgba(239,68,68,.3)',padding:'12px 20px',
       display:'flex',justifyContent:'space-between',alignItems:'center',position:'sticky',top:0,zIndex:50}}>
@@ -3382,8 +3373,21 @@ function CountdownBanner() {
             })}
           </div>`
         : html`<div style=${{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}}>
-            <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'#fbbf24',letterSpacing:.5}}>⚽ GROUP STAGE</div>
-            <div style=${{fontSize:11,color:'rgba(255,255,255,.7)'}}>In progress</div>
+            ${(function(){
+              var now = Date.now();
+              var koStart = new Date('2026-06-28T19:00:00Z').getTime(); // R32 first match
+              var final   = new Date('2026-07-19T19:00:00Z').getTime();
+              if (now > final) {
+                return html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'#4ade80',letterSpacing:.5}}>🏆 COMPLETED</div>
+                  <div style=${{fontSize:11,color:'rgba(255,255,255,.7)'}}>Tournament over</div>`;
+              }
+              if (now >= koStart) {
+                return html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'#f0b429',letterSpacing:.5}}>🏆 KNOCKOUT ROUND</div>
+                  <div style=${{fontSize:11,color:'rgba(255,255,255,.7)'}}>Round of 32 underway</div>`;
+              }
+              return html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'#fbbf24',letterSpacing:.5}}>⚽ GROUP STAGE</div>
+                <div style=${{fontSize:11,color:'rgba(255,255,255,.7)'}}>In progress</div>`;
+            })()}
           </div>`
       }
     </div>
@@ -5267,47 +5271,6 @@ class RoomErrorBoundary extends React.Component {
   }
 }
 
-// ── Top-level boundary: catches ANY crash anywhere in the app (not just
-// inside a room) so the page never silently goes blank. Without this,
-// a throw inside any useEffect/render (e.g. malformed data coming back
-// from the GAS polling a few seconds after mount) unmounts the whole
-// React tree and leaves #root empty with no visible explanation. ─────────
-class AppErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {err: null};
-  }
-  static getDerivedStateFromError(e) { return {err: e}; }
-  componentDidCatch(error, info) {
-    console.error('App crashed:', error, info && info.componentStack);
-  }
-  render() {
-    if (this.state.err) {
-      var msg = (this.state.err && this.state.err.message) || 'Unknown error';
-      var stack = (this.state.err && this.state.err.stack) || '';
-      return React.createElement('div', {
-        style:{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-          minHeight:'100vh',gap:14,background:'#0a1628',color:'#fff',fontFamily:'sans-serif',
-          padding:'24px',textAlign:'center'}
-      },
-        React.createElement('div', {style:{fontSize:48}}, '⚠️'),
-        React.createElement('h2', {style:{margin:0,color:'#f0b429'}}, 'App crashed after loading'),
-        React.createElement('p', {style:{color:'#dce8f5',margin:0,fontSize:14,maxWidth:480}}, msg),
-        React.createElement('button', {
-          onClick:function(){window.location.reload();},
-          style:{padding:'10px 24px',background:'#f0b429',color:'#0a1628',border:'none',
-            borderRadius:8,fontSize:14,fontWeight:700,cursor:'pointer',marginTop:8}
-        }, '↻ Reload'),
-        stack && React.createElement('pre', {
-          style:{color:'#5b8bb8',fontSize:10,maxWidth:560,overflow:'auto',textAlign:'left',
-            marginTop:12,whiteSpace:'pre-wrap'}
-        }, stack)
-      );
-    }
-    return this.props.children;
-  }
-}
-
 // ── Module-level state (outside React — persists across re-renders) ───────
 var _rankSnap    = {};  // {roomId: {uid: rank}} — for leaderboard position arrows
 var _prevResults = {};  // previous results snapshot — for points-earned toasts
@@ -6164,9 +6127,7 @@ function getAchievements(uid, predsMap, resultsMap) {
 }
 
 try {
-  ReactDOM.createRoot(document.getElementById('root')).render(
-    html`<${AppErrorBoundary}><${App} /></${AppErrorBoundary}>`
-  );
+  ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 } catch(e) {
   document.getElementById('root').innerHTML =
     '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;background:#0a1628;color:#fff;font-family:sans-serif;padding:20px;text-align:center">' +
