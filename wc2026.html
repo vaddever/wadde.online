@@ -593,44 +593,44 @@ var FACTS=['The 2026 World Cup is the first with 48 teams!','104 matches across 
 var PLY=[{n:'Cristiano Ronaldo',t:'Portugal',p:'Forward',i:'All-time top scorer',sid:874},{n:'Lionel Messi',t:'Argentina',p:'Forward',i:'2022 WC winner',sid:41959},{n:'Kylian Mbappé',t:'France',p:'Forward',i:'Top scorer contender',sid:342658},{n:'Erling Haaland',t:'Norway',p:'Forward',i:'Premier League top scorer',sid:839956},{n:'Vinicius Jr.',t:'Brazil',p:'Forward',i:'Champions League star',sid:700026},{n:'Pedri',t:'Spain',p:'Midfielder',i:'Barcelona midfield maestro',sid:888013},{n:'Jude Bellingham',t:'England',p:'Midfielder',i:'Real Madrid star',sid:816250},{n:'Kevin De Bruyne',t:'Belgium',p:'Midfielder',i:'World-class playmaker',sid:70996}];
 // ── WC 2026 Knockout Stage Matches ────────────────────────────────────────
 var KO_MS = [
-  // ── Round of 32 (16 matches) ─────────────────────────────────────────
-  {id:'r32_01',rd:'R32',h_slot:'W-A', a_slot:'3rd-3',utc:'2026-06-28T23:00:00Z'},
-  {id:'r32_02',rd:'R32',h_slot:'W-B', a_slot:'R-A',  utc:'2026-06-29T02:00:00Z'},
-  {id:'r32_03',rd:'R32',h_slot:'W-C', a_slot:'3rd-1',utc:'2026-06-29T19:00:00Z'},
-  {id:'r32_04',rd:'R32',h_slot:'W-D', a_slot:'R-C',  utc:'2026-06-29T22:00:00Z'},
-  {id:'r32_05',rd:'R32',h_slot:'W-E', a_slot:'3rd-2',utc:'2026-06-30T19:00:00Z'},
-  {id:'r32_06',rd:'R32',h_slot:'W-F', a_slot:'R-E',  utc:'2026-06-30T22:00:00Z'},
-  {id:'r32_07',rd:'R32',h_slot:'W-G', a_slot:'3rd-4',utc:'2026-07-01T19:00:00Z'},
-  {id:'r32_08',rd:'R32',h_slot:'W-H', a_slot:'R-G',  utc:'2026-07-01T22:00:00Z'},
-  {id:'r32_09',rd:'R32',h_slot:'W-I', a_slot:'3rd-5',utc:'2026-07-02T00:00:00Z'},
-  {id:'r32_10',rd:'R32',h_slot:'W-J', a_slot:'R-I',  utc:'2026-07-02T03:00:00Z'},
-  {id:'r32_11',rd:'R32',h_slot:'W-K', a_slot:'3rd-7',utc:'2026-07-02T19:00:00Z'},
-  {id:'r32_12',rd:'R32',h_slot:'W-L', a_slot:'R-K',  utc:'2026-07-02T22:00:00Z'},
-  {id:'r32_13',rd:'R32',h_slot:'R-B', a_slot:'3rd-6',utc:'2026-07-03T00:00:00Z'},
-  {id:'r32_14',rd:'R32',h_slot:'R-D', a_slot:'3rd-8',utc:'2026-07-03T03:00:00Z'},
-  {id:'r32_15',rd:'R32',h_slot:'R-F', a_slot:'R-J',  utc:'2026-07-03T19:00:00Z'},
-  {id:'r32_16',rd:'R32',h_slot:'R-H', a_slot:'R-L',  utc:'2026-07-03T22:00:00Z'},
-  // ── Round of 16 (8 matches) ──────────────────────────────────────────
-  {id:'r16_01',rd:'R16',h_slot:'W-r32_01',a_slot:'W-r32_02',utc:'2026-07-05T23:00:00Z'},
-  {id:'r16_02',rd:'R16',h_slot:'W-r32_03',a_slot:'W-r32_04',utc:'2026-07-06T02:00:00Z'},
-  {id:'r16_03',rd:'R16',h_slot:'W-r32_05',a_slot:'W-r32_06',utc:'2026-07-06T22:00:00Z'},
-  {id:'r16_04',rd:'R16',h_slot:'W-r32_07',a_slot:'W-r32_08',utc:'2026-07-06T19:00:00Z'},
-  {id:'r16_05',rd:'R16',h_slot:'W-r32_09',a_slot:'W-r32_10',utc:'2026-07-07T23:00:00Z'},
-  {id:'r16_06',rd:'R16',h_slot:'W-r32_11',a_slot:'W-r32_12',utc:'2026-07-07T02:00:00Z'},
-  {id:'r16_07',rd:'R16',h_slot:'W-r32_13',a_slot:'W-r32_14',utc:'2026-07-08T22:00:00Z'},
-  {id:'r16_08',rd:'R16',h_slot:'W-r32_15',a_slot:'W-r32_16',utc:'2026-07-08T19:00:00Z'},
-  // ── Quarter-finals (4 matches) ────────────────────────────────────────
-  {id:'qf_01',rd:'QF',h_slot:'W-r16_01',a_slot:'W-r16_02',utc:'2026-07-11T22:00:00Z'},
-  {id:'qf_02',rd:'QF',h_slot:'W-r16_03',a_slot:'W-r16_04',utc:'2026-07-12T02:00:00Z'},
-  {id:'qf_03',rd:'QF',h_slot:'W-r16_05',a_slot:'W-r16_06',utc:'2026-07-11T19:00:00Z'},
-  {id:'qf_04',rd:'QF',h_slot:'W-r16_07',a_slot:'W-r16_08',utc:'2026-07-12T19:00:00Z'},
-  // ── Semi-finals (2 matches) ───────────────────────────────────────────
-  {id:'sf_01',rd:'SF',h_slot:'W-qf_01',a_slot:'W-qf_02',utc:'2026-07-15T23:00:00Z'},
-  {id:'sf_02',rd:'SF',h_slot:'W-qf_03',a_slot:'W-qf_04',utc:'2026-07-16T23:00:00Z'},
-  // ── Third place play-off ───────────────────────────────────────────────
-  {id:'3pl',   rd:'3PL',h_slot:'L-sf_01',a_slot:'L-sf_02',utc:'2026-07-19T23:00:00Z'},
-  // ── Final ──────────────────────────────────────────────────────────────
-  {id:'fin',   rd:'FIN',h_slot:'W-sf_01',a_slot:'W-sf_02',utc:'2026-07-22T23:00:00Z'}
+  // ── Round of 32 — June 28 to July 3 (all teams confirmed) ──────────────
+  {id:'r32_01',rd:'R32',h:'South Africa',a:'Canada',         utc:'2026-06-28T19:00:00Z',v:'Los Angeles'},
+  {id:'r32_02',rd:'R32',h:'Brazil',      a:'Japan',          utc:'2026-06-29T17:00:00Z',v:'Houston'},
+  {id:'r32_03',rd:'R32',h:'Germany',     a:'Paraguay',       utc:'2026-06-29T20:30:00Z',v:'Boston'},
+  {id:'r32_04',rd:'R32',h:'Netherlands', a:'Morocco',        utc:'2026-06-30T01:00:00Z',v:'Monterrey'},
+  {id:'r32_05',rd:'R32',h:'Ivory Coast', a:'Norway',         utc:'2026-06-30T17:00:00Z',v:'Dallas'},
+  {id:'r32_06',rd:'R32',h:'France',      a:'Sweden',         utc:'2026-07-01T01:00:00Z',v:'New Jersey'},
+  {id:'r32_07',rd:'R32',h:'Mexico',      a:'Ecuador',        utc:'2026-07-01T02:00:00Z',v:'Mexico City'},
+  {id:'r32_08',rd:'R32',h:'England',     a:'DR Congo',       utc:'2026-07-01T16:00:00Z',v:'Atlanta'},
+  {id:'r32_09',rd:'R32',h:'Belgium',     a:'Senegal',        utc:'2026-07-01T20:00:00Z',v:'Seattle'},
+  {id:'r32_10',rd:'R32',h:'USA',         a:'Bosnia & Herzegovina',utc:'2026-07-02T00:00:00Z',v:'San Francisco'},
+  {id:'r32_11',rd:'R32',h:'Spain',       a:'Algeria',        utc:'2026-07-02T19:00:00Z',v:'Los Angeles'},
+  {id:'r32_12',rd:'R32',h:'Portugal',    a:'Croatia',        utc:'2026-07-02T23:00:00Z',v:'Toronto'},
+  {id:'r32_13',rd:'R32',h:'Switzerland', a:'Iran',           utc:'2026-07-03T03:00:00Z',v:'Vancouver'},
+  {id:'r32_14',rd:'R32',h:'Australia',   a:'Egypt',          utc:'2026-07-03T18:00:00Z',v:'Dallas'},
+  {id:'r32_15',rd:'R32',h:'Argentina',   a:'Cape Verde',     utc:'2026-07-03T22:00:00Z',v:'Miami'},
+  {id:'r32_16',rd:'R32',h:'Colombia',    a:'Ghana',          utc:'2026-07-04T01:30:00Z',v:'Kansas City'},
+  // ── Round of 16 — July 5-8 (teams TBD after R32) ─────────────────────
+  {id:'r16_01',rd:'R16',h:'W r32_01',a:'W r32_02',utc:'2026-07-05T17:00:00Z',v:'TBD'},
+  {id:'r16_02',rd:'R16',h:'W r32_03',a:'W r32_04',utc:'2026-07-05T21:00:00Z',v:'TBD'},
+  {id:'r16_03',rd:'R16',h:'W r32_05',a:'W r32_06',utc:'2026-07-06T17:00:00Z',v:'TBD'},
+  {id:'r16_04',rd:'R16',h:'W r32_07',a:'W r32_08',utc:'2026-07-06T21:00:00Z',v:'TBD'},
+  {id:'r16_05',rd:'R16',h:'W r32_09',a:'W r32_10',utc:'2026-07-07T17:00:00Z',v:'TBD'},
+  {id:'r16_06',rd:'R16',h:'W r32_11',a:'W r32_12',utc:'2026-07-07T21:00:00Z',v:'TBD'},
+  {id:'r16_07',rd:'R16',h:'W r32_13',a:'W r32_14',utc:'2026-07-08T17:00:00Z',v:'TBD'},
+  {id:'r16_08',rd:'R16',h:'W r32_15',a:'W r32_16',utc:'2026-07-08T21:00:00Z',v:'TBD'},
+  // ── Quarter-finals — July 11-12 ───────────────────────────────────────
+  {id:'qf_01',rd:'QF',h:'W r16_01',a:'W r16_02',utc:'2026-07-11T17:00:00Z',v:'TBD'},
+  {id:'qf_02',rd:'QF',h:'W r16_03',a:'W r16_04',utc:'2026-07-11T21:00:00Z',v:'TBD'},
+  {id:'qf_03',rd:'QF',h:'W r16_05',a:'W r16_06',utc:'2026-07-12T17:00:00Z',v:'TBD'},
+  {id:'qf_04',rd:'QF',h:'W r16_07',a:'W r16_08',utc:'2026-07-12T21:00:00Z',v:'TBD'},
+  // ── Semi-finals — July 14-15 ──────────────────────────────────────────
+  {id:'sf_01',rd:'SF',h:'W qf_01',a:'W qf_02',utc:'2026-07-14T21:00:00Z',v:'Dallas'},
+  {id:'sf_02',rd:'SF',h:'W qf_03',a:'W qf_04',utc:'2026-07-15T21:00:00Z',v:'Atlanta'},
+  // ── Third place play-off — July 18 ────────────────────────────────────
+  {id:'3pl',rd:'3PL',h:'L sf_01',a:'L sf_02',utc:'2026-07-18T22:00:00Z',v:'Miami'},
+  // ── Final — July 19 ───────────────────────────────────────────────────
+  {id:'fin',rd:'FIN',h:'W sf_01',a:'W sf_02',utc:'2026-07-19T23:00:00Z',v:'New York/New Jersey'}
 ];
 
 var KO_ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-finals',SF:'Semi-finals','3PL':'3rd Place',FIN:'Final'};
@@ -1641,6 +1641,7 @@ function SuperAdminApp() {
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults,
+                   wc26_koresults:setSaKoResults, wc26_bonus:setSaBonusPts,
                    wc26_global_anns:function(v){setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]);}};
     function tick() { done++; if (done >= keys.length) setLoading(false); }
     keys.forEach(function(k){
@@ -2328,7 +2329,68 @@ function SuperAdminApp() {
             </div>`;
           });
         })()}
-      </div>`}
+      
+
+        <!-- KO Results Section -->
+        <div style=${{marginTop:20}}>
+          <h3 style=${{margin:'0 0 12px',fontSize:15,color:'var(--gold)'}}>🏆 Knockout Round Results</h3>
+          ${(function(){
+            var koRes = saKoResults || {};
+            var rounds = ['R32','R16','QF','SF','3PL','FIN'];
+            var byRound = {};
+            KO_MS.forEach(function(m){if(!byRound[m.rd])byRound[m.rd]=[];byRound[m.rd].push(m);});
+            return html`<div style=${{display:'flex',flexDirection:'column',gap:16}}>
+              ${rounds.filter(function(rd){return byRound[rd]&&byRound[rd].length;}).map(function(rd){
+                return html`<div key=${rd}>
+                  <div style=${{fontSize:11,fontWeight:700,color:'var(--dm)',marginBottom:8,letterSpacing:.5}}>${rd==='R32'?'ROUND OF 32':rd==='R16'?'ROUND OF 16':rd==='QF'?'QUARTER-FINALS':rd==='SF'?'SEMI-FINALS':rd==='3PL'?'3RD PLACE':rd}</div>
+                  <div style=${{display:'flex',flexDirection:'column',gap:6}}>
+                    ${(byRound[rd]||[]).map(function(m,i){
+                      var res = koRes[m.id];
+                      var mTime = new Date(m.utc).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+                      var isKnown = m.h&&!m.h.startsWith('W ')&&!m.h.startsWith('L ');
+                      return html`<div key=${m.id} style=${{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderRadius:'var(--rs)',background:'var(--bg3)',border:'1px solid var(--bdr)'}}>
+                        <span style=${{fontSize:10,color:'var(--dm)',width:60,flexShrink:0}}>${mTime}</span>
+                        <span style=${{flex:1,fontSize:12,fontWeight:600,textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
+                        ${res?html`<span style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'var(--gold)',flexShrink:0,width:60,textAlign:'center'}}>${res.h}–${res.a}</span>`:
+                          html`<div style=${{display:'flex',gap:4,flexShrink:0,alignItems:'center'}}>
+                            <input type="number" min="0" max="20" placeholder="H" id=${'sa_kor_'+m.id+'_h'}
+                              style=${{width:36,padding:'4px',fontSize:12,textAlign:'center',background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:4}} />
+                            <span style=${{color:'var(--dm)'}}>–</span>
+                            <input type="number" min="0" max="20" placeholder="A" id=${'sa_kor_'+m.id+'_a'}
+                              style=${{width:36,padding:'4px',fontSize:12,textAlign:'center',background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:4}} />
+                            <button class="btn" style=${{fontSize:11,padding:'4px 8px',color:'#4ade80',borderColor:'rgba(74,222,128,.3)'}}
+                              onClick=${function(){
+                                var h=document.getElementById('sa_kor_'+m.id+'_h');
+                                var a=document.getElementById('sa_kor_'+m.id+'_a');
+                                if(!h||!a||h.value===''||a.value===''){alert('Enter both scores');return;}
+                                var upd=Object.assign({},saKoResults||{}); 
+                                upd[m.id]={h:Number(h.value),a:Number(a.value)};
+                                setSaKoResults(upd);
+                                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                                  body:JSON.stringify({action:'set',key:'wc26_koresults',value:upd})})
+                                .then(function(r){return r.json();})
+                                .then(function(d){if(d&&d.ok)alert('KO result saved ✓ — all rooms updated');else alert('Error: '+(d&&d.error||'?'));})
+                                .catch(function(e){alert('Error: '+e.message);});
+                              }}>Save</button>
+                          </div>`}
+                        <span style=${{flex:1,fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.a}</span>
+                        ${res?html`<button class="btn" style=${{fontSize:9,padding:'2px 6px',color:'var(--rd)',borderColor:'rgba(239,68,68,.2)',flexShrink:0}}
+                          onClick=${function(){
+                            if(!confirm('Clear result for '+m.id+'?')) return;
+                            var upd=Object.assign({},saKoResults||{}); delete upd[m.id];
+                            setSaKoResults(upd);
+                            fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                              body:JSON.stringify({action:'set',key:'wc26_koresults',value:upd})})
+                            .catch(function(){});
+                          }}>✕</button>`:null}
+                      </div>`;
+                    })}
+                  </div>
+                </div>`;
+              })}
+            </div>`;
+          })()}
+        </div></div>`}
       ${saTab==='anns'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14,maxWidth:540}}>
 
         <!-- Create/Edit modal inline -->
@@ -3476,49 +3538,111 @@ function QualifiersPanel(props) {
 
 // ── Full KO Bracket View ──────────────────────────────────────────────────
 function KOBracketView(props) {
-  var q=props.qualifiers, koRes=props.koResults||{};
-  var rounds=['R32','R16','QF','SF','FIN'];
+  var koRes = props.koResults || {};
+  var preds = props.preds || {};
+  var uid   = props.user && props.user.id;
+  var now   = Date.now();
 
-  return html`<div>
-    <!-- API sync status -->
-    <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-      <h2 style=${{margin:0,fontSize:16}}>🏆 Knockout Bracket</h2>
-      ${props.apiKey
-        ? html`<div style=${{fontSize:11,display:'flex',alignItems:'center',gap:5,
-            color:'#4ade80',background:'rgba(74,222,128,.08)',borderRadius:10,padding:'3px 10px',
-            border:'1px solid rgba(74,222,128,.2)'}}>
-            <span>●</span> Live API active</div>`
-        : html`<span style=${{fontSize:11,color:'var(--dm)'}}>No API key — manual mode</span>`
-      }
-    </div>
+  // Group KO_MS by round
+  var byRound = {};
+  KO_MS.forEach(function(m) {
+    if (!byRound[m.rd]) byRound[m.rd] = [];
+    byRound[m.rd].push(m);
+  });
+  var rounds = ['R32','R16','QF','SF','3PL','FIN'];
+  var roundLabels = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-Finals',SF:'Semi-Finals','3PL':'3rd Place Play-off',FIN:'🏆 Final'};
 
-    <!-- Qualifiers panel -->
-    <${QualifiersPanel} qualifiers=${q} />
+  var ROUND_COLORS = {R32:'#3b82f6',R16:'#8b5cf6',QF:'#f59e0b',SF:'#ef4444','3PL':'#6b7280',FIN:'#f0b429'};
 
-    <!-- Rounds -->
-    ${rounds.map(function(rd){
-      var matches=KO_MS.filter(function(m){return m.rd===rd;});
-      // Also show 3PL
-      if (rd==='FIN') matches=KO_MS.filter(function(m){return m.rd==='3PL'||m.rd==='FIN';});
-      return html`<div key=${rd} style=${{marginBottom:18}}>
-        <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:13,fontWeight:700,
-          letterSpacing:1.5,color:'var(--gold)',textTransform:'uppercase',marginBottom:8,
-          display:'flex',alignItems:'center',gap:8}}>
-          <span>${KO_ROUND_LABELS[rd]||rd}</span>
-          <div style=${{flex:1,height:1,background:'rgba(240,180,41,.15)'}}></div>
+  function matchStatus(m) {
+    var mTime = new Date(m.utc).getTime();
+    var res   = koRes[m.id];
+    if (res) return 'done';
+    if (now > mTime) return 'live';
+    if (now > mTime - 3600000) return 'soon';
+    return 'upcoming';
+  }
+
+  return html`<div style=${{display:'flex',flexDirection:'column',gap:20}}>
+    ${rounds.filter(function(rd){return byRound[rd]&&byRound[rd].length;}).map(function(rd){
+      var matches = byRound[rd];
+      var color   = ROUND_COLORS[rd]||'#60a5fa';
+      var upcoming = matches.filter(function(m){return matchStatus(m)==='upcoming';});
+      var live     = matches.filter(function(m){return matchStatus(m)==='live'||matchStatus(m)==='soon';});
+      var done     = matches.filter(function(m){return matchStatus(m)==='done';});
+
+      return html`<div key=${rd}>
+        <!-- Round header -->
+        <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+          <div style=${{height:3,flex:1,background:color,borderRadius:2,opacity:.4}}></div>
+          <span style=${{fontSize:11,fontWeight:700,color:color,letterSpacing:1,textTransform:'uppercase',whiteSpace:'nowrap'}}>${roundLabels[rd]||rd}</span>
+          <div style=${{height:3,flex:1,background:color,borderRadius:2,opacity:.4}}></div>
         </div>
-        ${matches.map(function(km){
-          return html`<${KOMatchCard} key=${km.id} match=${km} qualifiers=${q}
-            koResults=${koRes} isAdmin=${props.isAdmin}
-            onResult=${props.onResult} />`;
-        })}
+
+        <!-- Matches -->
+        <div style=${{display:'flex',flexDirection:'column',gap:8}}>
+          ${matches.map(function(m){
+            var status = matchStatus(m);
+            var res    = koRes[m.id];
+            var myPred = uid ? preds[uid+'_'+m.id] : null;
+            var mTime  = new Date(m.utc);
+            var mvtStr = mTime.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+            var isKnown = m.h && !m.h.startsWith('W ') && !m.h.startsWith('L ');
+
+            return html`<div key=${m.id} style=${{
+              borderRadius:'var(--rs)',
+              border:'1px solid '+(status==='live'||status==='soon'?'rgba(239,68,68,.4)':status==='done'?'rgba(74,222,128,.15)':'var(--bdr)'),
+              background:status==='live'||status==='soon'?'rgba(239,68,68,.04)':status==='done'?'rgba(74,222,128,.03)':'var(--bg2)',
+              overflow:'hidden'
+            }}>
+              <!-- Match row -->
+              <div style=${{display:'flex',alignItems:'center',padding:'10px 12px',gap:8}}>
+                <!-- Home team -->
+                <div style=${{flex:1,display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end',minWidth:0}}>
+                  ${isKnown?html`<${FlagImg} team=${m.h} w=${22} />`:null}
+                  <span style=${{fontSize:13,fontWeight:700,color:'var(--tx)',textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
+                </div>
+                <!-- Score / time -->
+                <div style=${{textAlign:'center',flexShrink:0,width:80}}>
+                  ${status==='done'&&res?html`<div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:22,fontWeight:900,color:'var(--tx)',letterSpacing:2}}>${res.h}–${res.a}</div>`:null}
+                  ${status==='live'||status==='soon'?html`<div>
+                    <div style=${{fontSize:10,color:'#ef4444',fontWeight:700,animation:'pulse 1s infinite'}}>● LIVE</div>
+                    <div style=${{fontSize:11,color:'var(--dm)'}}>${mvtStr.split(', ').slice(1).join(', ')}</div>
+                  </div>`:null}
+                  ${status==='upcoming'?html`<div style=${{fontSize:10,color:'var(--dm)',lineHeight:1.4}}>
+                    <div style=${{fontWeight:600,color:'var(--mu)'}}>${mvtStr.split(' ')[0]} ${mvtStr.split(' ')[1]} ${mvtStr.split(' ')[2]}</div>
+                    <div>${mvtStr.split(', ').pop()} MVT</div>
+                  </div>`:null}
+                </div>
+                <!-- Away team -->
+                <div style=${{flex:1,display:'flex',alignItems:'center',gap:6,minWidth:0}}>
+                  ${isKnown?html`<${FlagImg} team=${m.a} w=${22} />`:null}
+                  <span style=${{fontSize:13,fontWeight:700,color:'var(--tx)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.a}</span>
+                </div>
+              </div>
+
+              <!-- My prediction + action row -->
+              ${(myPred||(!res&&isKnown&&status!=='done'))&&html`<div style=${{borderTop:'1px solid var(--bdr)',padding:'6px 12px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,background:'rgba(0,0,0,.1)'}}>
+                <div style=${{fontSize:11,color:'var(--dm)'}}>
+                  ${myPred?html`<span>My pick: <strong style=${{color:'var(--tx)',fontFamily:'Barlow Condensed,sans-serif',fontSize:14}}>${myPred.h}–${myPred.a}</strong>
+                    ${res?html`<span style=${{marginLeft:6,fontWeight:600,color:(myPred.h==res.h&&myPred.a==res.a)?'#fbbf24':((myPred.h>myPred.a&&res.h>res.a)||(myPred.h<myPred.a&&res.h<res.a)||(myPred.h==myPred.a&&res.h==res.a))?'#4ade80':'#f87171'}}>
+                      ${(myPred.h==res.h&&myPred.a==res.a)?'🎯 +4pts':((myPred.h>myPred.a&&res.h>res.a)||(myPred.h<myPred.a&&res.h<res.a)||(myPred.h==myPred.a&&res.h==res.a))?'✓ +2pts':'✗ 0pts'}
+                    </span>`:null}
+                  </span>`:html`<span style=${{color:'var(--dm)'}}>No prediction yet</span>`}
+                </div>
+                ${!res&&isKnown&&props.onPredict?html`<button class="btn-p" style=${{fontSize:11,padding:'4px 12px'}}
+                  onClick=${function(){props.onPredict(m);}}>
+                  ${myPred?'✎ Edit':'⚽ Predict'}
+                </button>`:null}
+              </div>`}
+            </div>`;
+          })}
+        </div>
       </div>`;
     })}
-    <p style=${{fontSize:11,color:'var(--dm)',textAlign:'center',marginTop:4}}>
-      Bracket pairings are estimates — FIFA's official draw may differ · Scores sync automatically via API
-    </p>
   </div>`;
 }
+
 
 
 // ── Chat Room ─────────────────────────────────────────────────────────────
@@ -4031,8 +4155,11 @@ function RoomPage(props) {
         : html`<${KOBracketView}
           qualifiers=${props.qualifiers}
           koResults=${props.koResults||{}}
+          preds=${props.preds||{}}
+          user=${props.user}
           isAdmin=${props.isAdmin}
           apiKey=${props.apiKey}
+          onPredict=${function(m){props.onPredict&&props.onPredict(m);}}
           onResult=${function(km,h,a){ props.onKOResult&&props.onKOResult(km,h,a); }} />`
       }
     </div>`}
