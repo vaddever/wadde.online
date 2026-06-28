@@ -540,11 +540,11 @@ var MS=[
   {id:'m51',gr:'C',h:'Scotland',a:'Brazil',utc:'2026-06-24T22:00:00Z',v:'Hard Rock Stadium, Miami Gardens'},
   {id:'m52',gr:'C',h:'Morocco',a:'Haiti',utc:'2026-06-24T22:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
   // ── GROUP D ──────────────────────────────────────────────────────────────
-  {id:'m04',gr:'D',h:'USA',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m04',gr:'D',h:'United States',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Inglewood'},
   {id:'m08',gr:'D',h:'Australia',a:'Türkiye',utc:'2026-06-14T16:00:00Z',v:'BC Place, Vancouver'},
-  {id:'m29',gr:'D',h:'USA',a:'Australia',utc:'2026-06-19T19:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m29',gr:'D',h:'United States',a:'Australia',utc:'2026-06-19T19:00:00Z',v:'Lumen Field, Seattle'},
   {id:'m32',gr:'D',h:'Türkiye',a:'Paraguay',utc:'2026-06-20T03:00:00Z',v:"Levi's Stadium, Santa Clara"},
-  {id:'m59',gr:'D',h:'Türkiye',a:'USA',utc:'2026-06-26T02:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m59',gr:'D',h:'Türkiye',a:'United States',utc:'2026-06-26T02:00:00Z',v:'SoFi Stadium, Inglewood'},
   {id:'m60',gr:'D',h:'Paraguay',a:'Australia',utc:'2026-06-26T02:00:00Z',v:"Levi's Stadium, Santa Clara"},
   // ── GROUP E ──────────────────────────────────────────────────────────────
   {id:'m09',gr:'E',h:'Germany',a:'Curaçao',utc:'2026-06-14T17:00:00Z',v:'NRG Stadium, Houston'},
@@ -631,7 +631,7 @@ var KO_MS = [
   {id:'r32_07',rd:'R32',h:'Mexico',      a:'Ecuador',        utc:'2026-07-01T01:00:00Z',v:'Mexico City'},
   {id:'r32_08',rd:'R32',h:'England',     a:'DR Congo',       utc:'2026-07-01T16:00:00Z',v:'Atlanta'},
   {id:'r32_09',rd:'R32',h:'Belgium',     a:'Senegal',        utc:'2026-07-01T20:00:00Z',v:'Seattle'},
-  {id:'r32_10',rd:'R32',h:'USA',         a:'Bosnia & Herzegovina',utc:'2026-07-02T00:00:00Z',v:'San Francisco'},
+  {id:'r32_10',rd:'R32',h:'United States', a:'Bosnia & Herzegovina',utc:'2026-07-02T00:00:00Z',v:'San Francisco'},
   {id:'r32_11',rd:'R32',h:'Spain',       a:'Austria',        utc:'2026-07-02T19:00:00Z',v:'Los Angeles'},
   {id:'r32_12',rd:'R32',h:'Portugal',    a:'Croatia',        utc:'2026-07-02T23:00:00Z',v:'Toronto'},
   {id:'r32_13',rd:'R32',h:'Switzerland', a:'Algeria',        utc:'2026-07-03T03:00:00Z',v:'Vancouver'},
@@ -1042,6 +1042,12 @@ function computeGroupStandings(grpKey, results) {
   teams.forEach(function(t){ s[t]={mp:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0}; });
   MS.filter(function(m){ return m.gr===grpKey && results && results[m.id]; }).forEach(function(m){
     var r=results[m.id], h=m.h, a=m.a;
+    // Guard: skip if either team isn't in this group's roster. This can
+    // happen if a result references a team name that doesn't match GRP
+    // (stale data, a manual edit, etc.) — previously this threw
+    // "Cannot read properties of undefined (reading 'mp')" and crashed
+    // the whole app since this runs unguarded on every render.
+    if (!s[h] || !s[a]) { console.warn('computeGroupStandings: skipping match with unknown team(s)', m.id, h, a, 'group', grpKey); return; }
     s[h].mp++; s[a].mp++;
     s[h].gf+=r.h; s[h].ga+=r.a; s[a].gf+=r.a; s[a].ga+=r.h;
     s[h].gd=s[h].gf-s[h].ga; s[a].gd=s[a].gf-s[a].ga;
