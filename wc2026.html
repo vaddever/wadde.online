@@ -3872,17 +3872,13 @@ function ChatRoom(props) {
 
 // ── Room Announcements ───────────────────────────────────────────────────
 function AnnouncementsPanel(props) {
+  // Filter out junk announcements silently — NO state changes, NO GAS calls here
+  // (fixes polling loop: GAS returns ann → delete → GAS returns again → loop)
+  var BAD_TITLES = ['hello guys'];
   var anns = (props.announcements || []).filter(function(a){
-    var title = (a.title||'').toLowerCase();
-    return !title.includes('hello guys');
+    var title = (a.title||'').toLowerCase().trim();
+    return !BAD_TITLES.some(function(bad){ return title.startsWith(bad); });
   });
-  // Auto-delete "Hello GUYS" AFTER render (useEffect prevents React update-during-render error)
-  useEffect(function(){
-    var bad = (props.announcements||[]).filter(function(a){return (a.title||'').toLowerCase().includes('hello guys');});
-    if (bad.length && props.onDelete) {
-      bad.forEach(function(a){ props.onDelete(a.id); });
-    }
-  }, [(props.announcements||[]).length]);
   if (anns.length === 0 && !props.isAdmin) return null;
 
   return html`<div style=${{marginBottom:12}}>
@@ -5449,26 +5445,7 @@ function App() {
     Store.listen('rooms', function(v) {
       var rv = v||{};
       setRooms(rv);
-      // One-time cleanup: remove 'Hello GUYS' from room 8JK6MM
-      var csb = Object.values(rv).find(function(r){return r.code==='8JK6MM';});
-      if (csb && !window._csbAnnCleaned) {
-        window._csbAnnCleaned = true;
-        fetch(GS_URL+'?action=get&key=wc26_ann_'+csb.id+'&_='+Date.now(),{redirect:'follow'})
-        .then(function(r){return r.json();})
-        .then(function(d){
-          if (!d.ok || !Array.isArray(d.value) || !d.value.length) return;
-          var cleaned = d.value.filter(function(a){
-            return !(a.title||'').toLowerCase().includes('hello guys');
-          });
-          if (cleaned.length !== d.value.length) {
-            fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-              body:JSON.stringify({action:'set',key:'wc26_ann_'+csb.id,value:cleaned})
-            }).then(function(){
-              setAnnsByRoom(function(p){var n=Object.assign({},p);n[csb.id]=cleaned;return n;});
-            }).catch(function(){});
-          }
-        }).catch(function(){});
-      }
+      // Announcement cleanup handled by SA 'Clear Anns' button
       setRoom(function(cur) {
         if (!cur || !rv[cur.id]) return cur;
         var gasRoom = rv[cur.id];
