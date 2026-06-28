@@ -160,6 +160,34 @@ var GS_URL = 'https://script.google.com/macros/s/AKfycby5N5jQoNDf-HjmOx22SbSH2ZN
 var GS_SHEET_ID = '1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw'; // View your data: https://docs.google.com/spreadsheets/d/1-P-Y6DheJjiLYKtHG_im8izMPgzYT76KGL_AQ9lZFqw
 </script>
 
+<!-- Global crash net: if anything throws after the app has mounted (e.g. a
+     bad value coming back from a periodic GAS poll), React unmounts the
+     whole tree and #root goes blank with the only trace in devtools console.
+     This catches that moment and writes a visible banner instead, so the
+     page never just silently disappears. The AppErrorBoundary further down
+     handles in-render React errors; this covers everything else
+     (async callbacks, timers, promise rejections). -->
+<script>
+(function(){
+  function showCrashBanner(label, err){
+    try {
+      var msg = (err && (err.message || err.reason && err.reason.message)) || String(err && err.reason || err) || 'Unknown error';
+      var existing = document.getElementById('__crash_banner__');
+      if (existing) return; // only show the first one
+      var el = document.createElement('div');
+      el.id = '__crash_banner__';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7a1212;color:#fff;' +
+        'font-family:monospace;font-size:12px;padding:10px 14px;white-space:pre-wrap;max-height:40vh;overflow:auto;' +
+        'border-bottom:2px solid #f0b429;';
+      el.textContent = '⚠ ' + label + ': ' + msg + '  (page kept your data — try reloading)';
+      document.body.appendChild(el);
+    } catch(e) { /* never let the error handler itself throw */ }
+  }
+  window.addEventListener('error', function(e){ showCrashBanner('Script error', e.error || e); });
+  window.addEventListener('unhandledrejection', function(e){ showCrashBanner('Unhandled promise rejection', e); });
+})();
+</script>
+
 <!-- React + ReactDOM + htm: INLINED (no CDN needed) -->
 <script>/* React 18 */
 /**
@@ -5239,6 +5267,47 @@ class RoomErrorBoundary extends React.Component {
   }
 }
 
+// ── Top-level boundary: catches ANY crash anywhere in the app (not just
+// inside a room) so the page never silently goes blank. Without this,
+// a throw inside any useEffect/render (e.g. malformed data coming back
+// from the GAS polling a few seconds after mount) unmounts the whole
+// React tree and leaves #root empty with no visible explanation. ─────────
+class AppErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {err: null};
+  }
+  static getDerivedStateFromError(e) { return {err: e}; }
+  componentDidCatch(error, info) {
+    console.error('App crashed:', error, info && info.componentStack);
+  }
+  render() {
+    if (this.state.err) {
+      var msg = (this.state.err && this.state.err.message) || 'Unknown error';
+      var stack = (this.state.err && this.state.err.stack) || '';
+      return React.createElement('div', {
+        style:{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          minHeight:'100vh',gap:14,background:'#0a1628',color:'#fff',fontFamily:'sans-serif',
+          padding:'24px',textAlign:'center'}
+      },
+        React.createElement('div', {style:{fontSize:48}}, '⚠️'),
+        React.createElement('h2', {style:{margin:0,color:'#f0b429'}}, 'App crashed after loading'),
+        React.createElement('p', {style:{color:'#dce8f5',margin:0,fontSize:14,maxWidth:480}}, msg),
+        React.createElement('button', {
+          onClick:function(){window.location.reload();},
+          style:{padding:'10px 24px',background:'#f0b429',color:'#0a1628',border:'none',
+            borderRadius:8,fontSize:14,fontWeight:700,cursor:'pointer',marginTop:8}
+        }, '↻ Reload'),
+        stack && React.createElement('pre', {
+          style:{color:'#5b8bb8',fontSize:10,maxWidth:560,overflow:'auto',textAlign:'left',
+            marginTop:12,whiteSpace:'pre-wrap'}
+        }, stack)
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ── Module-level state (outside React — persists across re-renders) ───────
 var _rankSnap    = {};  // {roomId: {uid: rank}} — for leaderboard position arrows
 var _prevResults = {};  // previous results snapshot — for points-earned toasts
@@ -6095,7 +6164,9 @@ function getAchievements(uid, predsMap, resultsMap) {
 }
 
 try {
-  ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    html`<${AppErrorBoundary}><${App} /></${AppErrorBoundary}>`
+  );
 } catch(e) {
   document.getElementById('root').innerHTML =
     '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;background:#0a1628;color:#fff;font-family:sans-serif;padding:20px;text-align:center">' +
@@ -6110,3 +6181,4 @@ try {
 </script>
 </body>
 </html>
+      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
