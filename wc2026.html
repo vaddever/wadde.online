@@ -495,7 +495,7 @@ var MS=[
   {id:'m02',gr:'A',h:'South Korea',a:'Czechia',utc:'2026-06-12T02:00:00Z',v:'Estadio Akron, Guadalajara'},
   {id:'m25',gr:'A',h:'Czechia',a:'South Africa',utc:'2026-06-18T16:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
   {id:'m28',gr:'A',h:'Mexico',a:'South Korea',utc:'2026-06-19T01:00:00Z',v:'Estadio Akron, Guadalajara'},
-  {id:'m53',gr:'A',h:'Czechia',a:'Mexico',utc:'2026-06-25T01:00:00Z',v:'Estadio Azteca, Mexico City'},
+  {id:'m53',gr:'A',h:'Mexico',a:'Czechia',utc:'2026-06-25T01:00:00Z',v:'Estadio Azteca, Mexico City'},
   {id:'m54',gr:'A',h:'South Africa',a:'South Korea',utc:'2026-06-25T01:00:00Z',v:'Estadio BBVA, Monterrey'},
   // ── GROUP B ──────────────────────────────────────────────────────────────
   {id:'m03',gr:'B',h:'Canada',a:'Bosnia & Herzegovina',utc:'2026-06-12T19:00:00Z',v:'BMO Field, Toronto'},
@@ -512,11 +512,11 @@ var MS=[
   {id:'m51',gr:'C',h:'Scotland',a:'Brazil',utc:'2026-06-24T22:00:00Z',v:'Hard Rock Stadium, Miami Gardens'},
   {id:'m52',gr:'C',h:'Morocco',a:'Haiti',utc:'2026-06-24T22:00:00Z',v:'Mercedes-Benz Stadium, Atlanta'},
   // ── GROUP D ──────────────────────────────────────────────────────────────
-  {id:'m04',gr:'D',h:'United States',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m04',gr:'D',h:'USA',a:'Paraguay',utc:'2026-06-13T01:00:00Z',v:'SoFi Stadium, Inglewood'},
   {id:'m08',gr:'D',h:'Australia',a:'Türkiye',utc:'2026-06-14T16:00:00Z',v:'BC Place, Vancouver'},
-  {id:'m29',gr:'D',h:'United States',a:'Australia',utc:'2026-06-19T19:00:00Z',v:'Lumen Field, Seattle'},
+  {id:'m29',gr:'D',h:'USA',a:'Australia',utc:'2026-06-19T19:00:00Z',v:'Lumen Field, Seattle'},
   {id:'m32',gr:'D',h:'Türkiye',a:'Paraguay',utc:'2026-06-20T03:00:00Z',v:"Levi's Stadium, Santa Clara"},
-  {id:'m59',gr:'D',h:'Türkiye',a:'United States',utc:'2026-06-26T02:00:00Z',v:'SoFi Stadium, Inglewood'},
+  {id:'m59',gr:'D',h:'Türkiye',a:'USA',utc:'2026-06-26T02:00:00Z',v:'SoFi Stadium, Inglewood'},
   {id:'m60',gr:'D',h:'Paraguay',a:'Australia',utc:'2026-06-26T02:00:00Z',v:"Levi's Stadium, Santa Clara"},
   // ── GROUP E ──────────────────────────────────────────────────────────────
   {id:'m09',gr:'E',h:'Germany',a:'Curaçao',utc:'2026-06-14T17:00:00Z',v:'NRG Stadium, Houston'},
@@ -599,14 +599,14 @@ var KO_MS = [
   {id:'r32_03',rd:'R32',h:'Germany',     a:'Paraguay',       utc:'2026-06-29T20:30:00Z',v:'Boston'},
   {id:'r32_04',rd:'R32',h:'Netherlands', a:'Morocco',        utc:'2026-06-30T01:00:00Z',v:'Monterrey'},
   {id:'r32_05',rd:'R32',h:'Ivory Coast', a:'Norway',         utc:'2026-06-30T17:00:00Z',v:'Dallas'},
-  {id:'r32_06',rd:'R32',h:'France',      a:'Sweden',         utc:'2026-07-01T01:00:00Z',v:'New Jersey'},
-  {id:'r32_07',rd:'R32',h:'Mexico',      a:'Ecuador',        utc:'2026-07-01T02:00:00Z',v:'Mexico City'},
+  {id:'r32_06',rd:'R32',h:'France',      a:'Sweden',         utc:'2026-06-30T21:00:00Z',v:'New Jersey'},
+  {id:'r32_07',rd:'R32',h:'Mexico',      a:'Ecuador',        utc:'2026-07-01T01:00:00Z',v:'Mexico City'},
   {id:'r32_08',rd:'R32',h:'England',     a:'DR Congo',       utc:'2026-07-01T16:00:00Z',v:'Atlanta'},
   {id:'r32_09',rd:'R32',h:'Belgium',     a:'Senegal',        utc:'2026-07-01T20:00:00Z',v:'Seattle'},
   {id:'r32_10',rd:'R32',h:'USA',         a:'Bosnia & Herzegovina',utc:'2026-07-02T00:00:00Z',v:'San Francisco'},
-  {id:'r32_11',rd:'R32',h:'Spain',       a:'Algeria',        utc:'2026-07-02T19:00:00Z',v:'Los Angeles'},
+  {id:'r32_11',rd:'R32',h:'Spain',       a:'Austria',        utc:'2026-07-02T19:00:00Z',v:'Los Angeles'},
   {id:'r32_12',rd:'R32',h:'Portugal',    a:'Croatia',        utc:'2026-07-02T23:00:00Z',v:'Toronto'},
-  {id:'r32_13',rd:'R32',h:'Switzerland', a:'Iran',           utc:'2026-07-03T03:00:00Z',v:'Vancouver'},
+  {id:'r32_13',rd:'R32',h:'Switzerland', a:'Algeria',        utc:'2026-07-03T03:00:00Z',v:'Vancouver'},
   {id:'r32_14',rd:'R32',h:'Australia',   a:'Egypt',          utc:'2026-07-03T18:00:00Z',v:'Dallas'},
   {id:'r32_15',rd:'R32',h:'Argentina',   a:'Cape Verde',     utc:'2026-07-03T22:00:00Z',v:'Miami'},
   {id:'r32_16',rd:'R32',h:'Colombia',    a:'Ghana',          utc:'2026-07-04T01:30:00Z',v:'Kansas City'},
@@ -1645,6 +1645,7 @@ function SuperAdminApp() {
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults,
                    wc26_koresults:setSaKoResults, wc26_bonus:setSaBonusPts, wc26_pin_requests:function(v){setPinRequests(Array.isArray(v)?v:[]);}, wc26_settings:function(v){if(v&&typeof v.showBadges!=='undefined')setShowBadges(v.showBadges);},
+                   wc26_pred_log:function(v){setPredLog(Array.isArray(v)?v.slice(-300):[]);},
                    wc26_global_anns:function(v){setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]);}};
     function tick() { done++; if (done >= keys.length) setLoading(false); }
     keys.forEach(function(k){
@@ -1779,9 +1780,14 @@ function SuperAdminApp() {
   }
 
   // ── Authenticated ─────────────────────────────────────────────
-  var uList  = Object.values(saUsers);
-  var rList  = Object.values(saRooms);
-  var prList = Object.keys(saPreds).map(function(k){
+  // Use props data (from App) when SA hasn't fetched yet — avoids empty dashboard
+  var _saU = Object.keys(saUsers).length ? saUsers : (props.users||{});
+  var _saR = Object.keys(saRooms).length ? saRooms : (props.rooms||{});
+  var _saP = Object.keys(saPreds).length ? saPreds : (props.preds||{});
+  var _saRe= Object.keys(saResults).length ? saResults : (props.results||{});
+  var uList  = Object.values(_saU);
+  var rList  = Object.values(_saR);
+  var prList = Object.keys(_saP).map(function(k){
     var p=saPreds[k]; var pts=k.split('_');
     return {key:k, uid:pts[0]||'', mid:pts[1]||'', h:p.h, a:p.a, ts:p.ts||null};
   });
@@ -1800,7 +1806,7 @@ function SuperAdminApp() {
     var minsAfter = m ? Math.round((new Date(pr.ts)-new Date(m.utc))/60000) : 0;
     return Object.assign({},pr,{match:m, userName:u?u.name:'Unknown ('+pr.uid.slice(0,6)+')', minsAfter:minsAfter});
   });
-  var reList = Object.keys(saResults).map(function(id){
+  var reList = Object.keys(_saRe).map(function(id){
     var r=saResults[id]; return {id:id, h:r.h, a:r.a, auto:r.auto};
   });
 
@@ -2868,181 +2874,133 @@ function SuperAdminApp() {
         })()}
       </div>`}
 
-      ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14}}>
+      ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14,padding:'4px 0'}}>
 
         <!-- Badge Control -->
         <div class="card">
-          <h3 style=${{margin:'0 0 10px',fontSize:15}}>🏅 Badge Display</h3>
-          <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
             <div>
-              <div style=${{fontSize:13,fontWeight:600}}>Show achievement badges in standings</div>
-              <div style=${{fontSize:11,color:'var(--dm)',marginTop:2}}>Badges like 🎯 King of Prediction shown in leaderboard</div>
+              <div style=${{fontSize:14,fontWeight:600,marginBottom:3}}>🏅 Badge Display in Standings</div>
+              <div style=${{fontSize:11,color:'var(--dm)'}}>Show achievement badges (👑 King of Prediction) next to names in leaderboard</div>
             </div>
-            <button class=${showBadges?'btn-p':'btn'} style=${{fontSize:12,padding:'6px 16px'}}
+            <button class=${showBadges?'btn-p':'btn'} style=${{fontSize:12,padding:'7px 18px',flexShrink:0}}
               onClick=${function(){
-                var next = !showBadges;
-                setShowBadges(next);
+                var next=!showBadges; setShowBadges(next);
                 fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
                   body:JSON.stringify({action:'set',key:'wc26_settings',value:{showBadges:next}})
                 }).catch(function(){});
-                notify(next?'Badges enabled':'Badges hidden');
+                notify(next?'Badges enabled ✓':'Badges hidden');
               }}>${showBadges?'✓ Enabled':'Hidden'}</button>
+          </div>
+        </div>
+
+        <!-- Bonus Points -->
+        <div class="card">
+          <div style=${{fontSize:14,fontWeight:600,marginBottom:10}}>⭐ Bonus Points</div>
+          <div style=${{fontSize:11,color:'var(--dm)',marginBottom:10}}>Give bonus or deduct points for any user in any room. These appear with a star in standings.</div>
+          <div style=${{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+            <select id="bonus_rid" style=${{flex:'1 1 120px',padding:'7px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+              <option value="">Room…</option>
+              ${Object.values(_saR).map(function(r){return html`<option key=${r.id} value=${r.id}>${r.name}</option>`;})}
+            </select>
+            <select id="bonus_uid" style=${{flex:'1 1 120px',padding:'7px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+              <option value="">User…</option>
+              ${uList.map(function(u){return html`<option key=${u.id} value=${u.id}>${u.name}</option>`;})}
+            </select>
+            <input id="bonus_pts" type="number" placeholder="±pts" style=${{width:70,padding:'7px',fontSize:12,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+            <button class="btn-p" style=${{fontSize:12,padding:'7px 14px'}}
+              onClick=${function(){
+                var rid=document.getElementById('bonus_rid').value;
+                var uid=document.getElementById('bonus_uid').value;
+                var pts=Number(document.getElementById('bonus_pts').value||0);
+                if(!rid||!uid||isNaN(pts)){alert('Fill all fields');return;}
+                var cur=Object.assign({},saBonusPts||{});
+                if(!cur[rid]) cur[rid]={};
+                cur[rid][uid]=(cur[rid][uid]||0)+pts;
+                setSaBonusPts(cur);
+                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                  body:JSON.stringify({action:'set',key:'wc26_bonus',value:cur})
+                }).then(function(r){return r.json();})
+                .then(function(d){if(d&&d.ok)alert('Bonus saved ✓');else alert('Error');})
+                .catch(function(e){alert(e.message);});
+              }}>Give Bonus</button>
           </div>
         </div>
 
         <!-- PIN Reset Requests -->
         <div class="card">
-          <h3 style=${{margin:'0 0 10px',fontSize:15}}>🔑 PIN Reset Requests</h3>
-          ${pinRequests.length===0?html`<p style=${{fontSize:12,color:'var(--dm)',margin:0}}>No pending PIN reset requests.</p>`:
-            html`<div style=${{display:'flex',flexDirection:'column',gap:6}}>
+          <div style=${{fontSize:14,fontWeight:600,marginBottom:10}}>🔑 PIN Reset Requests</div>
+          ${pinRequests.length===0
+            ?html`<div style=${{fontSize:12,color:'var(--dm)'}}>No pending requests.</div>`
+            :html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
               ${pinRequests.map(function(req,i){
-                var u = saUsers[req.uid] || {name:req.name||req.uid};
-                return html`<div key=${i} style=${{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'var(--bg3)',borderRadius:'var(--rs)',border:'1px solid rgba(245,158,11,.2)'}}>
-                  <div style=${{flex:1}}>
+                var u=_saU[req.uid]||{name:req.name||req.uid,phone:req.phone||'?'};
+                return html`<div key=${i} style=${{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'var(--bg3)',borderRadius:'var(--rs)',flexWrap:'wrap'}}>
+                  <div style=${{flex:'1 1 120px'}}>
                     <div style=${{fontSize:13,fontWeight:600}}>${u.name}</div>
-                    <div style=${{fontSize:11,color:'var(--dm)'}}>Phone: ${u.phone||'?'} · Requested: ${new Date(req.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'})}</div>
+                    <div style=${{fontSize:11,color:'var(--dm)'}}>📱 ${u.phone} · ${new Date(req.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'})} MVT</div>
                   </div>
-                  ${(function(){
-                    var newPin = 'np_'+i;
-                    return html`<div style=${{display:'flex',gap:6,alignItems:'center'}}>
-                      <input id=${newPin} type="text" placeholder="New PIN (4-6 digits)"
-                        style=${{width:110,padding:'5px 8px',fontSize:12,background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
-                      <button class="btn-p" style=${{fontSize:11,padding:'5px 10px'}}
-                        onClick=${function(){
-                          var p=document.getElementById(newPin);
-                          if(!p||!/^\d{4,6}$/.test(p.value)){alert('Enter a 4-6 digit PIN');return;}
-                          var newPIN = p.value;
-                          var uid = req.uid;
-                          var updatedUser = Object.assign({},saUsers[uid]||{},{pin:btoa(newPIN)});
-                          var nr = Object.assign({},Object.fromEntries(Object.entries(saUsers).map(function(e){return [e[0],e[1]];})));
-                          nr[uid] = updatedUser;
-                          fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                            body:JSON.stringify({action:'set',key:'wc26_users',value:nr})})
-                          .then(function(r){return r.json();})
-                          .then(function(d){
-                            if(d&&d.ok){
-                              var leftover = pinRequests.filter(function(r2){return r2.uid!==uid;});
-                              setPinRequests(leftover);
-                              fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                                body:JSON.stringify({action:'set',key:'wc26_pin_requests',value:leftover})
-                              }).catch(function(){});
-                              alert('PIN reset to '+newPIN+' for '+u.name+' ✓');
-                            } else { alert('Error: '+(d&&d.error||'failed')); }
-                          }).catch(function(e){alert('Error: '+e.message);});
-                        }}>Approve</button>
-                      <button class="btn" style=${{fontSize:11,padding:'5px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
-                        onClick=${function(){
-                          var leftover = pinRequests.filter(function(r2){return r2.uid!==req.uid;});
-                          setPinRequests(leftover);
-                          fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                            body:JSON.stringify({action:'set',key:'wc26_pin_requests',value:leftover})
-                          }).catch(function(){});
-                        }}>Reject</button>
-                    </div>`;
-                  })()}
+                  <input id=${'np_'+i} type="text" placeholder="New PIN (4-6 digits)" maxLength="6"
+                    style=${{width:130,padding:'6px 8px',fontSize:12,background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                  <button class="btn-p" style=${{fontSize:11,padding:'6px 12px'}}
+                    onClick=${function(){
+                      var inp=document.getElementById('np_'+i);
+                      if(!inp||!/^\d{4,6}$/.test(inp.value)){alert('Enter 4-6 digit PIN');return;}
+                      var newPin=inp.value;
+                      var allUsers=Object.assign({},_saU);
+                      if(allUsers[req.uid]) allUsers[req.uid]=Object.assign({},allUsers[req.uid],{pin:btoa(newPin)});
+                      fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                        body:JSON.stringify({action:'set',key:'wc26_users',value:allUsers})})
+                      .then(function(r){return r.json();})
+                      .then(function(d){
+                        if(!d||!d.ok){alert('Error: '+(d&&d.error||'?'));return;}
+                        var left=pinRequests.filter(function(r2){return r2.uid!==req.uid;});
+                        setPinRequests(left);
+                        return fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                          body:JSON.stringify({action:'set',key:'wc26_pin_requests',value:left})});
+                      }).then(function(){alert('PIN reset to '+newPin+' for '+u.name+' ✓');})
+                      .catch(function(e){alert(e.message);});
+                    }}>Approve</button>
+                  <button class="btn" style=${{fontSize:11,padding:'6px 10px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
+                    onClick=${function(){
+                      var left=pinRequests.filter(function(r2){return r2.uid!==req.uid;});
+                      setPinRequests(left);
+                      fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                        body:JSON.stringify({action:'set',key:'wc26_pin_requests',value:left})
+                      }).catch(function(){});
+                    }}>Reject</button>
                 </div>`;
               })}
             </div>`}
         </div>
 
-        <!-- original settings follow -->
-        <divstyle=${{display:'flex',flexDirection:'column',gap:16,maxWidth:480}}>
-
-        <!-- Match Kickoff Time Editor -->
-        <div class="card" style=${{padding:'14px 16px'}}>
-          <h3 style=${{margin:'0 0 8px',fontSize:15}}>🕐 Match Kickoff Editor</h3>
-          <p style=${{fontSize:12,color:'var(--mu)',marginBottom:10}}>Edit kickoff times if FIFA changes a match. Enter time in UTC (MVT − 5h). Saves locally and persists across sessions.</p>
-          <div style=${{maxHeight:320,overflowY:'auto',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
-            ${MS.slice().sort(function(a,b){return new Date(a.utc)-new Date(b.utc);}).map(function(m){
-              var mvt=new Date(m.utc).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
-              return html`<div key=${m.id} style=${{display:'grid',gridTemplateColumns:'50px 1fr auto auto',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid rgba(255,255,255,.04)'}}>
-                <span style=${{fontSize:10,color:'var(--gold)',fontWeight:700}}>${m.gr} ${m.id}</span>
-                <div style=${{fontSize:11,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--tx)'}}>
-                  ${m.h} – ${m.a}
-                  <span style=${{fontSize:10,color:'var(--dm)',marginLeft:4}}>${mvt} MVT</span>
-                </div>
-                <input type="datetime-local" id=${'sch_'+m.id}
-                  defaultValue=${m.utc.slice(0,16)}
-                  style=${{fontSize:10,padding:'3px 5px',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:5,width:155}} />
-                <button class="btn-p" style=${{fontSize:10,padding:'4px 8px',flexShrink:0}}
-                  onClick=${function(){
-                    var inp=document.getElementById('sch_'+m.id);
-                    if(!inp||!inp.value) return;
-                    var nu=inp.value.length===16?inp.value+':00Z':inp.value+'Z';
-                    var idx=MS.findIndex(function(x){return x.id===m.id;});
-                    if(idx>=0) MS[idx]=Object.assign({},MS[idx],{utc:nu});
-                    var ov=JSON.parse(_ls.get('wc26_sched_overrides','{}')||'{}');
-                    ov[m.id]=nu;
-                    _ls.set('wc26_sched_overrides',JSON.stringify(ov));
-                    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                      body:JSON.stringify({action:'set',key:'wc26_sched',value:ov})})
-                      .catch(function(){});
-                    var mvtNew=new Date(nu).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
-                    alert('✓ Updated '+m.h+' vs '+m.a+'\n→ '+mvtNew+' MVT');
-                  }}>Save</button>
-              </div>`;
-            })}
-          </div>
-        </div>
-
-        <!-- Live Score API -->
-        <div class="card" style=${{padding:'14px 16px'}}>
-          <h3 style=${{marginBottom:4}}>⚡ Live Score Updates</h3>
-          <p style=${{fontSize:12,color:'var(--mu)',marginBottom:12,lineHeight:1.5}}>
-            Scores sync automatically every <strong>60 seconds</strong> from football-data.org.
-            Finished matches update results for all rooms instantly.<br/>
-            Knockout qualifiers are computed automatically from group results.
-          </p>
-          <div style=${{display:'flex',gap:8,marginBottom:10}}>
-            <input value=${saApiKey} onChange=${function(e){setSaApiKey(e.target.value.trim());}}
-              placeholder="football-data.org API key" style=${{flex:1,fontFamily:'monospace',fontSize:12}} />
-            <button class="btn-p" style=${{fontSize:12,padding:'8px 14px',flexShrink:0}} onClick=${function(){
-              if(!saApiKey) return;
-              // Save to localStorage immediately — this is all that's needed
-              // (key is passed directly in URL to GAS, Script Properties optional)
-              _ls.set('wc26_apikey', saApiKey);
-              setSyncSt('saved');
-              setTimeout(function(){setSyncSt('idle');},3000);
-              // Also try to save to GAS Script Properties (silently ignore if fails)
-              fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                body:JSON.stringify({action:'savekey',key:saApiKey})})
-                .catch(function(){});  // ignore GAS failures — localStorage is enough
-            }}>Save Key</button>
-          </div>
-          <div style=${{fontSize:11,color:syncSt==='saved'?'#22c55e':syncSt==='error'?'#ef4444':'var(--dm)'}}>
-            ${syncSt==='saved'?'✓ API key saved — live scores will sync every 60s':saApiKey?'Key saved ✓ — live scores will sync every 60s. Tap ⟳ Sync in any room to test.':'No key set. Get a free key at football-data.org'}
-          </div>
-          <div style=${{marginTop:12,padding:'10px 12px',background:'var(--bg3)',borderRadius:'var(--rs)',fontSize:11,color:'var(--mu)'}}>
-            <div style=${{fontWeight:600,marginBottom:4,color:'var(--tx)'}}>📋 How it works</div>
-            <div>1. Get a free API key at <strong>football-data.org</strong> → sign up → copy your key</div>
-            <div>2. Paste it above and click Save Key</div>
-            <div>3. Scores auto-update every 60s — group standings, knockout qualifiers, and all rooms update live</div>
-            <div style=${{marginTop:6,color:'var(--gold)'}}>💡 For 24/7 auto-sync without needing the app open: set up a time-based trigger in GAS calling <code>syncLiveScores()</code></div>
-          </div>
-        </div>
-
-        <!-- Password change -->
+        <!-- Change User PIN directly -->
         <div class="card">
-          <h3 style=${{marginBottom:12}}>🔑 Change Super-Admin Password</h3>
-          <div style=${{display:'flex',flexDirection:'column',gap:10}}>
-            <div><label>Current password</label>
-              <input type="password" value=${oldPw} onChange=${function(e){setOldPw(e.target.value);}} placeholder="Current password" /></div>
-            <div><label>New password <span style=${{color:'var(--dm)',fontWeight:400,fontSize:11}}>(min 6 characters)</span></label>
-              <input type="password" value=${newPw} onChange=${function(e){setNewPw(e.target.value);}} placeholder="New password" /></div>
-            <button class="btn-p" onClick=${changePw}>Update Password</button>
-            ${pwMsg&&html`<div style=${{fontSize:12,color:pwMsg[0]==='✓'?'#22c55e':'#ef4444',fontWeight:500}}>${pwMsg}</div>`}
+          <div style=${{fontSize:14,fontWeight:600,marginBottom:10}}>🔐 Change User PIN</div>
+          <div style=${{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+            <select id="pin_uid" style=${{flex:'1 1 140px',padding:'7px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+              <option value="">Select user…</option>
+              ${uList.map(function(u){return html`<option key=${u.id} value=${u.id}>${u.name} (${u.phone||'?'})</option>`;})}
+            </select>
+            <input id="pin_new" type="text" placeholder="New PIN (4-6 digits)" maxLength="6"
+              style=${{width:150,padding:'7px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+            <button class="btn-p" style=${{fontSize:12,padding:'7px 14px'}}
+              onClick=${function(){
+                var uid=document.getElementById('pin_uid').value;
+                var pin=document.getElementById('pin_new').value;
+                if(!uid||!/^\d{4,6}$/.test(pin)){alert('Select user and enter 4-6 digit PIN');return;}
+                var allUsers=Object.assign({},_saU);
+                if(!allUsers[uid]){alert('User not found');return;}
+                allUsers[uid]=Object.assign({},allUsers[uid],{pin:btoa(pin)});
+                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                  body:JSON.stringify({action:'set',key:'wc26_users',value:allUsers})})
+                .then(function(r){return r.json();})
+                .then(function(d){if(d&&d.ok)alert('PIN changed ✓');else alert('Error: '+(d&&d.error||'?'));})
+                .catch(function(e){alert(e.message);});
+              }}>Set PIN</button>
           </div>
         </div>
 
-        <!-- System info -->
-        <div class="card">
-          <h3 style=${{marginBottom:10}}>ℹ️ System</h3>
-          <ul style=${{fontSize:12,color:'var(--mu)',paddingLeft:18,margin:0,lineHeight:1.8}}>
-            <li>Default super-admin password: <code>wadde2026</code> — change it above</li>
-            <li>Access this panel via <code>#superadmin</code> in the URL</li>
-            <li>Structured Sheet tabs auto-update on every write once GAS is redeployed</li>
-          </ul>
-        </div>
       </div>`}
     </div>
   </div>`;
@@ -4766,143 +4724,155 @@ function H2HModal(props) {
 function UserPredictionsModal(props) {
   var u = props.user;
   if (!u) return null;
-  var predsMap  = props.preds    || {};
-  var resultsMap = props.results || {};
-  var allMatches = (props.MS || []).concat(props.KO_MS || []);
+  var predsMap   = props.preds    || {};
+  var resultsMap = props.results  || {};
+  var koResMap   = props.koResults || {};
+  var gsMatches  = props.MS  || [];
+  var koMatches  = props.KO_MS || [];
   var isMe = props.currentUser && props.currentUser.id === u.id;
 
-  // Get all matches this user predicted (sorted by predicted time)
-  var predicted = allMatches
-    .filter(function(m){ return predsMap[u.id+'_'+m.id]; })
-    .sort(function(a,b){
-      var ta = predsMap[u.id+'_'+a.id]; var tb = predsMap[u.id+'_'+b.id];
-      return ((ta&&ta.ts?new Date(ta.ts).getTime():0)) - ((tb&&tb.ts?new Date(tb.ts).getTime():0));
-    });
+  // Group stage predictions
+  var gsPreds = gsMatches.filter(function(m){ return predsMap[u.id+'_'+m.id]; });
+  // KO stage predictions
+  var koPreds = koMatches.filter(function(m){ return predsMap[u.id+'_'+m.id]; });
+  // All for stats
+  var allPreds = gsPreds.concat(koPreds);
+  var done = allPreds.filter(function(m){
+    return resultsMap[m.id] || koResMap[m.id];
+  }).length;
+  var exactCount = allPreds.filter(function(m){
+    var p=predsMap[u.id+'_'+m.id];
+    var r=resultsMap[m.id]||koResMap[m.id];
+    return r&&p&&Number(p.h)===Number(r.h)&&Number(p.a)===Number(r.a);
+  }).length;
+  var totalPts = allPreds.reduce(function(s,m){
+    var p=predsMap[u.id+'_'+m.id];
+    var r=resultsMap[m.id]||koResMap[m.id];
+    return s+(calcPts(p,r)||0);
+  },0);
+  var isKing = exactCount >= 3;
 
-  var totalPts = 0, exactCount = 0, winnerCount = 0;
-  predicted.forEach(function(m){
-    var p = predsMap[u.id+'_'+m.id], r = resultsMap[m.id];
-    if (!r) return;
-    var pts = calcPts(p,r)||0;
-    totalPts += pts;
-    if (pts > 0 && Number(p.h)===Number(r.h) && Number(p.a)===Number(r.a)) exactCount++;
-    else if (pts > 0) winnerCount++;
+  // Expand state for GS completed sections
+  var exS = useState({}); var expanded=exS[0]; var setExpanded=exS[1];
+  function toggleGrp(grp){ setExpanded(function(p){var n=Object.assign({},p);n[grp]=!n[grp];return n;}); }
+
+  // Group GS matches by group letter, only show those with predictions
+  var gsByGrp = {};
+  gsPreds.forEach(function(m){
+    if(!gsByGrp[m.gr]) gsByGrp[m.gr]=[];
+    gsByGrp[m.gr].push(m);
   });
-  var done = predicted.filter(function(m){return resultsMap[m.id];}).length;
-  var isKing = exactCount >= 1;
+
+  function renderMatch(m, koResMap2) {
+    var p = predsMap[u.id+'_'+m.id];
+    if (!p) return null;
+    var r = resultsMap[m.id] || (koResMap2&&koResMap2[m.id]);
+    var pts = r?(calcPts(p,r)||0):null;
+    var isExact  = pts===4;
+    var isWinner = pts===2;
+    var isWrong  = pts===0 && r;
+    var pending  = !r;
+    var teamH = m.h||m.h_slot||'TBD';
+    var teamA = m.a||m.a_slot||'TBD';
+    return html`<div key=${m.id} style=${{
+      display:'flex',alignItems:'center',gap:8,padding:'8px 16px',
+      borderBottom:'1px solid rgba(255,255,255,.06)',
+      background:isExact?'rgba(251,191,36,.05)':'transparent'
+    }}>
+      <!-- Home -->
+      <div style=${{flex:1,display:'flex',alignItems:'center',gap:5,minWidth:0,justifyContent:'flex-end'}}>
+        <span style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'right'}}>${teamH}</span>
+        <${FlagImg} team=${teamH} w=${18} />
+      </div>
+      <!-- Score -->
+      <div style=${{textAlign:'center',minWidth:90,flexShrink:0}}>
+        <div style=${{fontFamily:'Barlow Condensed',fontSize:19,fontWeight:800,
+          color:isExact?'#fbbf24':isWinner?'#60a5fa':isWrong?'#f87171':'var(--tx)'}}>${p.h}–${p.a}</div>
+        ${r?html`<div style=${{fontSize:10,color:'var(--dm)'}}>Result: <strong style=${{color:'var(--tx)'}}>${r.h}–${r.a}</strong></div>`:null}
+        ${pending?html`<div style=${{fontSize:10,color:'var(--dm)'}}>Pending</div>`:null}
+      </div>
+      <!-- Away -->
+      <div style=${{flex:1,display:'flex',alignItems:'center',gap:5,minWidth:0}}>
+        <${FlagImg} team=${teamA} w=${18} />
+        <span style=${{fontSize:12,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${teamA}</span>
+      </div>
+      <!-- Badge -->
+      <div style=${{flexShrink:0,width:28,textAlign:'center'}}>
+        ${isExact?'🎯':isWinner?html`<span style=${{fontSize:10,color:'#60a5fa',fontWeight:700}}>+2</span>`:isWrong?'✗':pending?'⏳':''}
+      </div>
+    </div>`;
+  }
 
   return html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}}>
-    <div class="modal" style=${{padding:0,overflow:'hidden',maxHeight:'88vh',display:'flex',flexDirection:'column',maxWidth:480}}>
-
+    <div class="modal" style=${{padding:0,overflow:'hidden',maxWidth:480,maxHeight:'85vh',display:'flex',flexDirection:'column'}}>
       <!-- Header -->
-      <div style=${{background:'linear-gradient(135deg,#1e1b4b,#1a1035)',padding:'16px 20px',flexShrink:0}}>
-        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
-          <div style=${{display:'flex',alignItems:'center',gap:10}}>
-            <div style=${{width:42,height:42,borderRadius:21,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:700,color:'#fff',flexShrink:0}}>
-              ${(u.name||'?')[0].toUpperCase()}
-            </div>
-            <div>
-              <div style=${{fontSize:16,fontWeight:700,color:'#fff',display:'flex',alignItems:'center',gap:6}}>
-                ${u.name}
-                ${isKing&&html`<span style=${{fontSize:13}}>👑</span>`}
-                ${isMe&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.3)',color:'#93c5fd',padding:'1px 7px',borderRadius:8}}>you</span>`}
-              </div>
-              <div style=${{fontSize:12,color:'rgba(255,255,255,.5)',marginTop:1}}>
-                ${u.favT&&u.favT[0]&&(u.favT[0]+' fan')}${u.champTeam?' · 🏆 '+u.champTeam:''}
-              </div>
-            </div>
+      <div style=${{background:'linear-gradient(135deg,#1e1b4b,#0f172a)',padding:'16px 16px 12px',flexShrink:0}}>
+        <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+          <div style=${{width:36,height:36,borderRadius:18,background:'#1a56db',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:700,color:'#fff',flexShrink:0}}>
+            ${(u.name||'?')[0].toUpperCase()}
           </div>
-          <button class="btn" style=${{padding:'4px 10px',fontSize:12,flexShrink:0}} onClick=${props.onClose}>✕</button>
+          <div style=${{flex:1,minWidth:0}}>
+            <div style=${{fontSize:15,fontWeight:700,color:'#fff',display:'flex',alignItems:'center',gap:6}}>
+              ${u.name} ${isKing?html`<span>👑</span>`:null} ${isMe?html`<span style=${{fontSize:10,background:'rgba(59,130,246,.3)',color:'#93c5fd',padding:'1px 7px',borderRadius:8}}>you</span>`:null}
+            </div>
+            <div style=${{fontSize:11,color:'rgba(255,255,255,.5)',marginTop:2}}>${u.favT&&u.favT[0]?u.favT[0]+' fan':''}${u.champTeam?' · 🏆 '+u.champTeam:''}</div>
+          </div>
+          <button class="btn" style=${{fontSize:11,padding:'3px 10px',color:'rgba(255,255,255,.5)',borderColor:'rgba(255,255,255,.2)'}} onClick=${props.onClose}>✕</button>
         </div>
-
-        <!-- Stats row -->
-        <div style=${{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8}}>
-          ${[
-            [predicted.length, 'Predicted'],
-            [done, 'Resolved'],
-            [exactCount, '🎯 Exact'],
-            [totalPts + ' pts', 'Score']
-          ].map(function(s,i){
-            return html`<div key=${i} style=${{textAlign:'center',background:'rgba(255,255,255,.07)',borderRadius:8,padding:'7px 4px'}}>
-              <div style=${{fontSize:18,fontWeight:800,color:i===2&&exactCount>0?'#fbbf24':'#fff',fontFamily:'Barlow Condensed'}}>${s[0]}</div>
+        <!-- Stats -->
+        <div style=${{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
+          ${[[allPreds.length,'Predicted'],[done,'Resolved'],[exactCount,'🎯 Exact'],[totalPts+' pts','Score']].map(function(s,i){
+            return html`<div key=${i} style=${{textAlign:'center',background:'rgba(255,255,255,.07)',borderRadius:8,padding:'6px 4px'}}>
+              <div style=${{fontSize:17,fontWeight:800,color:i===2&&exactCount>0?'#fbbf24':'#fff',fontFamily:'Barlow Condensed'}}>${s[0]}</div>
               <div style=${{fontSize:9,color:'rgba(255,255,255,.5)',letterSpacing:.5,textTransform:'uppercase'}}>${s[1]}</div>
             </div>`;
           })}
         </div>
-
-        ${isKing&&html`<div style=${{marginTop:10,background:'rgba(251,191,36,.15)',border:'1px solid rgba(251,191,36,.35)',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:8}}>
-          <span style=${{fontSize:20}}>👑</span>
-          <div>
-            <div style=${{fontSize:13,fontWeight:700,color:'#fbbf24'}}>King of Prediction!</div>
-            <div style=${{fontSize:11,color:'rgba(255,255,255,.6)'}}>${exactCount} exact score${exactCount!==1?'s':''} — incredible accuracy!</div>
-          </div>
-        </div>`}
+        ${isKing?html`<div style=${{marginTop:8,background:'rgba(251,191,36,.15)',border:'1px solid rgba(251,191,36,.35)',borderRadius:8,padding:'7px 12px',display:'flex',alignItems:'center',gap:8}}>
+          <span style=${{fontSize:18}}>👑</span>
+          <div><div style=${{fontSize:12,fontWeight:700,color:'#fbbf24'}}>King of Prediction!</div>
+          <div style=${{fontSize:11,color:'rgba(255,255,255,.6)'}}>${exactCount} exact scores — incredible accuracy!</div></div>
+        </div>`:null}
       </div>
 
-      <!-- Prediction list -->
+      <!-- Scrollable body -->
       <div style=${{overflowY:'auto',flex:1}}>
-        ${predicted.length===0&&html`<div style=${{textAlign:'center',padding:'32px 20px',color:'var(--mu)',fontSize:13}}>No predictions made yet.</div>`}
-        ${predicted.map(function(m){
-          var p = predsMap[u.id+'_'+m.id];
-          var r = resultsMap[m.id];
-          var pts = r ? (calcPts(p,r)||0) : null;
-          var isExact = pts===4;
-          var isWinner = pts===2;
-          var isWrong  = pts===0 && r;
-          var pending  = !r;
-          return html`<div key=${m.id} style=${{
-            borderBottom:'1px solid var(--bdr)',
-            padding:'10px 16px',
-            background:isExact?'rgba(251,191,36,.05)':pending?'transparent':'transparent'
-          }}>
-            <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-              <span style=${{fontSize:9,color:'var(--dm)',fontWeight:600,letterSpacing:.5,textTransform:'uppercase',minWidth:50}}>
-                ${m.gr?'Group '+m.gr:m.rd||'KO'}
-              </span>
-              ${isExact&&html`<span style=${{fontSize:10,background:'rgba(251,191,36,.18)',color:'#fbbf24',border:'1px solid rgba(251,191,36,.4)',padding:'1px 8px',borderRadius:12,fontWeight:700}}>👑 King of Prediction</span>`}
-              ${isWinner&&html`<span style=${{fontSize:10,background:'rgba(96,165,250,.12)',color:'#60a5fa',border:'1px solid rgba(96,165,250,.25)',padding:'1px 8px',borderRadius:12}}>✅ +2 pts</span>`}
-              ${isWrong&&html`<span style=${{fontSize:10,background:'rgba(239,68,68,.07)',color:'#f87171',padding:'1px 8px',borderRadius:12}}>✗ 0 pts</span>`}
-              ${pending&&html`<span style=${{fontSize:10,color:'var(--dm)',padding:'1px 8px'}}>Pending</span>`}
+
+        <!-- ── KO Stage Predictions ────────────────────────────────── -->
+        ${koPreds.length>0?html`<div>
+          <div style=${{padding:'8px 16px',background:'rgba(240,180,41,.06)',borderBottom:'1px solid rgba(240,180,41,.15)',fontSize:11,fontWeight:700,color:'var(--gold)',letterSpacing:.5}}>
+            🏆 KNOCKOUT STAGES (${koPreds.length} predictions)
+          </div>
+          ${koPreds.map(function(m){ return renderMatch(m, koResMap); })}
+        </div>`:null}
+
+        <!-- ── Group Stage — grouped & collapsible ────────────────── -->
+        ${Object.keys(gsByGrp).sort().map(function(grp){
+          var matches = gsByGrp[grp];
+          var grpDone = matches.filter(function(m){return resultsMap[m.id];}).length;
+          var grpPts  = matches.reduce(function(s,m){return s+(calcPts(predsMap[u.id+'_'+m.id],resultsMap[m.id])||0);},0);
+          var allDone = grpDone === matches.length;
+          var isOpen  = expanded[grp] !== false && !allDone || expanded[grp] === true;
+          return html`<div key=${grp}>
+            <div style=${{display:'flex',alignItems:'center',padding:'7px 16px',background:'var(--bg3)',borderBottom:'1px solid var(--bdr)',cursor:allDone?'pointer':'default'}}
+              onClick=${allDone?function(){toggleGrp(grp);}:undefined}>
+              <span style=${{fontSize:11,fontWeight:700,color:'var(--gold)',letterSpacing:.5,flex:1}}>GROUP ${grp}</span>
+              <span style=${{fontSize:11,color:'var(--dm)',marginRight:8}}>${grpDone}/${matches.length} done · <strong style=${{color:grpPts>0?'#4ade80':'var(--dm)'}}>${grpPts>0?'+'+grpPts+'pts':''}</strong></span>
+              ${allDone?html`<span style=${{fontSize:11,color:'var(--dm)'}}>${isOpen?'▲':'▼ expand'}</span>`:null}
             </div>
-
-            <div style=${{display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:6}}>
-              <!-- Home team -->
-              <div style=${{display:'flex',alignItems:'center',gap:6}}>
-                <${FlagImg} team=${m.h||m.h_slot||''} w=${20} />
-                <span style=${{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h||m.h_slot||'TBD'}</span>
-              </div>
-
-              <!-- Scores -->
-              <div style=${{textAlign:'center',minWidth:90}}>
-                <div style=${{display:'flex',alignItems:'center',gap:4,justifyContent:'center'}}>
-                  <!-- Predicted -->
-                  <span style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:700,color:isExact?'#fbbf24':isWinner?'#60a5fa':isWrong?'#f87171':'var(--tx)'}}>${p.h}–${p.a}</span>
-                </div>
-                ${r&&html`<div style=${{fontSize:10,color:'var(--dm)',marginTop:2}}>
-                  Result: <strong style=${{color:'var(--tx)'}}>${r.h}–${r.a}</strong>
-                </div>`}
-              </div>
-
-              <!-- Away team -->
-              <div style=${{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end'}}>
-                <span style=${{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'right'}}>${m.a||m.a_slot||'TBD'}</span>
-                <${FlagImg} team=${m.a||m.a_slot||''} w=${20} />
-              </div>
-            </div>
+            ${(!allDone||isOpen)?matches.map(function(m){ return renderMatch(m, null); }):null}
           </div>`;
         })}
+
+        ${allPreds.length===0?html`<div style=${{textAlign:'center',padding:'40px 20px',color:'var(--dm)'}}>
+          <div style=${{fontSize:28,marginBottom:6}}>📋</div>
+          <div>No predictions made yet</div>
+        </div>`:null}
       </div>
     </div>
   </div>`;
 }
 
-
-
-// ── Simple Room Chat ─────────────────────────────────────────────────────
-// Stores to localStorage + GAS. Polls GAS every 10s.
-// Guards: won't poll for 12s after sending (avoids race condition with GAS write).
-
-// ── Live Match Detail Modal ───────────────────────────────────────────────
 function LiveMatchModal(props) {
   var m   = props.match;
   var lv  = props.live;  // {h, a, status, min, htH, htA}
@@ -6073,6 +6043,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       currentUser=${user}
       preds=${preds}
       results=${results}
+      koResults=${koResults}
       MS=${(function(){try{return MS;}catch(e){return [];}})()}
       KO_MS=${(function(){try{return KO_MS;}catch(e){return [];}})()}
       onClose=${function(){setH2hUser(null);}} />`}
