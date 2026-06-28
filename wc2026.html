@@ -3841,17 +3841,16 @@ function ChatRoom(props) {
 // ── Room Announcements ───────────────────────────────────────────────────
 function AnnouncementsPanel(props) {
   var anns = (props.announcements || []).filter(function(a){
-    // Permanently hide deleted system announcements
     var title = (a.title||'').toLowerCase();
     return !title.includes('hello guys');
   });
-  // Auto-delete Hello GUYS from GAS if found
-  (function(){
+  // Auto-delete "Hello GUYS" AFTER render (useEffect prevents React update-during-render error)
+  useEffect(function(){
     var bad = (props.announcements||[]).filter(function(a){return (a.title||'').toLowerCase().includes('hello guys');});
     if (bad.length && props.onDelete) {
       bad.forEach(function(a){ props.onDelete(a.id); });
     }
-  })();
+  }, [(props.announcements||[]).length]);
   if (anns.length === 0 && !props.isAdmin) return null;
 
   return html`<div style=${{marginBottom:12}}>
@@ -6111,4 +6110,3 @@ try {
 </script>
 </body>
 </html>
-      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
