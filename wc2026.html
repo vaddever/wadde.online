@@ -1222,6 +1222,16 @@ function mStat(m, results) {
   if (now >= st) return 'live';
   return 'soon';
 }
+// Single source of truth for whether a prediction can still be made/edited.
+// cutoffMin = minutes before kickoff after which predictions lock (superadmin-
+// configurable; 0 = lock exactly at kickoff). Used both by the UI (to hide/
+// disable predict buttons) and by doPredict itself as a final guard, so no
+// code path can bypass the lockout.
+function canStillPredict(m, cutoffMin) {
+  if (!m || !m.utc) return false;
+  var cutoff = (Number(cutoffMin)||0) * 60000;
+  return Date.now() < (new Date(m.utc).getTime() - cutoff);
+}
 function genCode() { return Math.random().toString(36).substring(2,8).toUpperCase(); }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).substring(2,6); }
 function shuffle(arr) { return arr.slice().sort(function() { return Math.random() - 0.5; }); }
@@ -1609,7 +1619,7 @@ function WC2026Logo(props) {
 // Default password: wadde2026
 // ══════════════════════════════════════════════════════════════
 
-function SuperAdminApp() {
+function SuperAdminApp(props) {
   var ps  = useState(''); var pass = ps[0]; var setPass = ps[1];
   var as  = useState(false); var authed = as[0]; var setAuthed = as[1];
   var es  = useState(''); var err = es[0]; var setErr = es[1];
@@ -1621,6 +1631,13 @@ function SuperAdminApp() {
   var bPS = useState({}); var saBonusPts=bPS[0]; var setSaBonusPts=bPS[1];
   var rsC = useState({}); var resCollapsed=rsC[0]; var setResCollapsed=rsC[1];
   var bdG = useState(true); var showBadges=bdG[0]; var setShowBadges=bdG[1];
+  var pcM = useState(0); var predCutoffMin=pcM[0]; var setPredCutoffMin=pcM[1];
+
+  // notify() doesn't exist in this component's scope (it's local to App) —
+  // this was already being called by the pre-existing Badge Display button
+  // and would have thrown "notify is not defined". Use alert as a simple
+  // stand-in, consistent with this panel's existing style elsewhere.
+  function notify(msg, type) { alert((type==='err'?'⚠️ ':'') + msg); }
   var prR = useState([]); var pinRequests=prR[0]; var setPinRequests=prR[1];
   var krS = useState({}); var saKoResults=krS[0]; var setSaKoResults=krS[1];
   var rpS = useState({}); var saRoomPreds=rpS[0]; var setSaRoomPreds=rpS[1];
@@ -1678,7 +1695,7 @@ function SuperAdminApp() {
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults,
-                   wc26_koresults:setSaKoResults, wc26_bonus:setSaBonusPts, wc26_pin_requests:function(v){setPinRequests(Array.isArray(v)?v:[]);}, wc26_settings:function(v){if(v&&typeof v.showBadges!=='undefined')setShowBadges(v.showBadges);},
+                   wc26_koresults:setSaKoResults, wc26_bonus:setSaBonusPts, wc26_pin_requests:function(v){setPinRequests(Array.isArray(v)?v:[]);}, wc26_settings:function(v){if(v&&typeof v.showBadges!=='undefined')setShowBadges(v.showBadges); if(v&&typeof v.predictionCutoffMinutes!=='undefined'){var n=Number(v.predictionCutoffMinutes);if(!isNaN(n))setPredCutoffMin(n);}},
                    wc26_pred_log:function(v){setPredLog(Array.isArray(v)?v.slice(-300):[]);},
                    wc26_global_anns:function(v){setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]);}};
     function tick() { done++; if (done >= keys.length) setLoading(false); }
@@ -2921,10 +2938,33 @@ function SuperAdminApp() {
               onClick=${function(){
                 var next=!showBadges; setShowBadges(next);
                 fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                  body:JSON.stringify({action:'set',key:'wc26_settings',value:{showBadges:next}})
+                  body:JSON.stringify({action:'set',key:'wc26_settings',value:{showBadges:next,predictionCutoffMinutes:predCutoffMin}})
                 }).catch(function(){});
                 notify(next?'Badges enabled ✓':'Badges hidden');
               }}>${showBadges?'✓ Enabled':'Hidden'}</button>
+          </div>
+        </div>
+
+        <!-- Prediction Cutoff -->
+        <div class="card">
+          <div style=${{fontSize:14,fontWeight:600,marginBottom:3}}>⏱️ Prediction Cutoff</div>
+          <div style=${{fontSize:11,color:'var(--dm)',marginBottom:10}}>Lock predictions this many minutes before kickoff. Set to 0 to lock exactly at kickoff. Applies to every match — group stage and knockout.</div>
+          <div style=${{display:'flex',gap:8,alignItems:'center'}}>
+            <input id="pred_cutoff_input" type="number" min="0" step="5" defaultValue=${predCutoffMin} key=${'cutoff-'+predCutoffMin}
+              style=${{width:90,padding:'7px',fontSize:13,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+            <span style=${{fontSize:12,color:'var(--mu)'}}>minutes before kickoff</span>
+            <button class="btn-p" style=${{fontSize:12,padding:'7px 14px',marginLeft:'auto'}}
+              onClick=${function(){
+                var n = Number(document.getElementById('pred_cutoff_input').value);
+                if (isNaN(n) || n < 0) { notify('Enter a valid number of minutes','err'); return; }
+                setPredCutoffMin(n);
+                try { _ls.set('wc26_pred_cutoff', String(n)); } catch(e) {}
+                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                  body:JSON.stringify({action:'set',key:'wc26_settings',value:{showBadges:showBadges,predictionCutoffMinutes:n}})
+                }).then(function(r){return r.json();})
+                .then(function(d){ if(d&&d.ok) notify('Cutoff saved: '+n+' min before kickoff ✓'); else notify('Error saving cutoff','err'); })
+                .catch(function(e){ notify('Error: '+e.message,'err'); });
+              }}>Save</button>
           </div>
         </div>
 
@@ -3718,10 +3758,10 @@ function KOBracketView(props) {
                     </span>`:null}
                   </span>`:html`<span style=${{color:'var(--dm)'}}>No prediction yet</span>`}
                 </div>
-                ${!res&&isKnown&&props.onPredict?html`<button class="btn-p" style=${{fontSize:11,padding:'4px 12px'}}
+                ${!res&&isKnown&&props.onPredict&&canStillPredict(m,props.predCutoffMin)?html`<button class="btn-p" style=${{fontSize:11,padding:'4px 12px'}}
                   onClick=${function(){props.onPredict(m);}}>
                   ${myPred?'✎ Edit':'⚽ Predict'}
-                </button>`:null}
+                </button>`:(!res&&isKnown&&myPred===null?html`<span style=${{fontSize:11,color:'var(--dm)'}}>🔒 Locked</span>`:null)}
               </div>`}
             </div>`;
           })}
@@ -4194,8 +4234,10 @@ function RoomPage(props) {
                 </span>`}
                 ${res&&pred&&html`<span style=${{fontSize:12,color:'var(--mu)'}}>${ep===4?'🎯 +4pts':ep===2?'✓ +2pts':'✗ 0pts'} Predicted: <strong>${pred.h}–${pred.a}</strong></span>`}
               </div>
-              <div style=${{display:'flex',gap:6}}>\n                ${props.isAdmin&&st!=='done'&&html`<button class="btn" style=${{fontSize:11,padding:'3px 9px'}} onClick=${function(e){e.stopPropagation();props.onResult(m);}}>+ Result</button>`}
-                ${st==='soon'&&html`<button class="btn-p" style=${{fontSize:12,padding:'5px 14px'}} onClick=${function(e){e.stopPropagation();props.onPredict(m);}}>${pred?'Edit':'Predict ⚽'}</button>`}
+              <div style=${{display:'flex',gap:6}}>
+                ${props.isAdmin&&st!=='done'&&html`<button class="btn" style=${{fontSize:11,padding:'3px 9px'}} onClick=${function(e){e.stopPropagation();props.onResult(m);}}>+ Result</button>`}
+                ${st==='soon'&&canStillPredict(m,props.predCutoffMin)&&html`<button class="btn-p" style=${{fontSize:12,padding:'5px 14px'}} onClick=${function(e){e.stopPropagation();props.onPredict(m);}}>${pred?'Edit':'Predict ⚽'}</button>`}
+                ${st==='soon'&&!canStillPredict(m,props.predCutoffMin)&&html`<span style=${{fontSize:11,color:'var(--dm)'}}>🔒 Locked</span>`}
               </div>
             </div>`}
           </div>`;
@@ -4257,6 +4299,7 @@ function RoomPage(props) {
           user=${props.user}
           isAdmin=${props.isAdmin}
           apiKey=${props.apiKey}
+          predCutoffMin=${props.predCutoffMin}
           onPredict=${function(m){props.onPredict&&props.onPredict(m);}}
           onResult=${function(km,h,a){ props.onKOResult&&props.onKOResult(km,h,a); }} />`
       }
@@ -4984,10 +5027,11 @@ function LiveMatchModal(props) {
           onClick=${function(){window.open('https://www.livescore.com/en/football/world-cup/world-cup-2026/','_blank');}}>
           🌐 Full stats & lineups
         </button>
-        ${!res&&html`<button class="btn-p" style=${{flex:1,fontSize:12,padding:'8px'}}
+        ${!res&&canStillPredict(m,props.predCutoffMin)&&html`<button class="btn-p" style=${{flex:1,fontSize:12,padding:'8px'}}
           onClick=${props.onPredict}>
           ${props.pred?'✎ Edit prediction':'⚽ Predict'}
         </button>`}
+        ${!res&&!canStillPredict(m,props.predCutoffMin)&&html`<div style=${{flex:1,fontSize:12,padding:'8px',textAlign:'center',color:'var(--dm)'}}>🔒 Predictions locked</div>`}
       </div>
     </div>
   </div>`;
@@ -5434,6 +5478,14 @@ function App() {
   }, [theme]);
   function toggleTheme(){ setTheme(function(p){ return p==='dark'?'light':'dark'; }); }
 
+  // ── Prediction cutoff (minutes before kickoff after which predictions lock) ──
+  // 0 = lock exactly at kickoff (default). Set by superadmin in Settings.
+  var s_pc = useState(function(){
+    var n = Number(_ls.get('wc26_pred_cutoff','0'));
+    return isNaN(n) ? 0 : n;
+  });
+  var predCutoffMin = s_pc[0]; var setPredCutoffMin = s_pc[1];
+
   var s11c=useState({}); var adminAuth=s11c[0]; var setAdminAuth=s11c[1];
   var s11d=useState([]); var news=s11d[0]; var setNews=s11d[1];
   var s11e=useState(false); var newsLoading=s11e[0]; var setNewsLoading=s11e[1];
@@ -5548,6 +5600,15 @@ function App() {
       });
     });
     Store.listen('bonus', function(v){ setBonusPts(v||{}); });
+    Store.listen('settings', function(v) {
+      if (v && typeof v.predictionCutoffMinutes !== 'undefined') {
+        var n = Number(v.predictionCutoffMinutes);
+        if (!isNaN(n)) {
+          setPredCutoffMin(n);
+          try { _ls.set('wc26_pred_cutoff', String(n)); } catch(e) {}
+        }
+      }
+    });
     Store.listen('preds', function(v) {
       setPreds(function(prev) {
         var base = Object.assign({}, v || {});
@@ -5771,6 +5832,12 @@ function App() {
     notify('Joined "' + f.name + '"! 🎉');
   }
   function doPredict(mId, h, a) {
+    var m = MS.find(function(x){return x.id===mId;}) || KO_MS.find(function(x){return x.id===mId;});
+    if (!canStillPredict(m, predCutoffMin)) {
+      notify('Predictions for this match are locked ⏱️', 'err');
+      setModal(null);
+      return;
+    }
     var key      = user.id + '_' + mId;
     var userKey  = 'wc26_preds_' + user.id;
     var newPred  = {h: Number(h), a: Number(a), ts: new Date().toISOString()};
@@ -6135,6 +6202,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       live=${liveScores[liveMatchDetail.m&&liveMatchDetail.m.id]||null}
       result=${results[liveMatchDetail.m&&liveMatchDetail.m.id]||null}
       pred=${user&&preds[user.id+'_'+(liveMatchDetail.m&&liveMatchDetail.m.id)]||null}
+      predCutoffMin=${predCutoffMin}
       onClose=${function(){setLiveMatchDetail(null);}}
       onPredict=${function(){setLiveMatchDetail(null);setModal({t:'pred',m:liveMatchDetail.m});}} />`}
     ${h2hUser&&html`<${UserPredictionsModal}
@@ -6179,7 +6247,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       setRoom(useRoom); setTab('leaderboard'); setScr('room'); enterRoom(useRoom.id);
       loadMemberPreds(useRoom.members||[], setPreds); 
     }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
-      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
+      ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} predCutoffMin=${predCutoffMin} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey} announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
           onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(_ls.get('wc26_apikey','')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}} onDeleteAnn=${deleteAnnouncement} bonusPts=${bonusPts} onSetBonus=${setUserBonus} onEditPred=${function(uid,mId,h,a){doPredict.forUser(uid,mId,h,a);}}
