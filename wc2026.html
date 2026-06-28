@@ -1585,6 +1585,9 @@ function SuperAdminApp() {
   var uS  = useState({}); var saUsers = uS[0]; var setSaUsers = uS[1];
   var plS = useState([]); var predLog=plS[0]; var setPredLog=plS[1];
   var bPS = useState({}); var saBonusPts=bPS[0]; var setSaBonusPts=bPS[1];
+  var rsC = useState({}); var resCollapsed=rsC[0]; var setResCollapsed=rsC[1];
+  var bdG = useState(true); var showBadges=bdG[0]; var setShowBadges=bdG[1];
+  var prR = useState([]); var pinRequests=prR[0]; var setPinRequests=prR[1];
   var krS = useState({}); var saKoResults=krS[0]; var setSaKoResults=krS[1];
   var rpS = useState({}); var saRoomPreds=rpS[0]; var setSaRoomPreds=rpS[1];
   var rlS = useState({}); var saRoomLoading=rlS[0]; var setSaRoomLoading=rlS[1];
@@ -1637,11 +1640,11 @@ function SuperAdminApp() {
 
   function loadAll() {
     setLoading(true);
-    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log','wc26_bonus','wc26_koresults'];
+    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log','wc26_bonus','wc26_koresults','wc26_pin_requests','wc26_settings'];
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults,
-                   wc26_koresults:setSaKoResults, wc26_bonus:setSaBonusPts,
+                   wc26_koresults:setSaKoResults, wc26_bonus:setSaBonusPts, wc26_pin_requests:function(v){setPinRequests(Array.isArray(v)?v:[]);}, wc26_settings:function(v){if(v&&typeof v.showBadges!=='undefined')setShowBadges(v.showBadges);},
                    wc26_global_anns:function(v){setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]);}};
     function tick() { done++; if (done >= keys.length) setLoading(false); }
     keys.forEach(function(k){
@@ -2221,8 +2224,15 @@ function SuperAdminApp() {
           Scores sync to every user within 5 seconds. Once entered, room standings and points update automatically.
         </div>
 
-        <!-- All matches sorted by date, group shown as badge on each row -->
-        ${(function(){
+        <!-- Group Stage — collapsible -->
+        <div style=${{borderRadius:'var(--rs)',border:'1px solid var(--bdr)',overflow:'hidden',marginBottom:8}}>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',background:'var(--bg3)',cursor:'pointer'}}
+            onClick=${function(){setResCollapsed(function(p){var n=Object.assign({},p);n.gs=!n.gs;return n;})}}>
+            <span style=${{fontWeight:700,fontSize:14}}>⚽ Group Stage (${MS.length} matches)</span>
+            <span style=${{color:'var(--dm)',fontSize:12}}>${reList.filter(function(m){return saResults[m.id];}).length} / ${MS.length} results entered</span>
+            <span>${resCollapsed.gs?'▼':'▲'}</span>
+          </div>
+          ${!resCollapsed.gs&&(function(){
           var allM = MS.slice().sort(function(a,b){ return new Date(a.utc)-new Date(b.utc); });
 
           // Group by calendar date (MVT = UTC+5)
@@ -2332,8 +2342,14 @@ function SuperAdminApp() {
       
 
         <!-- KO Results Section -->
-        <div style=${{marginTop:20}}>
-          <h3 style=${{margin:'0 0 12px',fontSize:15,color:'var(--gold)'}}>🏆 Knockout Round Results</h3>
+        <div style=${{marginTop:12,borderRadius:'var(--rs)',border:'1px solid rgba(240,180,41,.3)',overflow:'hidden'}}>
+          <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',background:'rgba(240,180,41,.06)',cursor:'pointer'}}
+            onClick=${function(){setResCollapsed(function(p){var n=Object.assign({},p);n.ko=!n.ko;return n;})}}>
+            <span style=${{fontWeight:700,fontSize:14,color:'var(--gold)'}}>🏆 Knockout Rounds</span>
+            <span style=${{color:'var(--dm)',fontSize:12}}>${Object.keys(saKoResults||{}).length} results entered</span>
+            <span>${resCollapsed.ko?'▼':'▲'}</span>
+          </div>
+          ${!resCollapsed.ko&&html`<div style=${{padding:'12px 14px'}}>
           ${(function(){
             var koRes = saKoResults || {};
             var rounds = ['R32','R16','QF','SF','3PL','FIN'];
@@ -2390,7 +2406,7 @@ function SuperAdminApp() {
               })}
             </div>`;
           })()}
-        </div></div>`}
+        </div>          </div>`}</div>`}
       ${saTab==='anns'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14,maxWidth:540}}>
 
         <!-- Create/Edit modal inline -->
@@ -2852,7 +2868,85 @@ function SuperAdminApp() {
         })()}
       </div>`}
 
-      ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16,maxWidth:480}}>
+      ${saTab==='settings'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14}}>
+
+        <!-- Badge Control -->
+        <div class="card">
+          <h3 style=${{margin:'0 0 10px',fontSize:15}}>🏅 Badge Display</h3>
+          <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div>
+              <div style=${{fontSize:13,fontWeight:600}}>Show achievement badges in standings</div>
+              <div style=${{fontSize:11,color:'var(--dm)',marginTop:2}}>Badges like 🎯 King of Prediction shown in leaderboard</div>
+            </div>
+            <button class=${showBadges?'btn-p':'btn'} style=${{fontSize:12,padding:'6px 16px'}}
+              onClick=${function(){
+                var next = !showBadges;
+                setShowBadges(next);
+                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                  body:JSON.stringify({action:'set',key:'wc26_settings',value:{showBadges:next}})
+                }).catch(function(){});
+                notify(next?'Badges enabled':'Badges hidden');
+              }}>${showBadges?'✓ Enabled':'Hidden'}</button>
+          </div>
+        </div>
+
+        <!-- PIN Reset Requests -->
+        <div class="card">
+          <h3 style=${{margin:'0 0 10px',fontSize:15}}>🔑 PIN Reset Requests</h3>
+          ${pinRequests.length===0?html`<p style=${{fontSize:12,color:'var(--dm)',margin:0}}>No pending PIN reset requests.</p>`:
+            html`<div style=${{display:'flex',flexDirection:'column',gap:6}}>
+              ${pinRequests.map(function(req,i){
+                var u = saUsers[req.uid] || {name:req.name||req.uid};
+                return html`<div key=${i} style=${{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'var(--bg3)',borderRadius:'var(--rs)',border:'1px solid rgba(245,158,11,.2)'}}>
+                  <div style=${{flex:1}}>
+                    <div style=${{fontSize:13,fontWeight:600}}>${u.name}</div>
+                    <div style=${{fontSize:11,color:'var(--dm)'}}>Phone: ${u.phone||'?'} · Requested: ${new Date(req.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'})}</div>
+                  </div>
+                  ${(function(){
+                    var newPin = 'np_'+i;
+                    return html`<div style=${{display:'flex',gap:6,alignItems:'center'}}>
+                      <input id=${newPin} type="text" placeholder="New PIN (4-6 digits)"
+                        style=${{width:110,padding:'5px 8px',fontSize:12,background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                      <button class="btn-p" style=${{fontSize:11,padding:'5px 10px'}}
+                        onClick=${function(){
+                          var p=document.getElementById(newPin);
+                          if(!p||!/^\d{4,6}$/.test(p.value)){alert('Enter a 4-6 digit PIN');return;}
+                          var newPIN = p.value;
+                          var uid = req.uid;
+                          var updatedUser = Object.assign({},saUsers[uid]||{},{pin:btoa(newPIN)});
+                          var nr = Object.assign({},Object.fromEntries(Object.entries(saUsers).map(function(e){return [e[0],e[1]];})));
+                          nr[uid] = updatedUser;
+                          fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                            body:JSON.stringify({action:'set',key:'wc26_users',value:nr})})
+                          .then(function(r){return r.json();})
+                          .then(function(d){
+                            if(d&&d.ok){
+                              var leftover = pinRequests.filter(function(r2){return r2.uid!==uid;});
+                              setPinRequests(leftover);
+                              fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                                body:JSON.stringify({action:'set',key:'wc26_pin_requests',value:leftover})
+                              }).catch(function(){});
+                              alert('PIN reset to '+newPIN+' for '+u.name+' ✓');
+                            } else { alert('Error: '+(d&&d.error||'failed')); }
+                          }).catch(function(e){alert('Error: '+e.message);});
+                        }}>Approve</button>
+                      <button class="btn" style=${{fontSize:11,padding:'5px 8px',color:'var(--rd)',borderColor:'rgba(239,68,68,.3)'}}
+                        onClick=${function(){
+                          var leftover = pinRequests.filter(function(r2){return r2.uid!==req.uid;});
+                          setPinRequests(leftover);
+                          fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                            body:JSON.stringify({action:'set',key:'wc26_pin_requests',value:leftover})
+                          }).catch(function(){});
+                        }}>Reject</button>
+                    </div>`;
+                  })()}
+                </div>`;
+              })}
+            </div>`}
+        </div>
+
+        <!-- original settings follow -->
+        <divstyle=${{display:'flex',flexDirection:'column',gap:16,maxWidth:480}}>
 
         <!-- Match Kickoff Time Editor -->
         <div class="card" style=${{padding:'14px 16px'}}>
@@ -3216,6 +3310,8 @@ function AuthPage(props) {
         <div><label>PIN</label><input type="password" inputMode="numeric" maxLength="6" value=${pin} onChange=${function(e){setPin(e.target.value.replace(/\D/g,''));}} placeholder="4–6 digit PIN" /></div>
         <p style=${{fontSize:11,color:'var(--dm)',margin:'-8px 0 0'}}>No PIN? Leave blank (older accounts work without it)</p>
         <button class="btn-p" style=${{width:'100%',marginTop:4}} onClick=${sub}>Log in →</button>
+        <button class="btn" style=${{width:'100%',marginTop:6,fontSize:12,color:'var(--dm)'}}
+          onClick=${function(){props.onForgotPin&&props.onForgotPin(name,phone);}}>🔑 Forgot PIN? Request reset</button>
       </div>` : html`<div>
         ${step===1&&html`<div style=${{display:'flex',flexDirection:'column',gap:14}}>
           <h2>Create profile <span style=${{fontSize:13,color:'var(--mu)',fontWeight:400}}>1 of 3</span></h2>
@@ -3786,7 +3882,18 @@ function ChatRoom(props) {
 
 // ── Room Announcements ───────────────────────────────────────────────────
 function AnnouncementsPanel(props) {
-  var anns = props.announcements || [];
+  var anns = (props.announcements || []).filter(function(a){
+    // Permanently hide deleted system announcements
+    var title = (a.title||'').toLowerCase();
+    return !title.includes('hello guys');
+  });
+  // Auto-delete Hello GUYS from GAS if found
+  (function(){
+    var bad = (props.announcements||[]).filter(function(a){return (a.title||'').toLowerCase().includes('hello guys');});
+    if (bad.length && props.onDelete) {
+      bad.forEach(function(a){ props.onDelete(a.id); });
+    }
+  })();
   if (anns.length === 0 && !props.isAdmin) return null;
 
   return html`<div style=${{marginBottom:12}}>
@@ -3997,7 +4104,7 @@ function RoomPage(props) {
       </div>`}
 
     <div class="tabs">
-      ${[['leaderboard','📋 Standings'],['matches','⚽ Matches'],['groups','📊 Groups'],['knockout','🏆 Knockout'],['chat','💬 Chat']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){
+      ${[['leaderboard','📋 Standings'],['knockout','🏆 Knockout'],['matches','⚽ Matches'],['groups','📊 Groups'],['chat','💬 Chat'],['game','🎮 Game']].concat(props.isAdmin?[['admin','⚙️ Admin']]:[]).map(function(p){
         var isChat = p[0]==='chat';
         return html`<button key=${p[0]} class=${'tab '+(props.tab===p[0]?'on':'')}
           onClick=${function(){
@@ -4244,6 +4351,8 @@ function RoomPage(props) {
         </div>
       </div>
     </div>`}
+
+    ${props.tab==='game'&&html`<${PenaltyGame} user=${props.user} />`}
 
     ${props.tab==='chat'&&html`<${RoomChat}
       roomId=${props.room&&props.room.id}
@@ -4882,6 +4991,161 @@ function LiveMatchModal(props) {
 }
 
 
+
+// ── Penalty Shootout Mini-Game ───────────────────────────────────────────
+function PenaltyGame(props) {
+  var DIRS = ['left','center','right'];
+  var gs = useState({phase:'idle',score:[0,0],round:1,maxRounds:5,playerTurn:true,
+                     shotDir:null,keeperDir:null,result:null,history:[],msg:''});
+  var g=gs[0]; var setG=gs[1];
+
+  function shoot(dir) {
+    if (!g.playerTurn || g.phase!=='shoot') return;
+    var kDir = DIRS[Math.floor(Math.random()*3)];
+    var scored = dir !== kDir;
+    var msg = scored ? '⚽ GOAL!' : (kDir===dir?'🧤 Saved!':'🧤 Keeper guessed right!');
+    var newScore = scored ? [g.score[0]+1, g.score[1]] : [g.score[0], g.score[1]];
+    var newHistory = g.history.concat([{type:'player',dir:dir,keeperDir:kDir,scored:scored}]);
+    var nextRound = g.round;
+    
+    // Keeper shot (AI)
+    setTimeout(function(){
+      var pDir = DIRS[Math.floor(Math.random()*3)];
+      var kShootDir = DIRS[Math.floor(Math.random()*3)];
+      var kScored = pDir !== kShootDir;
+      var kMsg = kScored ? '🤖 CPU scores!' : '🙌 You saved it!';
+      var finalScore = kScored ? [newScore[0], newScore[1]+1] : newScore;
+      var finalHistory = newHistory.concat([{type:'keeper',dir:kShootDir,playerDir:pDir,scored:kScored}]);
+      var isLast = nextRound >= g.maxRounds;
+      setG(function(prev){return Object.assign({},prev,{
+        phase: isLast ? 'done' : 'shoot',
+        score: finalScore,
+        round: isLast ? nextRound : nextRound+1,
+        history: finalHistory,
+        msg: isLast ? (finalScore[0]>finalScore[1]?'🏆 You Win! '+finalScore[0]+'-'+finalScore[1]
+                       :finalScore[0]<finalScore[1]?'😢 CPU Wins! '+finalScore[0]+'-'+finalScore[1]
+                       :'🤝 Draw! '+finalScore[0]+'-'+finalScore[1]) : kMsg
+      });});
+    }, 800);
+    
+    setG(function(prev){return Object.assign({},prev,{phase:'animating',shotDir:dir,keeperDir:kDir,
+      score:newScore,history:newHistory,msg:msg});});
+  }
+
+  function chooseDir(dir) {
+    if (g.playerTurn || g.phase!=='choose') return;
+    var kShootDir = DIRS[Math.floor(Math.random()*3)];
+    var saved = dir === kShootDir;
+    var kScored = !saved;
+    var finalScore = kScored ? [g.score[0], g.score[1]+1] : [g.score[0], g.score[1]];
+    setG(function(prev){return Object.assign({},prev,{
+      phase:'shoot', playerTurn:true, round:prev.round+1 <= prev.maxRounds ? prev.round : prev.maxRounds,
+      score:finalScore, msg: saved ? '🙌 Great save!' : '🤖 CPU scores!'
+    });});
+  }
+
+  function startGame() {
+    setG({phase:'shoot',score:[0,0],round:1,maxRounds:5,playerTurn:true,
+          shotDir:null,keeperDir:null,result:null,history:[],msg:'Pick a direction to shoot!'});
+  }
+
+  var GOAL_W = 240; var GOAL_H = 120;
+  var KEEPER_X = {left:40, center:GOAL_W/2, right:GOAL_W-40};
+  var BALL_X   = {left:60, center:GOAL_W/2, right:GOAL_W-60};
+
+  return html`<div style=${{maxWidth:480,margin:'0 auto'}}>
+    <div style=${{textAlign:'center',marginBottom:16}}>
+      <h3 style=${{margin:'0 0 4px',fontSize:18}}>⚽ Penalty Shootout</h3>
+      <p style=${{fontSize:12,color:'var(--dm)',margin:0}}>Best of ${g.maxRounds} — You vs CPU Keeper</p>
+    </div>
+
+    <!-- Scoreboard -->
+    <div style=${{display:'flex',justifyContent:'center',gap:20,marginBottom:14,alignItems:'center'}}>
+      <div style=${{textAlign:'center'}}>
+        <div style=${{fontSize:12,color:'var(--dm)'}}>You</div>
+        <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:36,fontWeight:900,color:'#4ade80'}}>${g.score[0]}</div>
+      </div>
+      <div style=${{fontSize:20,color:'var(--dm)'}}>–</div>
+      <div style=${{textAlign:'center'}}>
+        <div style=${{fontSize:12,color:'var(--dm)'}}>CPU</div>
+        <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:36,fontWeight:900,color:'#f87171'}}>${g.score[1]}</div>
+      </div>
+    </div>
+
+    ${g.phase!=='idle'&&html`<div style=${{fontSize:12,color:'var(--dm)',textAlign:'center',marginBottom:8}}>Round ${Math.min(g.round,g.maxRounds)} / ${g.maxRounds}</div>`}
+
+    <!-- Goal visualization -->
+    <div style=${{position:'relative',width:GOAL_W+'px',height:GOAL_H+'px',margin:'0 auto 14px',
+      background:'linear-gradient(180deg,#1a7a3c 0%,#155f30 100%)',
+      border:'3px solid rgba(255,255,255,.4)',borderRadius:4}}>
+      <!-- Crossbar -->
+      <div style=${{position:'absolute',top:0,left:0,right:0,height:3,background:'white',opacity:.6}}></div>
+      <!-- Posts -->
+      <div style=${{position:'absolute',top:0,bottom:0,left:0,width:3,background:'white',opacity:.6}}></div>
+      <div style=${{position:'absolute',top:0,bottom:0,right:0,width:3,background:'white',opacity:.6}}></div>
+      <!-- Net lines -->
+      ${[0,1,2,3,4,5].map(function(i){
+        return html`<div key=${i} style=${{position:'absolute',top:0,bottom:0,left:i*40+'px',width:1,background:'rgba(255,255,255,.15)'}}></div>`;
+      })}
+      <!-- Keeper -->
+      <div style=${{
+        position:'absolute',bottom:4,
+        left:(g.shotDir?KEEPER_X[g.keeperDir||'center']:GOAL_W/2)-18+'px',
+        fontSize:32,transition:'left .3s',userSelect:'none'
+      }}>🧤</div>
+      <!-- Ball (only when shot) -->
+      ${g.shotDir&&html`<div style=${{
+        position:'absolute',top:20,
+        left:BALL_X[g.shotDir]-12+'px',
+        fontSize:24,animation:'none'
+      }}>⚽</div>`}
+    </div>
+
+    <!-- Message -->
+    <div style=${{textAlign:'center',minHeight:24,marginBottom:12}}>
+      <span style=${{fontSize:14,fontWeight:600,color:'var(--tx)'}}>${g.msg||''}</span>
+    </div>
+
+    <!-- Controls -->
+    ${g.phase==='idle'&&html`<div style=${{textAlign:'center'}}>
+      <button class="btn-p" style=${{padding:'10px 28px',fontSize:14}} onClick=${startGame}>▶ Start Game</button>
+    </div>`}
+
+    ${(g.phase==='shoot'||g.phase==='animating')&&html`<div>
+      <div style=${{fontSize:12,textAlign:'center',color:'var(--dm)',marginBottom:8}}>🎯 Shoot! Pick a corner:</div>
+      <div style=${{display:'flex',gap:8,justifyContent:'center'}}>
+        ${DIRS.map(function(dir){
+          return html`<button key=${dir} class="btn-p"
+            style=${{padding:'10px 18px',fontSize:13,opacity:g.phase==='animating'?.5:1,
+              background:dir==='left'?'#3b82f6':dir==='center'?'#8b5cf6':'#ef4444'}}
+            onClick=${function(){shoot(dir);}}>
+            ${dir==='left'?'← Left':dir==='center'?'↑ Center':'Right →'}
+          </button>`;
+        })}
+      </div>
+    </div>`}
+
+    ${g.phase==='done'&&html`<div style=${{textAlign:'center'}}>
+      <div style=${{fontSize:18,fontWeight:700,marginBottom:12,color:g.score[0]>g.score[1]?'#4ade80':g.score[0]<g.score[1]?'#f87171':'var(--gold)'}}>${g.msg}</div>
+      <!-- History -->
+      <div style=${{display:'flex',gap:4,justifyContent:'center',marginBottom:12}}>
+        ${g.history.filter(function(h){return h.type==='player';}).map(function(h,i){
+          return html`<span key=${i} style=${{fontSize:20}}>${h.scored?'⚽':'✗'}</span>`;
+        })}
+      </div>
+      <button class="btn-p" style=${{padding:'8px 24px',fontSize:13}} onClick=${startGame}>🔄 Play Again</button>
+    </div>`}
+
+    <!-- Mini history -->
+    ${g.history.length>0&&g.phase!=='done'&&html`<div style=${{marginTop:12,display:'flex',gap:4,justifyContent:'center'}}>
+      ${g.history.filter(function(h){return h.type==='player';}).map(function(h,i){
+        return html`<span key=${i} style=${{fontSize:16}}>${h.scored?'⚽':'—'}</span>`;
+      })}
+    </div>`}
+  </div>`;
+}
+
+
 function RoomChat(props) {
   var _lastSent = React.useRef(0);
   var _pollTimer= React.useRef(null);
@@ -5383,6 +5647,29 @@ function App() {
     if (f.pin && btoa(pin||'') !== f.pin) return notify('Incorrect PIN','err');
     Sess.set('wc26s', f.id); Sess.set('wc26_u', f); setUser(f); setScr('dash'); notify('Welcome back ' + f.name + '!');
   }
+  function doRequestPinReset(name, phone) {
+    if (!name||!phone) return notify('Enter name & phone to request PIN reset','err');
+    var f = Object.values(users).find(function(x){
+      return x.name.toLowerCase()===name.toLowerCase().trim()&&x.phone===phone.trim();
+    });
+    if (!f) return notify('User not found','err');
+    var req = {uid:f.id, name:f.name, phone:f.phone, ts:new Date().toISOString()};
+    // Load existing requests and append
+    fetch(GS_URL+'?action=get&key=wc26_pin_requests&_='+Date.now(),{redirect:'follow'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var existing = Array.isArray(d&&d.value)?d.value:[];
+      // Don't duplicate
+      var already = existing.some(function(e){return e.uid===f.id;});
+      if (already) return notify('Request already submitted — please wait for admin approval','err');
+      existing.push(req);
+      return fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'set',key:'wc26_pin_requests',value:existing})});
+    })
+    .then(function(){notify('PIN reset requested! Admin will approve shortly ✓');})
+    .catch(function(e){notify('Error: '+e.message,'err');});
+  }
+
   function doLogout() { Sess.del('wc26s'); setUser(null); setRoom(null); setScr('welcome'); }
 
   function doCreate(name, pass) {
