@@ -5489,8 +5489,22 @@ function App() {
         Object.keys(updates).forEach(function(id){
           if(koIds.indexOf(id)>=0) koU[id]=updates[id]; else grpU[id]=updates[id];
         });
-        if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
-        if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);_ls.set('wc26_kores',JSON.stringify(n));Store.set('koresults',n);return n;});
+        if(Object.keys(grpU).length) {
+          // SAFE: update state directly, then write to GAS separately (no Store.set inside setState)
+          var newR = Object.assign({}, _cache['wc26_results']||{}, grpU);
+          _cache['wc26_results'] = newR;
+          _lastWrite['wc26_results'] = Date.now() + 30000; // guard against poll overwrite
+          setResults(newR);
+          Store._write('wc26_results', newR); // async GAS write, does NOT call listeners
+        }
+        if(Object.keys(koU).length) {
+          var newK = Object.assign({}, _cache['wc26_koresults']||{}, koU);
+          _cache['wc26_koresults'] = newK;
+          _lastWrite['wc26_koresults'] = Date.now() + 30000;
+          _ls.set('wc26_kores', JSON.stringify(newK));
+          setKoResults(newK);
+          Store._write('wc26_koresults', newK);
+        }
       }, function(live) {
         setLiveScores(live);
         setLastSync(Date.now());
