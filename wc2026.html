@@ -2036,111 +2036,88 @@ function SuperAdminApp() {
                               })}
                             </div>`
                         }
-                      </div>`}
 
-                        <!-- ── Room Standings ─────────────────────── -->
-                        <div style=${{marginTop:12,padding:'10px 12px',background:'var(--bg2)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)'}}>
+                        <!-- ── Room Standings (inside isOpen) ─────── -->
+                        <div style=${{marginTop:10,padding:'10px 12px',background:'var(--bg2)',borderRadius:'var(--rs)',border:'1px solid var(--bdr)'}}>
                           <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:8,letterSpacing:.5}}>📊 ROOM STANDINGS</div>
                           ${(function(){
                             var members = r.members || [];
-                            var lbRows = members.map(function(uid){
-                              var u = (props.users&&props.users[uid]) || saUsers[uid] || {name:'User #'+uid.slice(-4), id:uid};
-                              // Use room-specific merged preds (per-user + global) — same as user view
-                              // Use live preds from App (same merged per-user+global data user view uses)
-                              var allPreds = props.preds || saRoomPreds[r.id] || Object.assign({}, saPreds);
-                              var grpPts = MS.reduce(function(tot,m){
-                                var p = allPreds[uid+'_'+m.id];
-                                return tot + (calcPts(p, (props.results||saResults||{})[m.id])||0);
-                              }, 0);
-                              var koPts = KO_MS.reduce(function(tot,m){
-                                var p = allPreds[uid+'_'+m.id];
-                                return tot + (calcPts(p, (props.koResults||saKoResults||{})[m.id])||0);
-                              }, 0);
-                              var bonusAmt = ((props.bonusPts||saBonusPts||{})[r.id]||{})[uid]||0;
-                              var total = grpPts + koPts + bonusAmt;
-                              var np = MS.concat(KO_MS).filter(function(m){return allPreds[uid+'_'+m.id];}).length;
-                              return {u:u, pts:total, grp:grpPts, ko:koPts, bonus:bonusAmt, np:np};
+                            if (!members.length) return html`<div style=${{fontSize:11,color:'var(--dm)'}}>No members</div>`;
+                            var allPreds = props.preds || saPreds;
+                            var allResults = props.results || saResults || {};
+                            var allKoRes   = props.koResults || saKoResults || {};
+                            var allBonus   = props.bonusPts || saBonusPts || {};
+                            var rows = members.map(function(uid){
+                              var u = (props.users&&props.users[uid]) || saUsers[uid] || {name:uid.slice(-6), id:uid};
+                              var pts = MS.reduce(function(s,m){ return s+(calcPts(allPreds[uid+'_'+m.id], allResults[m.id])||0); }, 0)
+                                      + KO_MS.reduce(function(s,m){ return s+(calcPts(allPreds[uid+'_'+m.id], allKoRes[m.id])||0); }, 0)
+                                      + ((allBonus[r.id]||{})[uid]||0);
+                              var np = MS.filter(function(m){return allPreds[uid+'_'+m.id];}).length;
+                              return {u:u, pts:pts, np:np};
                             }).sort(function(a,b){return b.pts-a.pts;});
-                            // Show loading indicator while per-user preds are being fetched
-                            if (saRoomLoading[r.id]) return html`<div style=${{fontSize:12,color:'var(--dm)',display:'flex',alignItems:'center',gap:8}}>
-                              <div style=${{width:14,height:14,border:'2px solid var(--bdr)',borderTopColor:'#f0b429',borderRadius:'50%',animation:'spin .8s linear infinite'}}></div>
-                              Loading standings…
-                            </div>`;
-                            if (lbRows.length===0) return html`<div style=${{fontSize:12,color:'var(--dm)'}}>No members.</div>`;
-                            return html`<div style=${{display:'flex',flexDirection:'column',gap:4}}>
-                              ${lbRows.map(function(row,i){
-                                return html`<div key=${row.u.id} style=${{display:'flex',justifyContent:'space-between',alignItems:'center',
-                                  padding:'5px 8px',borderRadius:'var(--rs)',
-                                  background:i===0?'rgba(240,180,41,.08)':i===1?'rgba(180,180,180,.05)':i===2?'rgba(184,115,51,.05)':'transparent',
-                                  fontSize:12}}>
-                                  <div style=${{display:'flex',alignItems:'center',gap:6}}>
-                                    <span style=${{fontSize:10,color:'var(--dm)',width:16,textAlign:'right'}}>${i+1}</span>
-                                    <span style=${{fontWeight:600}}>${row.u.name}</span>
-                                    ${row.bonus?html`<span style=${{fontSize:10,color:row.bonus>0?'#4ade80':'#f87171',fontWeight:600}}>${row.bonus>0?'+':''}${row.bonus}★</span>`:''}
-                                  </div>
-                                  <div style=${{display:'flex',gap:10,alignItems:'center'}}>
-                                    <span style=${{fontSize:10,color:'var(--dm)'}}>${row.np} preds</span>
-                                    <span style=${{fontWeight:700,color:row.pts>0?'#f0b429':'var(--dm)'}}>${row.pts} pts</span>
-                                  </div>
+                            return html`<div style=${{display:'flex',flexDirection:'column',gap:3}}>
+                              ${rows.map(function(row,i){
+                                return html`<div key=${row.u.id} style=${{display:'flex',justifyContent:'space-between',
+                                  padding:'4px 8px',borderRadius:'var(--rs)',fontSize:12,
+                                  background:i===0?'rgba(240,180,41,.08)':i<3?'rgba(255,255,255,.03)':'transparent'}}>
+                                  <span><span style=${{color:'var(--dm)',fontSize:10,marginRight:6}}>${i+1}</span><strong>${row.u.name}</strong></span>
+                                  <span><span style=${{color:'var(--dm)',fontSize:10,marginRight:8}}>${row.np}p</span><strong style=${{color:row.pts>0?'#f0b429':'var(--dm)'}}>${row.pts}pts</strong></span>
                                 </div>`;
                               })}
                             </div>`;
                           })()}
                         </div>
 
-                        <!-- ── Fix User Score (SA) ────────────────── -->
-                        <div style=${{marginTop:8,padding:'10px 12px',background:'var(--bg2)',borderRadius:'var(--rs)',border:'1px solid rgba(239,68,68,.2)'}}>
+                        <!-- ── Fix User Score ─────────────────────── -->
+                        <div style=${{marginTop:6,padding:'10px 12px',background:'var(--bg2)',borderRadius:'var(--rs)',border:'1px solid rgba(239,68,68,.2)'}}>
                           <div style=${{fontSize:11,fontWeight:600,color:'#f87171',marginBottom:8,letterSpacing:.5}}>🔧 FIX USER SCORE</div>
                           ${(function(){
-                            var fixId = 'sa_fix_'+r.id;
-                            return html`<div style=${{display:'flex',flexDirection:'column',gap:6}}>
-                              <div style=${{display:'flex',gap:6,flexWrap:'wrap'}}>
-                                <select id=${fixId+'_uid'} style=${{flex:'1 1 120px',padding:'6px 8px',fontSize:11,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
-                                  <option value="">User…</option>
-                                  ${(r.members||[]).map(function(uid){
-                                    return html`<option key=${uid} value=${uid}>${(saUsers[uid]||{}).name||uid.slice(-6)}</option>`;
-                                  })}
-                                </select>
-                                <select id=${fixId+'_mid'} style=${{flex:'2 1 160px',padding:'6px 8px',fontSize:11,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
-                                  <option value="">Match…</option>
-                                  ${MS.concat(KO_MS).map(function(m){
-                                    return html`<option key=${m.id} value=${m.id}>${m.id}: ${m.h} vs ${m.a}</option>`;
-                                  })}
-                                </select>
-                                <input id=${fixId+'_h'} type="number" min="0" max="20" placeholder="H" style=${{width:46,padding:'6px',fontSize:12,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
-                                <input id=${fixId+'_a'} type="number" min="0" max="20" placeholder="A" style=${{width:46,padding:'6px',fontSize:12,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
-                                <button class="btn" style=${{fontSize:11,padding:'6px 12px',color:'#f87171',borderColor:'rgba(239,68,68,.3)'}}
-                                  onClick=${function(){
-                                    var uid  = document.getElementById(fixId+'_uid').value;
-                                    var mid  = document.getElementById(fixId+'_mid').value;
-                                    var h    = document.getElementById(fixId+'_h').value;
-                                    var aVal = document.getElementById(fixId+'_a').value;
-                                    if(!uid||!mid||h===''||aVal===''){alert('Fill all fields');return;}
-                                    var userKey = 'wc26_preds_'+uid;
-                                    var newPred = {h:Number(h),a:Number(aVal),ts:new Date().toISOString(),adminEdit:true};
-                                    // Read existing user preds, merge, write
-                                    fetch(GS_URL+'?action=get&key='+encodeURIComponent(userKey)+'&_='+Date.now(),{redirect:'follow'})
-                                    .then(function(res){return res.json();})
-                                    .then(function(d){
-                                      var mp = (d.ok&&d.value&&typeof d.value==='object')?d.value:{};
-                                      mp[mid] = newPred;
-                                      // Also update global preds for SA view
-                                      var gp = Object.assign({},saPreds); gp[uid+'_'+mid]=newPred; setSaPreds(gp);
-                                      return fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                                        body:JSON.stringify({action:'set',key:userKey,value:mp})});
-                                    })
-                                    .then(function(res){return res.json();})
-                                    .then(function(d){
-                                      if(d&&d.ok) alert('Score fixed ✓ for '+(saUsers[uid]||{}).name+': '+mid+' '+h+'-'+aVal);
-                                      else alert('Error: '+(d&&d.error)||'failed');
-                                    })
-                                    .catch(function(e){alert('Network error: '+e.message);});
-                                  }}>Fix</button>
-                              </div>
+                            var fid='sa_fix_'+r.id;
+                            return html`<div style=${{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                              <select id=${fid+'_u'} style=${{flex:'1 1 110px',padding:'6px',fontSize:11,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                                <option value="">User…</option>
+                                ${(r.members||[]).map(function(uid){
+                                  return html`<option key=${uid} value=${uid}>${((props.users&&props.users[uid])||saUsers[uid]||{}).name||uid.slice(-6)}</option>`;
+                                })}
+                              </select>
+                              <select id=${fid+'_m'} style=${{flex:'2 1 150px',padding:'6px',fontSize:11,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                                <option value="">Match…</option>
+                                ${MS.concat(KO_MS).map(function(m){
+                                  return html`<option key=${m.id} value=${m.id}>${m.id}: ${m.h} vs ${m.a}</option>`;
+                                })}
+                              </select>
+                              <input id=${fid+'_h'} type="number" min="0" max="20" placeholder="H"
+                                style=${{width:40,padding:'6px',fontSize:12,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                              <span style=${{color:'var(--dm)'}}>–</span>
+                              <input id=${fid+'_a'} type="number" min="0" max="20" placeholder="A"
+                                style=${{width:40,padding:'6px',fontSize:12,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                              <button class="btn" style=${{fontSize:11,padding:'6px 12px',color:'#f87171',borderColor:'rgba(239,68,68,.3)'}}
+                                onClick=${function(){
+                                  var uid=document.getElementById(fid+'_u').value;
+                                  var mid=document.getElementById(fid+'_m').value;
+                                  var h=document.getElementById(fid+'_h').value;
+                                  var a=document.getElementById(fid+'_a').value;
+                                  if(!uid||!mid||h===''||a===''){alert('Fill all fields');return;}
+                                  var uKey='wc26_preds_'+uid;
+                                  var np={h:Number(h),a:Number(a),ts:new Date().toISOString(),adminEdit:true};
+                                  fetch(GS_URL+'?action=get&key='+encodeURIComponent(uKey)+'&_='+Date.now(),{redirect:'follow'})
+                                  .then(function(r){return r.json();})
+                                  .then(function(d){
+                                    var mp=(d.ok&&d.value&&typeof d.value==='object')?d.value:{};
+                                    mp[mid]=np;
+                                    return fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                                      body:JSON.stringify({action:'set',key:uKey,value:mp})});
+                                  })
+                                  .then(function(r){return r.json();})
+                                  .then(function(d){
+                                    if(d&&d.ok){alert('Fixed ✓');}else{alert('Error: '+(d&&d.error||'unknown'));}
+                                  })
+                                  .catch(function(e){alert('Error: '+e.message);});
+                                }}>Fix ✓</button>
                             </div>`;
                           })()}
                         </div>
-
+                      </div>`}
                     </td>
                   </tr>`;
                 })
