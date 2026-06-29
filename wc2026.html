@@ -1839,8 +1839,8 @@ function SuperAdminApp(props) {
   var uList  = Object.values(_saU);
   var rList  = Object.values(_saR);
   var prList = Object.keys(_saP).map(function(k){
-    var p=saPreds[k]; var pts=k.split('_');
-    return {key:k, uid:pts[0]||'', mid:pts[1]||'', h:p.h, a:p.a, ts:p.ts||null};
+    var p=_saP[k]; var pts=k.split('_');
+    return {key:k, uid:pts[0]||'', mid:pts[1]||'', h:p&&p.h, a:p&&p.a, ts:p&&p.ts||null};
   });
 
   // ── Integrity check: predictions changed after match kickoff ─────────────
@@ -1853,12 +1853,12 @@ function SuperAdminApp(props) {
   }).map(function(pr){
     var m = MS.find(function(x){return x.id===pr.mid;}) ||
             KO_MS.find(function(x){return x.id===pr.mid;});
-    var u = saUsers[pr.uid];
+    var u = _saU[pr.uid];
     var minsAfter = m ? Math.round((new Date(pr.ts)-new Date(m.utc))/60000) : 0;
     return Object.assign({},pr,{match:m, userName:u?u.name:'Unknown ('+pr.uid.slice(0,6)+')', minsAfter:minsAfter});
   });
   var reList = Object.keys(_saRe).map(function(id){
-    var r=saResults[id]; return {id:id, h:r.h, a:r.a, auto:r.auto};
+    var r=_saRe[id]||{}; return {id:id, h:r.h, a:r.a, auto:r.auto};
   });
 
   var SA_TABS = [
@@ -2286,7 +2286,7 @@ function SuperAdminApp(props) {
           <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',background:'var(--bg3)',cursor:'pointer'}}
             onClick=${function(){setResCollapsed(function(p){var n=Object.assign({},p);n.gs=!n.gs;return n;})}}>
             <span style=${{fontWeight:700,fontSize:14}}>⚽ Group Stage (${MS.length} matches)</span>
-            <span style=${{color:'var(--dm)',fontSize:12}}>${reList.filter(function(m){return saResults[m.id];}).length} / ${MS.length} results entered</span>
+            <span style=${{color:'var(--dm)',fontSize:12}}>${reList.filter(function(m){return _saRe[m.id];}).length} / ${MS.length} results entered</span>
             <span>${resCollapsed.gs?'▼':'▲'}</span>
           </div>
           ${!resCollapsed.gs&&(function(){
@@ -2312,13 +2312,13 @@ function SuperAdminApp(props) {
               <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                 <span style=${{fontSize:13,fontWeight:700,color:'var(--tx)'}}>${day.label}</span>
                 <div style=${{flex:1,height:1,background:'var(--bdr)'}}></div>
-                <span style=${{fontSize:11,color:'var(--dm)'}}>${day.matches.filter(function(m){return saResults[m.id];}).length}/${day.matches.length} done</span>
+                <span style=${{fontSize:11,color:'var(--dm)'}}>${day.matches.filter(function(m){return _saRe[m.id];}).length}/${day.matches.length} done</span>
               </div>
 
               <!-- Match rows for this date -->
               <div style=${{display:'flex',flexDirection:'column',gap:6}}>
                 ${day.matches.map(function(m){
-                  var existing = saResults[m.id];
+                  var existing = _saRe[m.id];
                   var kickoff = new Date(m.utc)
                     .toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
                   return html`<div key=${m.id} style=${{
@@ -2463,7 +2463,9 @@ function SuperAdminApp(props) {
               })}
             </div>`;
           })()}
-        </div>          </div>`}</div>`}
+        </div>`}
+        </div>
+        </div>`}
       ${saTab==='anns'&&html`<div style=${{display:'flex',flexDirection:'column',gap:14,maxWidth:540}}>
 
         <!-- Create/Edit modal inline -->
