@@ -2189,7 +2189,82 @@ function SuperAdminApp(props) {
       </div>`}
 
       <!-- Predictions tab -->
-      ${saTab==='preds'&&html`<div>
+      ${saTab==='preds'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16}}>
+
+        <!-- ── Fix / Add Prediction for any User ──────────────────── -->
+        <div class="card" style=${{border:'1px solid rgba(240,180,41,.3)',background:'rgba(240,180,41,.04)'}}>
+          <div style=${{fontWeight:700,fontSize:14,marginBottom:12,color:'var(--gold)'}}>🔧 Fix / Add Prediction for User</div>
+          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:10}}>Use this when a user couldn't predict due to site downtime. Their score will update instantly.</div>
+          <div style=${{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
+            <div style=${{display:'flex',flexDirection:'column',gap:4,flex:'1 1 130px'}}>
+              <label style=${{fontSize:11,color:'var(--dm)',fontWeight:600}}>User</label>
+              <select id="fix_pred_uid" style=${{padding:'7px 10px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                <option value="">Select user…</option>
+                ${uList.map(function(u){ return html`<option key=${u.id} value=${u.id}>${u.name} (${u.phone||'?'})</option>`; })}
+              </select>
+            </div>
+            <div style=${{display:'flex',flexDirection:'column',gap:4,flex:'2 1 180px'}}>
+              <label style=${{fontSize:11,color:'var(--dm)',fontWeight:600}}>Match</label>
+              <select id="fix_pred_mid" style=${{padding:'7px 10px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                <option value="">Select match…</option>
+                <optgroup label="── Group Stage ──">
+                  ${MS.map(function(m){ return html`<option key=${m.id} value=${m.id}>${m.id}: ${m.h} vs ${m.a} (${m.gr})</option>`; })}
+                </optgroup>
+                <optgroup label="── Knockout Round ──">
+                  ${KO_MS.filter(function(m){return !m.h.startsWith('W ')&&!m.h.startsWith('L ');}).map(function(m){ return html`<option key=${m.id} value=${m.id}>${m.rd}: ${m.h} vs ${m.a}</option>`; })}
+                </optgroup>
+              </select>
+            </div>
+            <div style=${{display:'flex',flexDirection:'column',gap:4,width:54}}>
+              <label style=${{fontSize:11,color:'var(--dm)',fontWeight:600}}>Home</label>
+              <input id="fix_pred_h" type="number" min="0" max="20" placeholder="0"
+                style=${{padding:'7px',fontSize:13,fontWeight:700,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+            </div>
+            <div style=${{display:'flex',flexDirection:'column',gap:4,width:54}}>
+              <label style=${{fontSize:11,color:'var(--dm)',fontWeight:600}}>Away</label>
+              <input id="fix_pred_a" type="number" min="0" max="20" placeholder="0"
+                style=${{padding:'7px',fontSize:13,fontWeight:700,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+            </div>
+            <button class="btn-p" style=${{padding:'7px 18px',fontSize:13,alignSelf:'flex-end'}}
+              onClick=${function(){
+                var uid = document.getElementById('fix_pred_uid').value;
+                var mid = document.getElementById('fix_pred_mid').value;
+                var h   = document.getElementById('fix_pred_h').value;
+                var a   = document.getElementById('fix_pred_a').value;
+                if (!uid||!mid||h===''||a==='') { alert('Fill all 4 fields'); return; }
+                var userKey = 'wc26_preds_'+uid;
+                var newPred = {h:Number(h), a:Number(a), ts:new Date().toISOString(), adminFix:true};
+                // Fetch user's existing preds, merge, write back
+                fetch(GS_URL+'?action=get&key='+encodeURIComponent(userKey)+'&_='+Date.now(), {redirect:'follow'})
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                  var mp = (d.ok&&d.value&&typeof d.value==='object') ? d.value : {};
+                  mp[mid] = newPred;
+                  return fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+                    body: JSON.stringify({action:'set', key:userKey, value:mp})});
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                  if (d&&d.ok) {
+                    var uName = (saUsers[uid]||{name:uid}).name;
+                    var match = MS.concat(KO_MS).find(function(m){return m.id===mid;});
+                    var mName = match ? match.h+' vs '+match.a : mid;
+                    alert('✅ Done! Prediction for '+uName+' ('+mName+') set to '+h+'-'+a);
+                    // Clear the form
+                    document.getElementById('fix_pred_h').value='';
+                    document.getElementById('fix_pred_a').value='';
+                    document.getElementById('fix_pred_mid').value='';
+                  } else {
+                    alert('❌ Error: '+(d&&d.error||'unknown'));
+                  }
+                })
+                .catch(function(e){ alert('❌ Network error: '+e.message); });
+              }}>Save Prediction</button>
+          </div>
+        </div>
+
+        <!-- ── All predictions table ─────────────────────────────── -->
+        <div>
 
         <!-- ── Integrity Check ────────────────────────────────────────── -->
         <div style=${{marginBottom:16,background:violations.length?'rgba(239,68,68,.08)':'rgba(34,197,94,.06)',
@@ -4341,7 +4416,7 @@ function RoomPage(props) {
               <div style=${{fontWeight:500,fontSize:14,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                 ${e.user&&e.user.favT&&typeof e.user.favT[0]==='string'&&e.user.favT[0]&&html`<${FlagImg} team=${e.user.favT[0]} w=${18} />`}
                 <span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:e.user&&e.user._loading?'var(--dm)':'inherit'}}>${e.user&&e.user.name}</span>
-                ${e.badges&&e.badges.some(function(b){return b&&(b.id==='sniper'||b.id==='marksman');})&&html`<span style=${{fontSize:13,flexShrink:0}} title="King of Prediction — got an exact score!">👑</span>`}
+                ${props.showBadges!==false&&e.badges&&e.badges.some(function(b){return b&&(b.id==='sniper'||b.id==='marksman');})&&html`<span style=${{fontSize:13,flexShrink:0}} title="King of Prediction — got an exact score!">👑</span>`}
                 ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8,flexShrink:0}}>you</span>`}
               </div>
               <div style=${{fontSize:11,color:'var(--mu)',marginTop:3,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
@@ -4351,7 +4426,7 @@ function RoomPage(props) {
                 ${e.pick&&html`<span style=${{display:'flex',alignItems:'center',gap:3}}>🏆 <${FlagImg} team=${e.pick} w=${14} /><span>${e.pick}</span></span>`}
                 ${!e.pick&&html`<span style=${{color:'var(--dm)'}}>No champion pick</span>`}
               </div>
-              ${e.badges&&e.badges.length>0&&html`<div style=${{display:'flex',gap:4,flexWrap:'wrap',marginTop:4}}>
+              ${props.showBadges!==false&&e.badges&&e.badges.length>0&&html`<div style=${{display:'flex',gap:4,flexWrap:'wrap',marginTop:4}}>
                 ${e.badges.filter(Boolean).map(function(b){ return html`<span key=${b.id} title=${b.desc} style=${{
                   background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.12)',
                   borderRadius:20,padding:'1px 7px',fontSize:10,cursor:'default',
@@ -5464,6 +5539,9 @@ function App() {
   // ── Super admin routing ─────────────────────────────────────────────────
   var s_sa = useState(window.location.hash === '#superadmin');
   var isSuperAdmin = s_sa[0];
+  var sbS = useState(function(){
+    try{ var s=JSON.parse(localStorage.getItem('wc26_settings')||'{}'); return s.showBadges!==false; }catch(e){return true;}
+  }); var showBadges=sbS[0]; var setShowBadges=sbS[1];
 
   // Listen for hash changes
   useEffect(function(){
@@ -5603,6 +5681,10 @@ function App() {
     });
     Store.listen('bonus', function(v){ setBonusPts(v||{}); });
     Store.listen('settings', function(v) {
+      if (v && typeof v.showBadges !== 'undefined') {
+        setShowBadges(v.showBadges);
+        try { var s=JSON.parse(localStorage.getItem('wc26_settings')||'{}'); s.showBadges=v.showBadges; localStorage.setItem('wc26_settings',JSON.stringify(s)); } catch(e){}
+      }
       if (v && typeof v.predictionCutoffMinutes !== 'undefined') {
         var n = Number(v.predictionCutoffMinutes);
         if (!isNaN(n)) {
@@ -6250,7 +6332,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       loadMemberPreds(useRoom.members||[], setPreds); 
     }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} predCutoffMin=${predCutoffMin} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
-          isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults}
+          isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults} showBadges=${showBadges}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey} announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
           onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(_ls.get('wc26_apikey','')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}} onDeleteAnn=${deleteAnnouncement} bonusPts=${bonusPts} onSetBonus=${setUserBonus} onEditPred=${function(uid,mId,h,a){doPredict.forUser(uid,mId,h,a);}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
