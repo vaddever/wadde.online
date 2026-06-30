@@ -1247,7 +1247,7 @@ var WCS = new Date('2026-06-11T19:00:00Z');
   } catch(e){}
 })();
 
-var KOS = new Date('2026-06-28T00:00:00Z');
+var KOS = new Date('2026-07-04T17:00:00Z'); // July 4, 22:00 MVT — champion pick deadline
 function daysTill(d) { return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 864e5)); }
 
 // Score picker component
@@ -2189,77 +2189,82 @@ function SuperAdminApp(props) {
       </div>`}
 
       <!-- Predictions tab -->
-      ${saTab==='preds'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16}}>
+      ${saTab==='preds'&&html`<div>
 
-        <!-- ── Fix / Add Prediction for any User ──────────────────── -->
-        <div class="card" style=${{border:'1px solid rgba(240,180,41,.3)',background:'rgba(240,180,41,.04)'}}>
-          <div style=${{fontWeight:700,fontSize:14,marginBottom:12,color:'var(--gold)'}}>🔧 Fix / Add Prediction for User</div>
-          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:10}}>Use this when a user couldn't predict due to site downtime. Their score will update instantly.</div>
+        <!-- ── Fix / Add Prediction for any User ─────────────────── -->
+        <div class="card" style=${{marginBottom:16,border:'1px solid rgba(240,180,41,.3)',background:'rgba(240,180,41,.04)'}}>
+          <div style=${{fontWeight:700,fontSize:15,marginBottom:4,color:'var(--gold)'}}>🔧 Fix / Add Prediction for User</div>
+          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:12}}>Use this when a user couldn't predict due to site issues. Points update automatically.</div>
           <div style=${{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
-            <div style=${{display:'flex',flexDirection:'column',gap:4,flex:'1 1 130px'}}>
-              <label style=${{fontSize:11,color:'var(--dm)',fontWeight:600}}>User</label>
-              <select id="fix_pred_uid" style=${{padding:'7px 10px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
-                <option value="">Select user…</option>
-                ${uList.map(function(u){ return html`<option key=${u.id} value=${u.id}>${u.name} (${u.phone||'?'})</option>`; })}
+
+            <div style=${{display:'flex',flexDirection:'column',gap:4,flex:'1 1 120px'}}>
+              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)'}}>User</div>
+              <select id="fp_uid" style=${{padding:'7px 8px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                <option value="">— select user —</option>
+                ${uList.map(function(u){return html`<option key=${u.id} value=${u.id}>${u.name}</option>`;})}
               </select>
             </div>
-            <div style=${{display:'flex',flexDirection:'column',gap:4,flex:'2 1 180px'}}>
-              <label style=${{fontSize:11,color:'var(--dm)',fontWeight:600}}>Match</label>
-              <select id="fix_pred_mid" style=${{padding:'7px 10px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
-                <option value="">Select match…</option>
-                <optgroup label="── Group Stage ──">
-                  ${MS.map(function(m){ return html`<option key=${m.id} value=${m.id}>${m.id}: ${m.h} vs ${m.a} (${m.gr})</option>`; })}
-                </optgroup>
-                <optgroup label="── Knockout Round ──">
-                  ${KO_MS.filter(function(m){return !m.h.startsWith('W ')&&!m.h.startsWith('L ');}).map(function(m){ return html`<option key=${m.id} value=${m.id}>${m.rd}: ${m.h} vs ${m.a}</option>`; })}
-                </optgroup>
-              </select>
-            </div>
-            <div style=${{display:'flex',flexDirection:'column',gap:4,width:54}}>
-              <label style=${{fontSize:11,color:'var(--dm)',fontWeight:600}}>Home</label>
-              <input id="fix_pred_h" type="number" min="0" max="20" placeholder="0"
-                style=${{padding:'7px',fontSize:13,fontWeight:700,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
-            </div>
-            <div style=${{display:'flex',flexDirection:'column',gap:4,width:54}}>
-              <label style=${{fontSize:11,color:'var(--dm)',fontWeight:600}}>Away</label>
-              <input id="fix_pred_a" type="number" min="0" max="20" placeholder="0"
-                style=${{padding:'7px',fontSize:13,fontWeight:700,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
-            </div>
-            <button class="btn-p" style=${{padding:'7px 18px',fontSize:13,alignSelf:'flex-end'}}
-              onClick=${function(){
-                var uid = document.getElementById('fix_pred_uid').value;
-                var mid = document.getElementById('fix_pred_mid').value;
-                var h   = document.getElementById('fix_pred_h').value;
-                var a   = document.getElementById('fix_pred_a').value;
-                if (!uid||!mid||h===''||a==='') { alert('Fill all 4 fields'); return; }
-                var userKey = 'wc26_preds_'+uid;
-                var newPred = {h:Number(h), a:Number(a), ts:new Date().toISOString(), adminFix:true};
-                // Fetch user's existing preds, merge, write back
-                fetch(GS_URL+'?action=get&key='+encodeURIComponent(userKey)+'&_='+Date.now(), {redirect:'follow'})
-                .then(function(r){ return r.json(); })
-                .then(function(d){
-                  var mp = (d.ok&&d.value&&typeof d.value==='object') ? d.value : {};
-                  mp[mid] = newPred;
-                  return fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
-                    body: JSON.stringify({action:'set', key:userKey, value:mp})});
-                })
-                .then(function(r){ return r.json(); })
-                .then(function(d){
-                  if (d&&d.ok) {
-                    var uName = (saUsers[uid]||{name:uid}).name;
-                    var match = MS.concat(KO_MS).find(function(m){return m.id===mid;});
-                    var mName = match ? match.h+' vs '+match.a : mid;
-                    alert('✅ Done! Prediction for '+uName+' ('+mName+') set to '+h+'-'+a);
-                    // Clear the form
-                    document.getElementById('fix_pred_h').value='';
-                    document.getElementById('fix_pred_a').value='';
-                    document.getElementById('fix_pred_mid').value='';
-                  } else {
-                    alert('❌ Error: '+(d&&d.error||'unknown'));
+
+            <div style=${{display:'flex',flexDirection:'column',gap:4,flex:'2 1 160px'}}>
+              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)'}}>Match</div>
+              <select id="fp_mid" style=${{padding:'7px 8px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                ${(function(){
+                  var opts=[html`<option value="">— select match —</option>`];
+                  opts.push(html`<option disabled value="">── GROUP STAGE ──</option>`);
+                  MS.forEach(function(m){opts.push(html`<option key=${m.id} value=${m.id}>${m.id}: ${m.h} vs ${m.a}</option>`);});
+                  var koKnown=KO_MS.filter(function(m){return m.h&&!m.h.startsWith('W ')&&!m.h.startsWith('L ')&&!m.h.startsWith('Win ')&&!m.h.startsWith('Los ');});
+                  if(koKnown.length){
+                    opts.push(html`<option disabled value="">── KNOCKOUT ──</option>`);
+                    koKnown.forEach(function(m){opts.push(html`<option key=${m.id} value=${m.id}>${m.rd}: ${m.h} vs ${m.a}</option>`);});
                   }
+                  return opts;
+                })()}
+              </select>
+            </div>
+
+            <div style=${{display:'flex',flexDirection:'column',gap:4,width:50}}>
+              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)'}}>Home</div>
+              <input id="fp_h" type="number" min="0" max="20" placeholder="0"
+                style=${{padding:'7px',fontSize:13,fontWeight:700,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+            </div>
+
+            <div style=${{display:'flex',flexDirection:'column',gap:4,width:50}}>
+              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)'}}>Away</div>
+              <input id="fp_a" type="number" min="0" max="20" placeholder="0"
+                style=${{padding:'7px',fontSize:13,fontWeight:700,textAlign:'center',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+            </div>
+
+            <button class="btn-p" style=${{padding:'7px 16px',fontSize:13,alignSelf:'flex-end'}}
+              onClick=${function(){
+                var uid=document.getElementById('fp_uid').value;
+                var mid=document.getElementById('fp_mid').value;
+                var h=document.getElementById('fp_h').value;
+                var a=document.getElementById('fp_a').value;
+                if(!uid||!mid||h===''||a===''){alert('Please fill all 4 fields');return;}
+                var uName=(saUsers[uid]||{name:uid}).name;
+                var match=MS.concat(KO_MS).find(function(m){return m.id===mid;});
+                var mName=match?match.h+' vs '+match.a:mid;
+                if(!confirm('Set prediction for '+uName+' on '+mName+' to '+h+'-'+a+'?'))return;
+                fetch(GS_URL+'?action=get&key=wc26_preds_'+uid+'&_='+Date.now(),{redirect:'follow'})
+                .then(function(r){return r.json();})
+                .then(function(d){
+                  var mp=(d.ok&&d.value&&typeof d.value==='object')?d.value:{};
+                  mp[mid]={h:Number(h),a:Number(a),ts:new Date().toISOString(),adminFix:true};
+                  return fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                    body:JSON.stringify({action:'set',key:'wc26_preds_'+uid,value:mp})});
                 })
-                .catch(function(e){ alert('❌ Network error: '+e.message); });
-              }}>Save Prediction</button>
+                .then(function(r){return r.json();})
+                .then(function(d){
+                  if(d&&d.ok){
+                    alert('Saved! '+uName+' prediction for '+mName+' = '+h+'-'+a);
+                    document.getElementById('fp_h').value='';
+                    document.getElementById('fp_a').value='';
+                    document.getElementById('fp_mid').value='';
+                  }else{alert('Error: '+(d&&d.error||'failed'));}
+                })
+                .catch(function(e){alert('Network error: '+e.message);});
+              }}>Save</button>
+
           </div>
         </div>
 
@@ -3551,11 +3556,15 @@ function DashPage(props) {
                   <div style=${{fontSize:11,color:'var(--mu)'}}>Your pick</div>
                 </div>
               </div>
-              <button class="btn" style=${{width:'100%',fontSize:11,padding:'5px'}} onClick=${props.onPickChampion}>Change pick</button>
+              ${props.canPick
+                ? html`<button class="btn" style=${{width:'100%',fontSize:11,padding:'5px'}} onClick=${props.onPickChampion}>Change pick</button>`
+                : html`<div style=${{fontSize:11,color:'var(--dm)',textAlign:'center',padding:'5px',background:'rgba(239,68,68,.08)',borderRadius:'var(--rs)',border:'1px solid rgba(239,68,68,.2)'}}>🔒 Picks locked</div>`}
             </div>`
           : html`<div>
-              <p style=${{fontSize:12,color:'var(--dm)',margin:'0 0 8px'}}>Pick your champion team for +5 pts!</p>
-              <button class="btn-p" style=${{width:'100%',fontSize:12,padding:'7px'}} onClick=${props.onPickChampion}>🏆 Pick Now</button>
+              ${props.canPick
+                ? html`<p style=${{fontSize:12,color:'var(--dm)',margin:'0 0 8px'}}>Pick your champion team for +5 pts!</p>`
+                : html`<p style=${{fontSize:12,color:'#f87171',margin:'0 0 8px'}}>🔒 Champion picks closed — deadline passed</p>`}
+              <button class="btn-p" style=${{width:'100%',fontSize:12,padding:'7px',opacity:props.canPick?1:.4,cursor:props.canPick?'pointer':'not-allowed'}} onClick=${function(){if(props.canPick)props.onPickChampion();}} disabled=${!props.canPick}>🏆 Pick Now</button>
             </div>`
         }
       </div>
@@ -5965,6 +5974,12 @@ function App() {
     notify('Prediction saved! ⚽');
   }
   function doPickW(team) {
+    if (Date.now() >= KOS.getTime()) {
+      notify('🔒 Champion pick deadline passed (July 4, 22:00 MVT). No further changes allowed.', 'err');
+      setModal(null);
+      return;
+    }
+
     // Global champion pick — saved once to user profile (not per-room)
     var nu = Object.assign({}, users);
     if (!user || !nu[user.id]) return;
@@ -6330,7 +6345,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       var useRoom = (cached&&cached.members&&cached.members.length>=(r.members||[]).length)?cached:r;
       setRoom(useRoom); setTab('leaderboard'); setScr('room'); enterRoom(useRoom.id);
       loadMemberPreds(useRoom.members||[], setPreds); 
-    }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+    }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} canPick=${canPick} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} predCutoffMin=${predCutoffMin} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults} showBadges=${showBadges}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey} announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
