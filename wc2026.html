@@ -1247,7 +1247,7 @@ var WCS = new Date('2026-06-11T19:00:00Z');
   } catch(e){}
 })();
 
-var KOS = new Date('2026-06-28T00:00:00Z');
+var KOS = new Date('2026-07-04T17:00:00Z'); // July 4, 22:00 MVT — champion pick deadline
 function daysTill(d) { return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 864e5)); }
 
 // Score picker component
@@ -3556,11 +3556,15 @@ function DashPage(props) {
                   <div style=${{fontSize:11,color:'var(--mu)'}}>Your pick</div>
                 </div>
               </div>
-              <button class="btn" style=${{width:'100%',fontSize:11,padding:'5px'}} onClick=${props.onPickChampion}>Change pick</button>
+              ${props.canPick
+                ? html`<button class="btn" style=${{width:'100%',fontSize:11,padding:'5px'}} onClick=${props.onPickChampion}>Change pick</button>`
+                : html`<div style=${{fontSize:11,color:'var(--dm)',textAlign:'center',padding:'5px',background:'rgba(239,68,68,.08)',borderRadius:'var(--rs)',border:'1px solid rgba(239,68,68,.2)'}}>🔒 Picks locked</div>`}
             </div>`
           : html`<div>
-              <p style=${{fontSize:12,color:'var(--dm)',margin:'0 0 8px'}}>Pick your champion team for +5 pts!</p>
-              <button class="btn-p" style=${{width:'100%',fontSize:12,padding:'7px'}} onClick=${props.onPickChampion}>🏆 Pick Now</button>
+              ${props.canPick
+                ? html`<p style=${{fontSize:12,color:'var(--dm)',margin:'0 0 8px'}}>Pick your champion team for +5 pts!</p>`
+                : html`<p style=${{fontSize:12,color:'#f87171',margin:'0 0 8px'}}>🔒 Champion picks closed — deadline passed</p>`}
+              <button class="btn-p" style=${{width:'100%',fontSize:12,padding:'7px',opacity:props.canPick?1:.4,cursor:props.canPick?'pointer':'not-allowed'}} onClick=${function(){if(props.canPick)props.onPickChampion();}} disabled=${!props.canPick}>🏆 Pick Now</button>
             </div>`
         }
       </div>
@@ -5970,6 +5974,12 @@ function App() {
     notify('Prediction saved! ⚽');
   }
   function doPickW(team) {
+    if (Date.now() >= KOS.getTime()) {
+      notify('🔒 Champion pick deadline passed (July 4, 22:00 MVT). No further changes allowed.', 'err');
+      setModal(null);
+      return;
+    }
+
     // Global champion pick — saved once to user profile (not per-room)
     var nu = Object.assign({}, users);
     if (!user || !nu[user.id]) return;
@@ -6335,7 +6345,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       var useRoom = (cached&&cached.members&&cached.members.length>=(r.members||[]).length)?cached:r;
       setRoom(useRoom); setTab('leaderboard'); setScr('room'); enterRoom(useRoom.id);
       loadMemberPreds(useRoom.members||[], setPreds); 
-    }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
+    }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} canPick=${canPick} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} predCutoffMin=${predCutoffMin} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
           isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults} showBadges=${showBadges}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey} announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
