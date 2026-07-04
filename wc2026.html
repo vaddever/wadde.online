@@ -2438,15 +2438,36 @@ function SuperAdminApp(props) {
       <!-- Results tab -->
       ${saTab==='schedule'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16}}>
 
+        
         <div class="card">
-          <div style=${{fontWeight:700,fontSize:15,marginBottom:14,color:'var(--gold)'}}>📅 Post Match to Schedule</div>
+          <div style=${{fontWeight:700,fontSize:15,marginBottom:4,color:'var(--gold)'}}>📅 Post Match to Schedule</div>
           <div style=${{fontSize:12,color:'var(--dm)',marginBottom:14}}>Once saved, all users see the match in Knockout tab and can predict immediately.</div>
-          <div style=${{display:'flex',flexDirection:'column',gap:10}}>
 
+          <div style=${{display:'flex',flexDirection:'column',gap:12}}>
+
+            <!-- Step 1: Round -->
             <div>
-              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>ROUND / CATEGORY</div>
-              <select id="sch_rd" style=${{width:'100%',padding:'8px 10px',fontSize:13,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
-                <option value="R16">🔵 Round of 16</option>
+              <div style=${{fontSize:11,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:4}}>① ROUND / CATEGORY</div>
+              <select id="sch_rd"
+                style=${{width:'100%',padding:'9px 12px',fontSize:13,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}
+                onChange=${function(e){
+                  var rd = e.target.value;
+                  var midEl = document.getElementById('sch_id');
+                  if (!midEl) return;
+                  // Repopulate match dropdown for this round
+                  while(midEl.options.length > 1) midEl.remove(1);
+                  KO_MS.filter(function(m){return m.rd===rd;}).forEach(function(m){
+                    var opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.id + ' — ' + m.h + ' vs ' + m.a;
+                    midEl.appendChild(opt);
+                  });
+                  // Clear teams
+                  var hEl=document.getElementById('sch_h'); var aEl=document.getElementById('sch_a');
+                  if(hEl)hEl.value=''; if(aEl)aEl.value='';
+                }}>
+                <option value="R32">🔵 Round of 32</option>
+                <option value="R16">🟣 Round of 16</option>
                 <option value="QF">🟡 Quarter-Final</option>
                 <option value="SF">🟠 Semi-Final</option>
                 <option value="3PL">⚫ 3rd Place Play-Off</option>
@@ -2454,59 +2475,100 @@ function SuperAdminApp(props) {
               </select>
             </div>
 
+            <!-- Step 2: Match slot -->
             <div>
-              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>MATCH (select existing slot to update, or create new)</div>
-              <select id="sch_id" style=${{width:'100%',padding:'8px 10px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+              <div style=${{fontSize:11,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:4}}>② SELECT MATCH</div>
+              <select id="sch_id"
+                style=${{width:'100%',padding:'9px 12px',fontSize:13,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}
+                onChange=${function(e){
+                  var mid = e.target.value;
+                  if (!mid) return;
+                  var match = KO_MS.find(function(m){return m.id===mid;});
+                  if (!match) return;
+                  // Auto-fill teams from the match
+                  var hEl=document.getElementById('sch_h'); var aEl=document.getElementById('sch_a'); var vEl=document.getElementById('sch_v');
+                  if(hEl && match.h && !match.h.startsWith('W ') && !match.h.startsWith('L '))hEl.value=match.h;
+                  if(aEl && match.a && !match.a.startsWith('W ') && !match.a.startsWith('L '))aEl.value=match.a;
+                  if(vEl && match.v && match.v!=='TBD')vEl.value=match.v;
+                  // Auto-fill date/time from existing UTC
+                  if(match.utc){
+                    var d=new Date(match.utc);
+                    // Convert UTC to MVT (UTC+5)
+                    var mvt=new Date(d.getTime()+5*3600000);
+                    var yyyy=mvt.getUTCFullYear(), mm=String(mvt.getUTCMonth()+1).padStart(2,'0');
+                    var dd=String(mvt.getUTCDate()).padStart(2,'0');
+                    var hh=String(mvt.getUTCHours()).padStart(2,'0'), min=String(mvt.getUTCMinutes()).padStart(2,'0');
+                    var dateEl=document.getElementById('sch_date'); var timeEl=document.getElementById('sch_time');
+                    if(dateEl)dateEl.value=yyyy+'-'+mm+'-'+dd;
+                    if(timeEl)timeEl.value=hh+':'+min;
+                  }
+                }}>
+                <option value="">— first select a round above —</option>
                 ${(function(){
-                  return KO_MS.map(function(m){
+                  return KO_MS.filter(function(m){return m.rd==='R32';}).map(function(m){
                     return html`<option key=${m.id} value=${m.id}>${m.id} — ${m.h} vs ${m.a}</option>`;
                   });
                 })()}
               </select>
             </div>
 
+            <!-- Step 3: Teams -->
             <div style=${{display:'flex',gap:8,alignItems:'flex-end'}}>
               <div style=${{flex:1}}>
-                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>HOME TEAM</div>
-                <input id="sch_h" list="sch_tl" placeholder="e.g. Canada" style=${{width:'100%',padding:'8px 10px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                <div style=${{fontSize:11,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:4}}>③ HOME TEAM</div>
+                <input id="sch_h" list="sch_tl" placeholder="Team name (auto-filled from match)"
+                  style=${{width:'100%',padding:'9px 12px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
               </div>
-              <div style=${{flexShrink:0,fontSize:16,fontWeight:700,color:'var(--dm)',paddingBottom:4}}>vs</div>
+              <div style=${{flexShrink:0,fontSize:16,fontWeight:700,color:'var(--dm)',paddingBottom:8}}>vs</div>
               <div style=${{flex:1}}>
-                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>AWAY TEAM</div>
-                <input id="sch_a" list="sch_tl" placeholder="e.g. Morocco" style=${{width:'100%',padding:'8px 10px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                <div style=${{fontSize:11,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:4}}>AWAY TEAM</div>
+                <input id="sch_a" list="sch_tl" placeholder="Team name (auto-filled from match)"
+                  style=${{width:'100%',padding:'9px 12px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
               </div>
             </div>
             <datalist id="sch_tl">${TEAMS.map(function(tm){return html`<option key=${tm} value=${tm} />`;})}</datalist>
 
+            <!-- Step 4: Date & Time -->
             <div style=${{display:'flex',gap:8}}>
               <div style=${{flex:1}}>
-                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>DATE — MVT (UTC+5)</div>
-                <input id="sch_date" type="date" style=${{width:'100%',padding:'8px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+                <div style=${{fontSize:11,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:4}}>④ DATE (MVT = UTC+5)</div>
+                <input id="sch_date" type="date"
+                  style=${{width:'100%',padding:'9px 12px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
               </div>
-              <div style=${{width:120}}>
-                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>TIME — MVT 24h</div>
-                <input id="sch_time" type="time" style=${{width:'100%',padding:'8px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+              <div style=${{width:130}}>
+                <div style=${{fontSize:11,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:4}}>TIME (MVT 24h)</div>
+                <input id="sch_time" type="time"
+                  style=${{width:'100%',padding:'9px 12px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
               </div>
-              <div style=${{width:100}}>
-                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>VENUE</div>
-                <input id="sch_v" placeholder="City" style=${{width:'100%',padding:'8px',fontSize:12,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+              <div style=${{width:110}}>
+                <div style=${{fontSize:11,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:4}}>VENUE</div>
+                <input id="sch_v" placeholder="City"
+                  style=${{width:'100%',padding:'9px 12px',fontSize:12,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
               </div>
             </div>
 
-            <button class="btn-p" style=${{padding:'10px',fontSize:14,marginTop:4}}
+            <!-- Step 5: Post -->
+            <button class="btn-p" style=${{padding:'11px',fontSize:14,marginTop:2}}
               onClick=${function(){
                 var rd=document.getElementById('sch_rd').value;
                 var id=document.getElementById('sch_id').value;
-                var h=document.getElementById('sch_h').value.trim();
-                var a=document.getElementById('sch_a').value.trim();
+                var h=(document.getElementById('sch_h').value||'').trim();
+                var a=(document.getElementById('sch_a').value||'').trim();
                 var date=document.getElementById('sch_date').value;
                 var time=document.getElementById('sch_time').value;
-                var v=document.getElementById('sch_v').value.trim();
-                if(!id||!h||!a||!date||!time){alert('Please fill all fields (except Venue is optional)');return;}
-                var mvtDT=date+'T'+time+':00+05:00';
-                var utcD=new Date(mvtDT);
-                if(isNaN(utcD.getTime())){alert('Invalid date/time');return;}
-                var utcStr=utcD.toISOString();
+                var v=(document.getElementById('sch_v').value||'').trim();
+                if(!id){alert('② Select a match first');return;}
+                if(!h||!a){alert('③ Enter both Home and Away team names');return;}
+                if(!date||!time){alert('④ Select date and time in MVT');return;}
+                // Convert MVT (UTC+5) → UTC correctly
+                var parts=date.split('-'); var tparts=time.split(':');
+                var mvtDate=new Date(Date.UTC(
+                  Number(parts[0]),Number(parts[1])-1,Number(parts[2]),
+                  Number(tparts[0]),Number(tparts[1]||0),0
+                ));
+                // Subtract 5 hours to get UTC from MVT
+                var utcMs=mvtDate.getTime()-(5*60*60*1000);
+                var utcStr=new Date(utcMs).toISOString();
                 var entry={id:id,rd:rd,h:h,a:a,utc:utcStr,v:v||'TBD'};
                 var existing=(props.koSchedule||[]).filter(function(m){return m.id!==id;});
                 existing.push(entry);
@@ -2517,14 +2579,19 @@ function SuperAdminApp(props) {
                   if(d&&d.ok){
                     if(props.setKoSchedule)props.setKoSchedule(existing);
                     setSaKoSchedule(existing);
-                    var dsp=utcD.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
-                    alert('Posted! '+rd+': '+h+' vs '+a+' on '+dsp+' MVT. Users can now predict.');
+                    var mvtDisp=new Date(utcMs+5*3600000).toISOString().replace('T',' ').slice(0,16);
+                    alert('Posted: '+rd+': '+h+' vs '+a+'. Users can now predict!');
+                    document.getElementById('sch_id').value='';
                     document.getElementById('sch_h').value='';
                     document.getElementById('sch_a').value='';
                     document.getElementById('sch_v').value='';
+                    document.getElementById('sch_date').value='';
+                    document.getElementById('sch_time').value='';
                   }else alert('Error: '+(d&&d.error||'failed'));
-                }).catch(function(e){alert('Network error: '+e.message);});
-              }}>📅 Post Match to All Users</button>
+                })
+                .catch(function(e){alert('Network error: '+e.message);});
+              }}>⑤ 📅 Post Match to All Users</button>
+
           </div>
         </div>
 
@@ -2722,44 +2789,45 @@ function SuperAdminApp(props) {
                         <span style=${{fontSize:10,color:'var(--dm)',width:60,flexShrink:0}}>${mTime}</span>
                         <span style=${{flex:1,fontSize:12,fontWeight:600,textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
                         ${res?html`<span style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'var(--gold)',flexShrink:0,width:60,textAlign:'center'}}>${res.h}–${res.a}</span>`:
-                          html`<div style=${{display:'flex',gap:4,flexShrink:0,alignItems:'center'}}>
-                            <input type="number" min="0" max="20" placeholder="H" id=${'sa_kor_'+m.id+'_h'}
-                              style=${{width:36,padding:'4px',fontSize:12,textAlign:'center',background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:4}} />
-                            <span style=${{color:'var(--dm)'}}>–</span>
-                            <input type="number" min="0" max="20" placeholder="A" id=${'sa_kor_'+m.id+'_a'}
-                              style=${{width:36,padding:'4px',fontSize:12,textAlign:'center',background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:4}} />
-                            <button class="btn" style=${{fontSize:11,padding:'4px 8px',color:'#4ade80',borderColor:'rgba(74,222,128,.3)'}}
-                              onClick=${function(){
-                                var hEl=document.getElementById('sa_kor_'+m.id+'_h');
-                                var aEl=document.getElementById('sa_kor_'+m.id+'_a');
-                                if(!hEl||!aEl||hEl.value===''||aEl.value===''){alert('Enter both scores');return;}
-                                var hv=Number(hEl.value), av=Number(aEl.value);
-                                var res={h:hv,a:av};
-                                // If draw in KO match, require winner pick
-                                if(hv===av){
+                          html`<div style=${{display:'flex',flexDirection:'column',gap:5,flexShrink:0}}>
+                            <div style=${{display:'flex',gap:4,alignItems:'center'}}>
+                              <input type="number" min="0" max="20" placeholder="H" id=${'sa_kor_'+m.id+'_h'}
+                                style=${{width:36,padding:'4px',fontSize:12,textAlign:'center',background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:4}} />
+                              <span style=${{color:'var(--dm)'}}>–</span>
+                              <input type="number" min="0" max="20" placeholder="A" id=${'sa_kor_'+m.id+'_a'}
+                                style=${{width:36,padding:'4px',fontSize:12,textAlign:'center',background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:4}} />
+                              <button class="btn" style=${{fontSize:11,padding:'4px 8px',color:'#4ade80',borderColor:'rgba(74,222,128,.3)'}}
+                                onClick=${function(){
+                                  var hEl=document.getElementById('sa_kor_'+m.id+'_h');
+                                  var aEl=document.getElementById('sa_kor_'+m.id+'_a');
+                                  if(!hEl||!aEl||hEl.value===''||aEl.value===''){alert('Enter both scores');return;}
+                                  var hv=Number(hEl.value),av=Number(aEl.value);
+                                  var res={h:hv,a:av};
                                   var isKO=['R16','QF','SF','3PL','FIN'].indexOf(m.rd)!==-1;
-                                  if(isKO){
-                                    var w=window.prompt('Draw result - type 1 for ' + m.h + ', 2 for ' + m.a,'');
-                                    if(w===null)return;
-                                    res.winner=w==='1'?m.h:m.a;
-                                    res.pens='Draw (penalties)';
+                                  if(hv===av&&isKO){
+                                    var wEl=document.getElementById('sa_kor_'+m.id+'_w');
+                                    var winner=wEl&&wEl.value;
+                                    if(!winner){alert('Score is a draw — select the winner on penalties below');return;}
+                                    res.winner=winner; res.pens='pens';
                                   }
-                                }
-                                var upd=Object.assign({},saKoResults||{}); 
-                                upd[m.id]=res;
-                                setSaKoResults(upd);
-                                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                                  body:JSON.stringify({action:'set',key:'wc26_koresults',value:upd})})
-                                .then(function(r){return r.json();})
-                                .then(function(d){
-                                  if(d&&d.ok){
-                                    var msg='KO result saved ✓';
-                                    if(res.winner)msg+=' — '+res.winner+' advances (pens)';
-                                    alert(msg+' — all rooms updated');
-                                  }else alert('Error: '+(d&&d.error||'?'));
-                                })
-                                .catch(function(e){alert('Error: '+e.message);});
-                              }}>Save</button>
+                                  var upd=Object.assign({},saKoResults||{});
+                                  upd[m.id]=res;
+                                  setSaKoResults(upd);
+                                  fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                                    body:JSON.stringify({action:'set',key:'wc26_koresults',value:upd})})
+                                  .then(function(r){return r.json();})
+                                  .then(function(d){
+                                    if(d&&d.ok){alert('Saved'+(res.winner?' — '+res.winner+' wins on pens':'')+'!');}
+                                    else alert('Error: '+(d&&d.error||'?'));
+                                  }).catch(function(e){alert('Error: '+e.message);});
+                                }}>Save</button>
+                            </div>
+                            <select id=${'sa_kor_'+m.id+'_w'}
+                              style=${{fontSize:11,padding:'3px 6px',background:'var(--bg)',color:'var(--tx)',border:'1px solid rgba(240,180,41,.3)',borderRadius:4,width:'100%'}}>
+                              <option value="">Draw? Select pens winner</option>
+                              <option value=${m.h}>${m.h} wins on pens</option>
+                              <option value=${m.a}>${m.a} wins on pens</option>
+                            </select>
                           </div>`}
                         <span style=${{flex:1,fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.a}</span>
                         ${res?html`<button class="btn" style=${{fontSize:9,padding:'2px 6px',color:'var(--rd)',borderColor:'rgba(239,68,68,.2)',flexShrink:0}}
@@ -5199,6 +5267,8 @@ function UserPredictionsModal(props) {
   // Expand state for GS completed sections
   var exS = useState({}); var expanded=exS[0]; var setExpanded=exS[1];
   function toggleGrp(grp){ setExpanded(function(p){var n=Object.assign({},p);n[grp]=!n[grp];return n;}); }
+  var koExS = useState({}); var koExpanded=koExS[0]; var setKoExpanded=koExS[1];
+  function toggleKoRd(rd){ setKoExpanded(function(p){var n=Object.assign({},p);n[rd]=!n[rd];return n;}); }
 
   // Group GS matches by group letter, only show those with predictions
   var gsByGrp = {};
@@ -5232,7 +5302,8 @@ function UserPredictionsModal(props) {
       <div style=${{textAlign:'center',minWidth:90,flexShrink:0}}>
         <div style=${{fontFamily:'Barlow Condensed',fontSize:19,fontWeight:800,
           color:isExact?'#fbbf24':isWinner?'#60a5fa':isWrong?'#f87171':'var(--tx)'}}>${p.h}–${p.a}</div>
-        ${r?html`<div style=${{fontSize:10,color:'var(--dm)'}}>Result: <strong style=${{color:'var(--tx)'}}>${r.h}–${r.a}</strong></div>`:null}
+        ${p.winner?html`<div style=${{fontSize:10,color:'#60a5fa',fontWeight:600}}>→ ${p.winner}</div>`:null}
+        ${r?html`<div style=${{fontSize:10,color:'var(--dm)'}}>Result: <strong style=${{color:'var(--tx)'}}>${r.h}–${r.a}${r.winner?html` <span style=${{color:'#4ade80'}}>(${r.winner})</span>`:''}</strong></div>`:null}
         ${pending?html`<div style=${{fontSize:10,color:'var(--dm)'}}>Pending</div>`:null}
       </div>
       <!-- Away -->
@@ -5287,7 +5358,29 @@ function UserPredictionsModal(props) {
           <div style=${{padding:'8px 16px',background:'rgba(240,180,41,.06)',borderBottom:'1px solid rgba(240,180,41,.15)',fontSize:11,fontWeight:700,color:'var(--gold)',letterSpacing:.5}}>
             🏆 KNOCKOUT STAGES (${koPreds.length} predictions)
           </div>
-          ${koPreds.map(function(m){ return renderMatch(m, koResMap); })}
+          ${(function(){
+            // Group KO predictions by round
+            var koByRound = {};
+            var RD_ORDER = ['R32','R16','QF','SF','3PL','FIN'];
+            var RD_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-Finals',SF:'Semi-Finals','3PL':'3rd Place',FIN:'Final'};
+            var RD_COLORS = {R32:'#3b82f6',R16:'#8b5cf6',QF:'#f59e0b',SF:'#ef4444','3PL':'#6b7280',FIN:'#f0b429'};
+            koPreds.forEach(function(m){ var rd=m.rd||'R32'; if(!koByRound[rd])koByRound[rd]=[]; koByRound[rd].push(m); });
+            return html`<div>${RD_ORDER.filter(function(rd){return koByRound[rd]&&koByRound[rd].length;}).map(function(rd){
+              var matches=koByRound[rd];
+              var doneCount=matches.filter(function(m){return koResMap[m.id]||resultsMap[m.id];}).length;
+              var isOpen=!koExpanded[rd];
+              var color=RD_COLORS[rd]||'#60a5fa';
+              return html`<div key=${rd}>
+                <div style=${{display:'flex',alignItems:'center',padding:'6px 16px',background:'rgba(0,0,0,.15)',cursor:'pointer',borderBottom:'1px solid rgba(255,255,255,.06)'}}
+                  onClick=${function(){toggleKoRd(rd);}}>
+                  <span style=${{fontSize:11,fontWeight:700,color:color,flex:1,letterSpacing:.5}}>${RD_LABELS[rd]||rd}</span>
+                  <span style=${{fontSize:11,color:'var(--dm)',marginRight:8}}>${doneCount}/${matches.length} done</span>
+                  <span style=${{fontSize:12,color:color}}>${isOpen?'▲':'▼'}</span>
+                </div>
+                ${isOpen?matches.map(function(m){ return renderMatch(m, koResMap); }):null}
+              </div>`;
+            })}</div>`;
+          })()}
         </div>`:null}
 
         <!-- ── Group Stage — grouped & collapsible ────────────────── -->
