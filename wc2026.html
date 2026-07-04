@@ -514,7 +514,7 @@ var html = htm.bind(React.createElement);
 var useState = React.useState;
 var useEffect = React.useEffect;
 
-var F={Mexico:'🇲🇽','South Africa':'🇿🇦','South Korea':'🇰🇷',Czechia:'🇨🇿',Canada:'🇨🇦','Bosnia & Herzegovina':'🇧🇦',Qatar:'🇶🇦',Switzerland:'🇨🇭',Brazil:'🇧🇷',Morocco:'🇲🇦',Haiti:'🇭🇹',Scotland:'\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F','United States':'🇺🇸',Paraguay:'🇵🇾',Australia:'🇦🇺',Türkiye:'🇹🇷',Germany:'🇩🇪','Curaçao':'🇨🇼','Ivory Coast':'🇨🇮',Ecuador:'🇪🇨',Netherlands:'🇳🇱',Japan:'🇯🇵',Sweden:'🇸🇪',Tunisia:'🇹🇳',Belgium:'🇧🇪',Egypt:'🇪🇬',Iran:'🇮🇷','New Zealand':'🇳🇿',Spain:'🇪🇸','Cape Verde':'🇨🇻','Saudi Arabia':'🇸🇦',Uruguay:'🇺🇾',France:'🇫🇷',Senegal:'🇸🇳',Iraq:'🇮🇶',Norway:'🇳🇴',Argentina:'🇦🇷',Algeria:'🇩🇿',Austria:'🇦🇹',Jordan:'🇯🇴',Portugal:'🇵🇹','DR Congo':'🇨🇩',Uzbekistan:'🇺🇿',Colombia:'🇨🇴',England:'\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F',Croatia:'🇭🇷',Ghana:'🇬🇭',Panama:'🇵🇦'};
+var F={Mexico:'🇲🇽','South Africa':'🇿🇦','South Korea':'🇰🇷',Czechia:'🇨🇿',Canada:'🇨🇦','Bosnia & Herzegovina':'🇧🇦',Qatar:'🇶🇦',Switzerland:'🇨🇭',Brazil:'🇧🇷',Morocco:'🇲🇦',Haiti:'🇭🇹',Scotland:'\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F','United States':'🇺🇸','USA':'🇺🇸',Paraguay:'🇵🇾',Australia:'🇦🇺',Türkiye:'🇹🇷',Germany:'🇩🇪','Curaçao':'🇨🇼','Ivory Coast':'🇨🇮',Ecuador:'🇪🇨',Netherlands:'🇳🇱',Japan:'🇯🇵',Sweden:'🇸🇪',Tunisia:'🇹🇳',Belgium:'🇧🇪',Egypt:'🇪🇬',Iran:'🇮🇷','New Zealand':'🇳🇿',Spain:'🇪🇸','Cape Verde':'🇨🇻','Saudi Arabia':'🇸🇦',Uruguay:'🇺🇾',France:'🇫🇷',Senegal:'🇸🇳',Iraq:'🇮🇶',Norway:'🇳🇴',Argentina:'🇦🇷',Algeria:'🇩🇿',Austria:'🇦🇹',Jordan:'🇯🇴',Portugal:'🇵🇹','DR Congo':'🇨🇩',Uzbekistan:'🇺🇿',Colombia:'🇨🇴',England:'\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F',Croatia:'🇭🇷',Ghana:'🇬🇭',Panama:'🇵🇦'};
 var GRP={A:['Mexico','South Africa','South Korea','Czechia'],B:['Canada','Bosnia & Herzegovina','Qatar','Switzerland'],C:['Brazil','Morocco','Haiti','Scotland'],D:['United States','Paraguay','Australia','Türkiye'],E:['Germany','Curaçao','Ivory Coast','Ecuador'],F:['Netherlands','Japan','Sweden','Tunisia'],G:['Belgium','Egypt','Iran','New Zealand'],H:['Spain','Cape Verde','Saudi Arabia','Uruguay'],I:['France','Senegal','Iraq','Norway'],J:['Argentina','Algeria','Austria','Jordan'],K:['Portugal','DR Congo','Uzbekistan','Colombia'],L:['England','Croatia','Ghana','Panama']};
 var TEAMS=Object.values(GRP).flat();
 var MS=[
@@ -648,9 +648,9 @@ var KO_MS = [
   // W r32_12(Portugal) vs W r32_11(Spain) | W r32_10(USA) vs W r32_09(Belgium)
   {id:'r16_05',rd:'R16',h:'Portugal',  a:'Spain',    utc:'2026-07-06T19:00:00Z',v:'Dallas',      pair:'r32_12 r32_11'},
   {id:'r16_06',rd:'R16',h:'USA',       a:'Belgium',  utc:'2026-07-07T00:00:00Z',v:'Seattle',     pair:'r32_10 r32_09'},
-  // W r32_15(Argentina) vs W r32_14(Egypt) | W r32_13(Switzerland) vs W r32_16(Colombia)
+  // W r32_15(Argentina) vs W r32_14(Egypt) | W r32_13(Switzerland) vs W r32_16(TBD)
   {id:'r16_07',rd:'R16',h:'Argentina', a:'Egypt',    utc:'2026-07-07T16:00:00Z',v:'Atlanta',     pair:'r32_15 r32_14'},
-  {id:'r16_08',rd:'R16',h:'Switzerland',a:'TBD',     utc:'2026-07-07T20:00:00Z',v:'Vancouver',   pair:'r32_13 r32_16'},
+  {id:'r16_08',rd:'R16',h:'Switzerland',a:'Colombia',     utc:'2026-07-07T20:00:00Z',v:'Vancouver',   pair:'r32_13 r32_16'},
   // ── Quarter-finals — July 9-12 ────────────────────────────────────────
   {id:'qf_01',rd:'QF',h:'W r16_01',a:'W r16_02',utc:'2026-07-09T20:00:00Z',v:'Seattle',     pair:'r16_01 r16_02'},
   {id:'qf_02',rd:'QF',h:'W r16_05',a:'W r16_06',utc:'2026-07-10T00:00:00Z',v:'Los Angeles', pair:'r16_05 r16_06'},
@@ -3991,6 +3991,9 @@ function KOBracketView(props) {
   var preds = props.preds || {};
   var uid   = props.user && props.user.id;
   var now   = Date.now();
+  // Expand/collapse per round — all expanded by default
+  var exS = useState({}); var collapsed=exS[0]; var setCollapsed=exS[1];
+  function toggleRound(rd){ setCollapsed(function(p){var n=Object.assign({},p);n[rd]=!n[rd];return n;}); }
 
   // Group KO_MS by round
   var byRound = {};
@@ -4055,15 +4058,20 @@ function KOBracketView(props) {
       var done     = matches.filter(function(m){return matchStatus(m)==='done';});
 
       return html`<div key=${rd}>
-        <!-- Round header -->
-        <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+        <!-- Round header with expand/collapse -->
+        <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:collapsed[rd]?4:10,cursor:'pointer'}}
+          onClick=${function(){toggleRound(rd);}}>
           <div style=${{height:3,flex:1,background:color,borderRadius:2,opacity:.4}}></div>
-          <span style=${{fontSize:11,fontWeight:700,color:color,letterSpacing:1,textTransform:'uppercase',whiteSpace:'nowrap'}}>${roundLabels[rd]||rd}</span>
+          <span style=${{fontSize:11,fontWeight:700,color:color,letterSpacing:1,textTransform:'uppercase',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:6}}>
+            ${roundLabels[rd]||rd}
+            <span style=${{fontSize:13,color:color,opacity:.7}}>${collapsed[rd]?'▼':' ▲'}</span>
+            <span style=${{fontSize:10,color:'var(--dm)',fontWeight:400}}>${done.length}/${matches.length} done</span>
+          </span>
           <div style=${{height:3,flex:1,background:color,borderRadius:2,opacity:.4}}></div>
         </div>
 
-        <!-- Matches -->
-        <div style=${{display:'flex',flexDirection:'column',gap:8}}>
+        <!-- Matches (hidden when collapsed) -->
+        ${!collapsed[rd]&&html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
           ${matches.map(function(m){
             var status = matchStatus(m);
             var res    = koRes[m.id];
@@ -4122,7 +4130,7 @@ function KOBracketView(props) {
               </div>`}
             </div>`;
           })}
-        </div>
+        </div>`}
       </div>`;
     })}
   </div>`;
@@ -4691,12 +4699,14 @@ function RoomPage(props) {
         :html`<div style=${{display:'flex',flexDirection:'column',gap:8}}>
           ${props.lboard.map(function(e,i){ return html`<div key=${(e.user&&e.user.id)||i} class="lbr"
             onClick=${function(){props.onViewPreds&&props.onViewPreds(e.user);}}
+            title="Tap to view predictions"
             style=${{borderColor:i===0?'rgba(240,180,41,.22)':e.user&&e.user.id===props.user.id?'rgba(59,130,246,.3)':undefined,background:i===0?'rgba(240,180,41,.03)':undefined,cursor:'pointer'}}>
             <div style=${{width:32,height:32,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0,background:i===0?'rgba(240,180,41,.15)':i===1?'rgba(148,163,184,.1)':i===2?'rgba(180,100,30,.1)':'var(--bg3)'}}>${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
             <div style=${{flex:1,minWidth:0}}>
               <div style=${{fontWeight:500,fontSize:14,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                 ${e.user&&e.user.favT&&typeof e.user.favT[0]==='string'&&e.user.favT[0]&&html`<${FlagImg} team=${e.user.favT[0]} w=${18} />`}
                 <span style=${{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:e.user&&e.user._loading?'var(--dm)':'inherit'}}>${e.user&&e.user.name}</span>
+                <span style=${{fontSize:10,color:'var(--dm)',marginLeft:4,opacity:.5}}>📊</span>
                 ${props.showBadges!==false&&e.badges&&e.badges.some(function(b){return b&&(b.id==='sniper'||b.id==='marksman');})&&html`<span style=${{fontSize:13,flexShrink:0}} title="King of Prediction — got an exact score!">👑</span>`}
                 ${e.user&&e.user.id===props.user.id&&html`<span style=${{fontSize:10,background:'rgba(59,130,246,.15)',color:'#60a5fa',padding:'1px 7px',borderRadius:8,flexShrink:0}}>you</span>`}
               </div>
@@ -6668,4 +6678,3 @@ try {
 </script>
 </body>
 </html>
- 
