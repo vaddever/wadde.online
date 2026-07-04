@@ -621,7 +621,7 @@ var FACTS=['The 2026 World Cup is the first with 48 teams!','104 matches across 
 var PLY=[{n:'Cristiano Ronaldo',t:'Portugal',p:'Forward',i:'All-time top scorer',sid:874},{n:'Lionel Messi',t:'Argentina',p:'Forward',i:'2022 WC winner',sid:41959},{n:'Kylian Mbappé',t:'France',p:'Forward',i:'Top scorer contender',sid:342658},{n:'Erling Haaland',t:'Norway',p:'Forward',i:'Premier League top scorer',sid:839956},{n:'Vinicius Jr.',t:'Brazil',p:'Forward',i:'Champions League star',sid:700026},{n:'Pedri',t:'Spain',p:'Midfielder',i:'Barcelona midfield maestro',sid:888013},{n:'Jude Bellingham',t:'England',p:'Midfielder',i:'Real Madrid star',sid:816250},{n:'Kevin De Bruyne',t:'Belgium',p:'Midfielder',i:'World-class playmaker',sid:70996}];
 // ── WC 2026 Knockout Stage Matches ────────────────────────────────────────
 var KO_MS = [
-  // ── Round of 32 — June 28 to July 3 (all teams confirmed) ──────────────
+  // ── Round of 32 — All results confirmed ──────────────────────────────
   {id:'r32_01',rd:'R32',h:'South Africa',a:'Canada',         utc:'2026-06-28T19:00:00Z',v:'Los Angeles'},
   {id:'r32_02',rd:'R32',h:'Brazil',      a:'Japan',          utc:'2026-06-29T17:00:00Z',v:'Houston'},
   {id:'r32_03',rd:'R32',h:'Germany',     a:'Paraguay',       utc:'2026-06-29T20:30:00Z',v:'Boston'},
@@ -631,34 +631,38 @@ var KO_MS = [
   {id:'r32_07',rd:'R32',h:'Mexico',      a:'Ecuador',        utc:'2026-07-01T01:00:00Z',v:'Mexico City'},
   {id:'r32_08',rd:'R32',h:'England',     a:'DR Congo',       utc:'2026-07-01T16:00:00Z',v:'Atlanta'},
   {id:'r32_09',rd:'R32',h:'Belgium',     a:'Senegal',        utc:'2026-07-01T20:00:00Z',v:'Seattle'},
-  {id:'r32_10',rd:'R32',h:'United States', a:'Bosnia & Herzegovina',utc:'2026-07-02T00:00:00Z',v:'San Francisco'},
+  {id:'r32_10',rd:'R32',h:'USA',         a:'Bosnia & Herzegovina',utc:'2026-07-02T00:00:00Z',v:'San Francisco'},
   {id:'r32_11',rd:'R32',h:'Spain',       a:'Austria',        utc:'2026-07-02T19:00:00Z',v:'Los Angeles'},
   {id:'r32_12',rd:'R32',h:'Portugal',    a:'Croatia',        utc:'2026-07-02T23:00:00Z',v:'Toronto'},
   {id:'r32_13',rd:'R32',h:'Switzerland', a:'Algeria',        utc:'2026-07-03T03:00:00Z',v:'Vancouver'},
   {id:'r32_14',rd:'R32',h:'Australia',   a:'Egypt',          utc:'2026-07-03T18:00:00Z',v:'Dallas'},
   {id:'r32_15',rd:'R32',h:'Argentina',   a:'Cape Verde',     utc:'2026-07-03T22:00:00Z',v:'Miami'},
   {id:'r32_16',rd:'R32',h:'Colombia',    a:'Ghana',          utc:'2026-07-04T01:30:00Z',v:'Kansas City'},
-  // ── Round of 16 — July 5-8 (teams TBD after R32) ─────────────────────
-  {id:'r16_01',rd:'R16',h:'W r32_01',a:'W r32_02',utc:'2026-07-05T17:00:00Z',v:'TBD'},
-  {id:'r16_02',rd:'R16',h:'W r32_03',a:'W r32_04',utc:'2026-07-05T21:00:00Z',v:'TBD'},
-  {id:'r16_03',rd:'R16',h:'W r32_05',a:'W r32_06',utc:'2026-07-06T17:00:00Z',v:'TBD'},
-  {id:'r16_04',rd:'R16',h:'W r32_07',a:'W r32_08',utc:'2026-07-06T21:00:00Z',v:'TBD'},
-  {id:'r16_05',rd:'R16',h:'W r32_09',a:'W r32_10',utc:'2026-07-07T17:00:00Z',v:'TBD'},
-  {id:'r16_06',rd:'R16',h:'W r32_11',a:'W r32_12',utc:'2026-07-07T21:00:00Z',v:'TBD'},
-  {id:'r16_07',rd:'R16',h:'W r32_13',a:'W r32_14',utc:'2026-07-08T17:00:00Z',v:'TBD'},
-  {id:'r16_08',rd:'R16',h:'W r32_15',a:'W r32_16',utc:'2026-07-08T21:00:00Z',v:'TBD'},
-  // ── Quarter-finals — July 11-12 ───────────────────────────────────────
-  {id:'qf_01',rd:'QF',h:'W r16_01',a:'W r16_02',utc:'2026-07-11T17:00:00Z',v:'TBD'},
-  {id:'qf_02',rd:'QF',h:'W r16_03',a:'W r16_04',utc:'2026-07-11T21:00:00Z',v:'TBD'},
-  {id:'qf_03',rd:'QF',h:'W r16_05',a:'W r16_06',utc:'2026-07-12T17:00:00Z',v:'TBD'},
-  {id:'qf_04',rd:'QF',h:'W r16_07',a:'W r16_08',utc:'2026-07-12T21:00:00Z',v:'TBD'},
+  // ── Round of 16 — Correct bracket pairings with actual teams ─────────
+  // W r32_01(Canada) vs W r32_04(Morocco) | W r32_03(Paraguay) vs W r32_06(France)
+  {id:'r16_01',rd:'R16',h:'Canada',    a:'Morocco',  utc:'2026-07-04T17:00:00Z',v:'Houston',    pair:'r32_01 r32_04'},
+  {id:'r16_02',rd:'R16',h:'Paraguay',  a:'France',   utc:'2026-07-04T21:00:00Z',v:'Philadelphia',pair:'r32_03 r32_06'},
+  // W r32_02(Brazil) vs W r32_05(Norway) | W r32_07(Mexico) vs W r32_08(England)
+  {id:'r16_03',rd:'R16',h:'Brazil',    a:'Norway',   utc:'2026-07-05T20:00:00Z',v:'New Jersey',  pair:'r32_02 r32_05'},
+  {id:'r16_04',rd:'R16',h:'Mexico',    a:'England',  utc:'2026-07-06T00:00:00Z',v:'Mexico City', pair:'r32_07 r32_08'},
+  // W r32_12(Portugal) vs W r32_11(Spain) | W r32_10(USA) vs W r32_09(Belgium)
+  {id:'r16_05',rd:'R16',h:'Portugal',  a:'Spain',    utc:'2026-07-06T19:00:00Z',v:'Dallas',      pair:'r32_12 r32_11'},
+  {id:'r16_06',rd:'R16',h:'USA',       a:'Belgium',  utc:'2026-07-07T00:00:00Z',v:'Seattle',     pair:'r32_10 r32_09'},
+  // W r32_15(Argentina) vs W r32_14(Egypt) | W r32_13(Switzerland) vs W r32_16(TBD)
+  {id:'r16_07',rd:'R16',h:'Argentina', a:'Egypt',    utc:'2026-07-07T16:00:00Z',v:'Atlanta',     pair:'r32_15 r32_14'},
+  {id:'r16_08',rd:'R16',h:'Switzerland',a:'TBD',     utc:'2026-07-07T20:00:00Z',v:'Vancouver',   pair:'r32_13 r32_16'},
+  // ── Quarter-finals — July 9-12 ────────────────────────────────────────
+  {id:'qf_01',rd:'QF',h:'W r16_01',a:'W r16_02',utc:'2026-07-09T20:00:00Z',v:'Seattle',     pair:'r16_01 r16_02'},
+  {id:'qf_02',rd:'QF',h:'W r16_05',a:'W r16_06',utc:'2026-07-10T00:00:00Z',v:'Los Angeles', pair:'r16_05 r16_06'},
+  {id:'qf_03',rd:'QF',h:'W r16_03',a:'W r16_04',utc:'2026-07-11T20:00:00Z',v:'Houston',     pair:'r16_03 r16_04'},
+  {id:'qf_04',rd:'QF',h:'W r16_07',a:'W r16_08',utc:'2026-07-12T00:00:00Z',v:'Kansas City', pair:'r16_07 r16_08'},
   // ── Semi-finals — July 14-15 ──────────────────────────────────────────
-  {id:'sf_01',rd:'SF',h:'W qf_01',a:'W qf_02',utc:'2026-07-14T21:00:00Z',v:'Dallas'},
-  {id:'sf_02',rd:'SF',h:'W qf_03',a:'W qf_04',utc:'2026-07-15T21:00:00Z',v:'Atlanta'},
-  // ── Third place play-off — July 18 ────────────────────────────────────
-  {id:'3pl',rd:'3PL',h:'L sf_01',a:'L sf_02',utc:'2026-07-18T22:00:00Z',v:'Miami'},
+  {id:'sf_01',rd:'SF',h:'W qf_01',a:'W qf_02',utc:'2026-07-14T19:00:00Z',v:'Dallas',        pair:'qf_01 qf_02'},
+  {id:'sf_02',rd:'SF',h:'W qf_03',a:'W qf_04',utc:'2026-07-15T19:00:00Z',v:'Atlanta',       pair:'qf_03 qf_04'},
+  // ── 3rd Place — July 18 ───────────────────────────────────────────────
+  {id:'3pl',rd:'3PL',h:'Los sf_01',a:'Los sf_02',utc:'2026-07-18T21:00:00Z',v:'Miami',       pair:'sf_01 sf_02'},
   // ── Final — July 19 ───────────────────────────────────────────────────
-  {id:'fin',rd:'FIN',h:'W sf_01',a:'W sf_02',utc:'2026-07-19T23:00:00Z',v:'New York/New Jersey'}
+  {id:'fin',rd:'FIN',h:'W sf_01',a:'W sf_02',utc:'2026-07-19T19:00:00Z',v:'New York / New Jersey',pair:'sf_01 sf_02'}
 ];
 
 var KO_ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-finals',SF:'Semi-finals','3PL':'3rd Place',FIN:'Final'};
@@ -1195,14 +1199,33 @@ var Sess = {
 };
 
 // Helpers
-function calcPts(p, r) {
+function calcPts(p, r, matchId) {
   if (!p || !r) return null;
   if (p.h===undefined||p.a===undefined||r.h===undefined||r.a===undefined) return null;
   var ph=Number(p.h), pa=Number(p.a), rh=Number(r.h), ra=Number(r.a);
-  if (ph===rh && pa===ra) return 4;          // exact score = 4 pts
-  var pw = ph>pa?1:ph<pa?-1:0;
+  // Determine actual result direction (handle penalty winners in KO)
   var rw = rh>ra?1:rh<ra?-1:0;
-  return pw===rw ? 2 : 0;                    // correct winner/draw = 2 pts
+  if (rw===0 && r.winner) {
+    // Draw with penalty winner — find match to know home/away
+    var m = matchId ? KO_MS.find(function(x){return x.id===matchId;}) : null;
+    rw = (m && r.winner===m.h) ? 1 : -1;
+  }
+  if (ph===rh && pa===ra) {
+    // Exact score match
+    if (rw!==0 && ph===pa) {
+      // KO draw exact — also check winner pick
+      var pw2 = p.winner ? ((p.winner && r.winner && p.winner===r.winner)?rw:rw*-1) : 0;
+      return pw2===rw ? 4 : 2; // right winner = 4pts, wrong winner = 2pts
+    }
+    return 4;
+  }
+  var pw = ph>pa?1:ph<pa?-1:0;
+  // For KO draw prediction, use winner field to determine direction
+  if (pw===0 && p.winner && matchId) {
+    var km = KO_MS.find(function(x){return x.id===matchId;});
+    if (km) pw = p.winner===km.h ? 1 : -1;
+  }
+  return pw===rw ? 2 : 0;
 }
 function fmtTime(iso) {
   var d   = new Date(iso);
@@ -1453,26 +1476,56 @@ function ScorePick(props) {
 function PredModal(props) {
   var hs = useState(props.existing ? props.existing.h : 0); var h = hs[0]; var setH = hs[1];
   var as = useState(props.existing ? props.existing.a : 0); var a = as[0]; var setA = as[1];
+  var ws = useState(props.existing ? props.existing.winner||null : null); var winner=ws[0]; var setWinner=ws[1];
   var t = fmtTime(props.match.utc);
+  var isKO = props.match && ['R16','QF','SF','3PL','FIN'].indexOf(props.match.rd) !== -1;
+  var isDraw = Number(h) === Number(a);
+  var needsWinner = isKO && isDraw;
+  var mH = props.match.h; var mA = props.match.a;
   return html`<div class="modal">
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
       <h2 style=${{margin:0}}>Predict Score</h2>
       <button class="btn" style=${{padding:'4px 8px'}} onClick=${props.onClose}><i class="ti ti-x"></i></button>
     </div>
     <div style=${{display:'flex',alignItems:'center',justifyContent:'center',gap:16,marginBottom:12}}>
-      <div style=${{textAlign:'center'}}><div style=${{fontSize:28}}>${F[props.match.h]||'🏳'}</div><div style=${{fontSize:13,fontWeight:500}}>${props.match.h}</div></div>
+      <div style=${{textAlign:'center'}}><div style=${{fontSize:28}}>${F[mH]||'🏳'}</div><div style=${{fontSize:13,fontWeight:500}}>${mH}</div></div>
       <span style=${{color:'var(--mu)'}}>vs</span>
-      <div style=${{textAlign:'center'}}><div style=${{fontSize:28}}>${F[props.match.a]||'🏳'}</div><div style=${{fontSize:13,fontWeight:500}}>${props.match.a}</div></div>
+      <div style=${{textAlign:'center'}}><div style=${{fontSize:28}}>${F[mA]||'🏳'}</div><div style=${{fontSize:13,fontWeight:500}}>${mA}</div></div>
     </div>
     <div style=${{fontSize:12,color:'var(--mu)',textAlign:'center',marginBottom:16}}>${t.local}<br/><span style=${{fontSize:11,color:'var(--dm)'}}>${t.utcS}</span></div>
-    <div style=${{display:'flex',alignItems:'center',gap:16,marginBottom:20,justifyContent:'center'}}>
-      <${ScorePick} val=${h} onChange=${setH} label=${props.match.h} />
+    <div style=${{display:'flex',alignItems:'center',gap:16,marginBottom:16,justifyContent:'center'}}>
+      <${ScorePick} val=${h} onChange=${setH} label=${mH} />
       <span style=${{fontFamily:'Barlow Condensed',fontSize:28,fontWeight:700,color:'var(--mu)'}}>–</span>
-      <${ScorePick} val=${a} onChange=${setA} label=${props.match.a} />
+      <${ScorePick} val=${a} onChange=${setA} label=${mA} />
     </div>
+    ${needsWinner&&html`<div style=${{marginBottom:16,padding:'10px 12px',background:'rgba(240,180,41,.08)',borderRadius:'var(--rs)',border:'1px solid rgba(240,180,41,.3)'}}>
+      <div style=${{fontSize:12,fontWeight:600,color:'var(--gold)',marginBottom:8}}>⚽ Draw predicted — who wins after extra time/penalties?</div>
+      <div style=${{display:'flex',gap:8}}>
+        <button style=${{flex:1,padding:'8px',borderRadius:'var(--rs)',fontSize:13,fontWeight:600,cursor:'pointer',
+          border:winner===mH?'2px solid #1a56db':'1px solid var(--bdr)',
+          background:winner===mH?'rgba(26,86,219,.15)':'var(--bg3)',color:'var(--tx)'}}
+          onClick=${function(){setWinner(winner===mH?null:mH);}}>
+          ${F[mH]||'🏳'} ${mH}
+        </button>
+        <button style=${{flex:1,padding:'8px',borderRadius:'var(--rs)',fontSize:13,fontWeight:600,cursor:'pointer',
+          border:winner===mA?'2px solid #1a56db':'1px solid var(--bdr)',
+          background:winner===mA?'rgba(26,86,219,.15)':'var(--bg3)',color:'var(--tx)'}}
+          onClick=${function(){setWinner(winner===mA?null:mA);}}>
+          ${F[mA]||'🏳'} ${mA}
+        </button>
+      </div>
+    </div>`}
+    ${isKO&&!isDraw&&html`<div style=${{fontSize:11,color:'var(--dm)',textAlign:'center',marginBottom:12}}>
+      🏆 KO Match — predicted winner will advance
+    </div>`}
     <div style=${{display:'flex',gap:10}}>
       <button class="btn" style=${{flex:1}} onClick=${props.onClose}>Cancel</button>
-      <button class="btn-p" style=${{flex:2}} onClick=${function(){props.onSave(props.match.id,h,a);}}>Save prediction ⚽</button>
+      <button class="btn-p" style=${{flex:2,opacity:(needsWinner&&!winner)?.4:1}} 
+        disabled=${needsWinner&&!winner}
+        onClick=${function(){
+          if(needsWinner&&!winner){alert('Please pick who wins after penalties');return;}
+          props.onSave(props.match.id, h, a, winner||null);
+        }}>Save prediction ⚽</button>
     </div>
   </div>`;
 }
@@ -1520,12 +1573,39 @@ function WinnerModal(props) {
   var ss = useState(props.current||null); var sel = ss[0]; var setSel = ss[1];
   var fs = useState(''); var filter = fs[0]; var setFilter = fs[1];
   var filtered = TEAMS.filter(function(t){ return t.toLowerCase().includes(filter.toLowerCase()); });
+  // Countdown to Jul 4, 22:00 MVT deadline
+  var DEADLINE = new Date('2026-07-04T17:00:00Z').getTime();
+  var cs = useState(Math.max(0, DEADLINE - Date.now())); var msLeft=cs[0]; var setMsLeft=cs[1];
+  useEffect(function(){
+    if (msLeft <= 0) return;
+    var timer = setInterval(function(){
+      var left = Math.max(0, DEADLINE - Date.now());
+      setMsLeft(left);
+      if (left === 0) clearInterval(timer);
+    }, 1000);
+    return function(){ clearInterval(timer); };
+  }, []);
+  var hours   = Math.floor(msLeft / 3600000);
+  var minutes = Math.floor((msLeft % 3600000) / 60000);
+  var seconds = Math.floor((msLeft % 60000) / 1000);
+  var expired = msLeft === 0;
   return html`<div class="modal" style=${{maxWidth:480}}>
-    <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-      <h2 style=${{margin:0}}>🏆 Tournament Winner</h2>
+    <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+      <h2 style=${{margin:0,fontSize:16}}>🏆 Pick Your Champion Team</h2>
       <button class="btn" style=${{padding:'4px 8px'}} onClick=${props.onClose}><i class="ti ti-x"></i></button>
     </div>
-    <p style=${{fontSize:13,color:'var(--mu)',marginBottom:12}}>Pick your champion — the team you think will win WC 2026. Correct = +5 pts! Can be changed anytime before Jun 28.</p>
+    <div style=${{marginBottom:10,padding:'8px 12px',borderRadius:'var(--rs)',background:expired?'rgba(239,68,68,.1)':'rgba(240,180,41,.08)',border:'1px solid '+(expired?'rgba(239,68,68,.3)':'rgba(240,180,41,.3)')}}>
+      <div style=${{fontSize:13,fontWeight:600,color:expired?'#f87171':'var(--gold)',marginBottom:3}}>${expired?'🔒 Picks are now closed':'⏰ Deadline: Jul 4, 22:00 MVT'}</div>
+      ${expired
+        ? html`<div style=${{fontSize:12,color:'var(--dm)'}}>The champion pick window has ended. No more changes allowed.</div>`
+        : html`<div style=${{display:'flex',gap:8,alignItems:'center'}}>
+            <div style=${{textAlign:'center'}}>
+              <div style=${{fontFamily:'Barlow Condensed',fontSize:24,fontWeight:800,color:'var(--gold)'}}>${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}</div>
+              <div style=${{fontSize:10,color:'var(--dm)'}}>remaining to pick</div>
+            </div>
+          </div>`}
+    </div>
+    <p style=${{fontSize:12,color:'var(--mu)',marginBottom:12}}>Pick the team you think will win WC 2026 — earns you <strong style=${{color:'var(--gold)'}}>+5 pts</strong> if correct! ${props.current?html`<span>Current pick: <strong>${props.current}</strong></span>`:'No pick yet.'}</p>
     <input value=${filter} onChange=${function(e){setFilter(e.target.value);}} placeholder="Search team..." style=${{marginBottom:10}} />
     <div class="g3" style=${{maxHeight:260,overflowY:'auto',marginBottom:16,padding:2}}>
       ${filtered.map(function(t){ return html`<button key=${t} onClick=${function(){setSel(t);}} style=${{padding:'8px 5px',borderRadius:'var(--rs)',fontSize:11,cursor:'pointer',border:sel===t?'2px solid #1a56db':'1px solid var(--bdr)',background:sel===t?'rgba(26,86,219,.1)':'var(--bg3)',color:'var(--tx)',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
@@ -1632,6 +1712,7 @@ function SuperAdminApp(props) {
   var rsC = useState({}); var resCollapsed=rsC[0]; var setResCollapsed=rsC[1];
   var bdG = useState(true); var showBadges=bdG[0]; var setShowBadges=bdG[1];
   var pcM = useState(0); var predCutoffMin=pcM[0]; var setPredCutoffMin=pcM[1];
+  var ksS = useState([]); var koSchedule=ksS[0]; var setSaKoSchedule=ksS[1];
 
   // notify() doesn't exist in this component's scope (it's local to App) —
   // this was already being called by the pre-existing Badge Display button
@@ -1691,13 +1772,13 @@ function SuperAdminApp(props) {
 
   function loadAll() {
     setLoading(true);
-    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log','wc26_bonus','wc26_koresults','wc26_pin_requests','wc26_settings'];
+    var keys = ['wc26_users','wc26_rooms','wc26_preds','wc26_results','wc26_global_anns','wc26_pred_log','wc26_bonus','wc26_koresults','wc26_pin_requests','wc26_settings','wc26_ko_schedule'];
     var done = 0;
     var setters = {wc26_users:setSaUsers, wc26_rooms:setSaRooms,
                    wc26_preds:setSaPreds, wc26_results:setSaResults,
                    wc26_koresults:setSaKoResults, wc26_bonus:setSaBonusPts, wc26_pin_requests:function(v){setPinRequests(Array.isArray(v)?v:[]);}, wc26_settings:function(v){if(v&&typeof v.showBadges!=='undefined')setShowBadges(v.showBadges); if(v&&typeof v.predictionCutoffMinutes!=='undefined'){var n=Number(v.predictionCutoffMinutes);if(!isNaN(n))setPredCutoffMin(n);}},
                    wc26_pred_log:function(v){setPredLog(Array.isArray(v)?v.slice(-300):[]);},
-                   wc26_global_anns:function(v){setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]);}};
+                   wc26_global_anns:function(v){setGlobalAnns(Array.isArray(v)?v:v?Object.values(v):[]);}, wc26_ko_schedule:function(v){setSaKoSchedule(Array.isArray(v)?v:v?Object.values(v):[]);} };
     function tick() { done++; if (done >= keys.length) setLoading(false); }
     keys.forEach(function(k){
       fetch(GS_URL + '?action=get&key=' + k)
@@ -1865,6 +1946,7 @@ function SuperAdminApp(props) {
     {id:'users',     label:'👤 Users ('+uList.length+')'},
     {id:'rooms',     label:'🏠 Rooms ('+rList.length+')'},
     {id:'preds',     label:'⚽ Predictions ('+prList.length+')'},
+    {id:'schedule',  label:'📅 Schedule'},
     {id:'results',   label:'📊 Results ('+reList.length+')'},
     {id:'audit',     label:'📋 Audit Log'},
     {id:'anns',     label:'📢 Announcements'},
@@ -2354,6 +2436,141 @@ function SuperAdminApp(props) {
       </div>`}
 
       <!-- Results tab -->
+      ${saTab==='schedule'&&html`<div style=${{display:'flex',flexDirection:'column',gap:16}}>
+
+        <div class="card">
+          <div style=${{fontWeight:700,fontSize:15,marginBottom:14,color:'var(--gold)'}}>📅 Post Match to Schedule</div>
+          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:14}}>Once saved, all users see the match in Knockout tab and can predict immediately.</div>
+          <div style=${{display:'flex',flexDirection:'column',gap:10}}>
+
+            <div>
+              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>ROUND / CATEGORY</div>
+              <select id="sch_rd" style=${{width:'100%',padding:'8px 10px',fontSize:13,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                <option value="R16">🔵 Round of 16</option>
+                <option value="QF">🟡 Quarter-Final</option>
+                <option value="SF">🟠 Semi-Final</option>
+                <option value="3PL">⚫ 3rd Place Play-Off</option>
+                <option value="FIN">🏆 Final</option>
+              </select>
+            </div>
+
+            <div>
+              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>MATCH (select existing slot to update, or create new)</div>
+              <select id="sch_id" style=${{width:'100%',padding:'8px 10px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                ${(function(){
+                  return KO_MS.map(function(m){
+                    return html`<option key=${m.id} value=${m.id}>${m.id} — ${m.h} vs ${m.a}</option>`;
+                  });
+                })()}
+              </select>
+            </div>
+
+            <div style=${{display:'flex',gap:8,alignItems:'flex-end'}}>
+              <div style=${{flex:1}}>
+                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>HOME TEAM</div>
+                <input id="sch_h" list="sch_tl" placeholder="e.g. Canada" style=${{width:'100%',padding:'8px 10px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+              </div>
+              <div style=${{flexShrink:0,fontSize:16,fontWeight:700,color:'var(--dm)',paddingBottom:4}}>vs</div>
+              <div style=${{flex:1}}>
+                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>AWAY TEAM</div>
+                <input id="sch_a" list="sch_tl" placeholder="e.g. Morocco" style=${{width:'100%',padding:'8px 10px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+              </div>
+            </div>
+            <datalist id="sch_tl">${TEAMS.map(function(tm){return html`<option key=${tm} value=${tm} />`;})}</datalist>
+
+            <div style=${{display:'flex',gap:8}}>
+              <div style=${{flex:1}}>
+                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>DATE — MVT (UTC+5)</div>
+                <input id="sch_date" type="date" style=${{width:'100%',padding:'8px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+              </div>
+              <div style=${{width:120}}>
+                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>TIME — MVT 24h</div>
+                <input id="sch_time" type="time" style=${{width:'100%',padding:'8px',fontSize:13,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+              </div>
+              <div style=${{width:100}}>
+                <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>VENUE</div>
+                <input id="sch_v" placeholder="City" style=${{width:'100%',padding:'8px',fontSize:12,boxSizing:'border-box',background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}} />
+              </div>
+            </div>
+
+            <button class="btn-p" style=${{padding:'10px',fontSize:14,marginTop:4}}
+              onClick=${function(){
+                var rd=document.getElementById('sch_rd').value;
+                var id=document.getElementById('sch_id').value;
+                var h=document.getElementById('sch_h').value.trim();
+                var a=document.getElementById('sch_a').value.trim();
+                var date=document.getElementById('sch_date').value;
+                var time=document.getElementById('sch_time').value;
+                var v=document.getElementById('sch_v').value.trim();
+                if(!id||!h||!a||!date||!time){alert('Please fill all fields (except Venue is optional)');return;}
+                var mvtDT=date+'T'+time+':00+05:00';
+                var utcD=new Date(mvtDT);
+                if(isNaN(utcD.getTime())){alert('Invalid date/time');return;}
+                var utcStr=utcD.toISOString();
+                var entry={id:id,rd:rd,h:h,a:a,utc:utcStr,v:v||'TBD'};
+                var existing=(props.koSchedule||[]).filter(function(m){return m.id!==id;});
+                existing.push(entry);
+                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                  body:JSON.stringify({action:'set',key:'wc26_ko_schedule',value:existing})})
+                .then(function(r){return r.json();})
+                .then(function(d){
+                  if(d&&d.ok){
+                    if(props.setKoSchedule)props.setKoSchedule(existing);
+                    setSaKoSchedule(existing);
+                    var dsp=utcD.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
+                    alert('Posted! '+rd+': '+h+' vs '+a+' on '+dsp+' MVT. Users can now predict.');
+                    document.getElementById('sch_h').value='';
+                    document.getElementById('sch_a').value='';
+                    document.getElementById('sch_v').value='';
+                  }else alert('Error: '+(d&&d.error||'failed'));
+                }).catch(function(e){alert('Network error: '+e.message);});
+              }}>📅 Post Match to All Users</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style=${{fontWeight:700,fontSize:15,marginBottom:10}}>📋 KO Schedule Overview</div>
+          ${(function(){
+            var ks=props.koSchedule||[];
+            var byRound={};
+            var effKO=KO_MS.map(function(m){var ov=ks.find(function(s){return s.id===m.id;});return ov?Object.assign({},m,ov):m;})
+                           .concat(ks.filter(function(s){return !KO_MS.find(function(k){return k.id===s.id;});}));
+            effKO.forEach(function(m){if(!byRound[m.rd])byRound[m.rd]=[];byRound[m.rd].push(m);});
+            var RO=['R16','QF','SF','3PL','FIN'];
+            var RL={R16:'Round of 16',QF:'Quarter-Finals',SF:'Semi-Finals','3PL':'3rd Place',FIN:'Final'};
+            return html`<div>${RO.filter(function(rd){return byRound[rd]&&byRound[rd].length;}).map(function(rd){
+              return html`<div key=${rd} style=${{marginBottom:12}}>
+                <div style=${{fontSize:11,fontWeight:700,color:'var(--gold)',marginBottom:5,letterSpacing:.5}}>${RL[rd]||rd}</div>
+                ${byRound[rd].map(function(m){
+                  var mvt=m.utc?new Date(m.utc).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'}):'TBD';
+                  var isUpd=!!ks.find(function(s){return s.id===m.id;});
+                  return html`<div key=${m.id} style=${{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',borderRadius:'var(--rs)',
+                    background:isUpd?'rgba(74,222,128,.05)':'var(--bg3)',
+                    border:'1px solid '+(isUpd?'rgba(74,222,128,.2)':'var(--bdr)'),marginBottom:4}}>
+                    <div>
+                      <span style=${{fontWeight:600,fontSize:13}}>${m.h} vs ${m.a}</span>
+                      <span style=${{fontSize:11,color:'var(--dm)',marginLeft:8}}>${m.id}</span>
+                      ${isUpd?html`<span style=${{fontSize:10,color:'#4ade80',marginLeft:4}}>✓ custom</span>`:''}
+                    </div>
+                    <div style=${{display:'flex',alignItems:'center',gap:8}}>
+                      <span style=${{fontSize:11,color:'var(--dm)'}}>${mvt} MVT</span>
+                      ${isUpd?html`<button class="btn" style=${{fontSize:10,padding:'2px 6px',color:'#f87171',borderColor:'rgba(239,68,68,.2)'}}
+                        onClick=${function(){
+                          var upd=ks.filter(function(s){return s.id!==m.id;});
+                          fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'set',key:'wc26_ko_schedule',value:upd})})
+                          .then(function(r){return r.json();})
+                          .then(function(){if(props.setKoSchedule)props.setKoSchedule(upd);setSaKoSchedule(upd);});
+                        }}>Revert</button>`:''}
+                    </div>
+                  </div>`;
+                })}
+              </div>`;
+            })}</div>`;
+          })()}
+        </div>
+
+      </div>`}
+
       ${saTab==='results'&&html`<div>
         <!-- Info banner -->
         <div style=${{marginBottom:14,padding:'10px 14px',background:'rgba(34,197,94,.07)',border:'1px solid rgba(34,197,94,.2)',borderRadius:'var(--rs)',fontSize:12,color:'var(--mu)'}}>
@@ -2513,16 +2730,34 @@ function SuperAdminApp(props) {
                               style=${{width:36,padding:'4px',fontSize:12,textAlign:'center',background:'var(--bg)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:4}} />
                             <button class="btn" style=${{fontSize:11,padding:'4px 8px',color:'#4ade80',borderColor:'rgba(74,222,128,.3)'}}
                               onClick=${function(){
-                                var h=document.getElementById('sa_kor_'+m.id+'_h');
-                                var a=document.getElementById('sa_kor_'+m.id+'_a');
-                                if(!h||!a||h.value===''||a.value===''){alert('Enter both scores');return;}
+                                var hEl=document.getElementById('sa_kor_'+m.id+'_h');
+                                var aEl=document.getElementById('sa_kor_'+m.id+'_a');
+                                if(!hEl||!aEl||hEl.value===''||aEl.value===''){alert('Enter both scores');return;}
+                                var hv=Number(hEl.value), av=Number(aEl.value);
+                                var res={h:hv,a:av};
+                                // If draw in KO match, require winner pick
+                                if(hv===av){
+                                  var isKO=['R16','QF','SF','3PL','FIN'].indexOf(m.rd)!==-1;
+                                  if(isKO){
+                                    var w=window.prompt('Draw result - type 1 for ' + m.h + ', 2 for ' + m.a,'');
+                                    if(w===null)return;
+                                    res.winner=w==='1'?m.h:m.a;
+                                    res.pens='Draw (penalties)';
+                                  }
+                                }
                                 var upd=Object.assign({},saKoResults||{}); 
-                                upd[m.id]={h:Number(h.value),a:Number(a.value)};
+                                upd[m.id]=res;
                                 setSaKoResults(upd);
                                 fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
                                   body:JSON.stringify({action:'set',key:'wc26_koresults',value:upd})})
                                 .then(function(r){return r.json();})
-                                .then(function(d){if(d&&d.ok)alert('KO result saved ✓ — all rooms updated');else alert('Error: '+(d&&d.error||'?'));})
+                                .then(function(d){
+                                  if(d&&d.ok){
+                                    var msg='KO result saved ✓';
+                                    if(res.winner)msg+=' — '+res.winner+' advances (pens)';
+                                    alert(msg+' — all rooms updated');
+                                  }else alert('Error: '+(d&&d.error||'?'));
+                                })
                                 .catch(function(e){alert('Error: '+e.message);});
                               }}>Save</button>
                           </div>`}
@@ -3759,7 +3994,41 @@ function KOBracketView(props) {
 
   // Group KO_MS by round
   var byRound = {};
-  KO_MS.forEach(function(m) {
+  
+  // Resolve team name: if placeholder like 'W r32_01', look up koResults
+  function getTeam(slot, koRes) {
+    if (!slot || (!slot.startsWith('W ') && !slot.startsWith('Los ') && !slot.startsWith('Win '))) return slot;
+    var m = slot.match(/^(W|Win|Los)\s+(r32|r16|qf|sf|3pl|fin)_?(\S+)$/);
+    if (!m) return slot;
+    var isLoss = m[1]==='Los';
+    var matchId = m[2]+'_'+m[3];
+    if (matchId.includes('__')) matchId = matchId.replace('__','_'); // normalize
+    var res = koRes[matchId];
+    if (!res) return slot; // not played yet
+    var parentMatch = KO_MS.find(function(x){return x.id===matchId;});
+    if (!parentMatch) return slot;
+    var hTeam = getTeam(parentMatch.h, koRes);
+    var aTeam = getTeam(parentMatch.a, koRes);
+    if (res.h > res.a) return isLoss ? aTeam : hTeam;
+    if (res.a > res.h) return isLoss ? hTeam : aTeam;
+    // Draw — use winner field if available
+    if (res.winner) {
+      var winnerTeam = res.winner === parentMatch.h ? hTeam : aTeam;
+      return isLoss ? (winnerTeam===hTeam?aTeam:hTeam) : winnerTeam;
+    }
+    return slot;
+  }
+
+// Merge hardcoded KO_MS with any custom schedule from GAS
+  var effKO_BV = (function(){
+    var ks = props.koSchedule || [];
+    if (!ks.length) return KO_MS;
+    var ovMap = {};
+    ks.forEach(function(m){ if(m.id) ovMap[m.id]=m; });
+    return KO_MS.map(function(m){ return ovMap[m.id]?Object.assign({},m,ovMap[m.id]):m; })
+                .concat(ks.filter(function(m){return m.id&&!KO_MS.find(function(k){return k.id===m.id;});}));
+  })();
+  effKO_BV.forEach(function(m) {
     if (!byRound[m.rd]) byRound[m.rd] = [];
     byRound[m.rd].push(m);
   });
@@ -3801,7 +4070,9 @@ function KOBracketView(props) {
             var myPred = uid ? preds[uid+'_'+m.id] : null;
             var mTime  = new Date(m.utc);
             var mvtStr = mTime.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Indian/Maldives'});
-            var isKnown = m.h && !m.h.startsWith('W ') && !m.h.startsWith('L ');
+            var resolvedH = getTeam(m.h, koRes);
+            var resolvedA = getTeam(m.a, koRes);
+            var isKnown = resolvedH && !resolvedH.startsWith('W ') && !resolvedH.startsWith('L ') && !resolvedH.startsWith('Win ');
 
             return html`<div key=${m.id} style=${{
               borderRadius:'var(--rs)',
@@ -3813,8 +4084,8 @@ function KOBracketView(props) {
               <div style=${{display:'flex',alignItems:'center',padding:'10px 12px',gap:8}}>
                 <!-- Home team -->
                 <div style=${{flex:1,display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end',minWidth:0}}>
-                  ${isKnown?html`<${FlagImg} team=${m.h} w=${22} />`:null}
-                  <span style=${{fontSize:13,fontWeight:700,color:'var(--tx)',textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
+                  ${isKnown?html`<${FlagImg} team=${resolvedH} w=${22} />`:null}
+                  <span style=${{fontSize:13,fontWeight:700,color:'var(--tx)',textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${resolvedH}</span>
                 </div>
                 <!-- Score / time -->
                 <div style=${{textAlign:'center',flexShrink:0,width:80}}>
@@ -3830,7 +4101,7 @@ function KOBracketView(props) {
                 </div>
                 <!-- Away team -->
                 <div style=${{flex:1,display:'flex',alignItems:'center',gap:6,minWidth:0}}>
-                  ${isKnown?html`<${FlagImg} team=${m.a} w=${22} />`:null}
+                  ${isKnown?html`<${FlagImg} team=${resolvedA} w=${22} />`:null}
                   <span style=${{fontSize:13,fontWeight:700,color:'var(--tx)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.a}</span>
                 </div>
               </div>
@@ -4381,6 +4652,7 @@ function RoomPage(props) {
         : html`<${KOBracketView}
           qualifiers=${props.qualifiers}
           koResults=${props.koResults||{}}
+          koSchedule=${props.koSchedule||[]}
           preds=${props.preds||{}}
           user=${props.user}
           isAdmin=${props.isAdmin}
@@ -4652,7 +4924,7 @@ function RoomPage(props) {
                 <span style=${{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
                 <span style=${{fontSize:11,color:'var(--mu)',flexShrink:0}}>vs</span>
                 <${FlagImg} team=${m.a} w=${20} />
-                <span style=${{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.a}</span>
+                <span style=${{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${resolvedA}</span>
               </div>
               <span class=${'bdg '+(st==='live'?'blv':'bpa')} style=${{fontSize:10,flexShrink:0}}>${st==='live'?'LIVE':'PAST'}</span>
               <button class="btn-p" style=${{fontSize:11,padding:'4px 10px',flexShrink:0}} onClick=${function(){props.onResult(m);}}>
@@ -5580,6 +5852,7 @@ function App() {
   var s11e=useState(false); var newsLoading=s11e[0]; var setNewsLoading=s11e[1];
   var s11f=useState(function(){ try{ return JSON.parse(_ls.get('wc26_kores','{}')||'{}'); }catch(e){ console.warn('wc26_kores was corrupted, resetting:', e); try{_ls.del('wc26_kores');}catch(e2){} return {}; } });
   var koResults=s11f[0]; var setKoResults=s11f[1];
+  var ksSt=useState([]); var koSchedule=ksSt[0]; var setKoSchedule=ksSt[1];
   var s11g=useState(function(){return _ls.get('wc26_apikey','0f39102e379e411b88bb07838e749fb2');});
   var apiKey=s11g[0]; var setApiKey=s11g[1];
   var s11h=useState({}); var chatMsgs=s11h[0]; var setChatMsgs=s11h[1];
@@ -5722,7 +5995,12 @@ function App() {
       var kr = v||{};
       setKoResults(kr);
       _ls.set('wc26_kores', JSON.stringify(kr));
+    })
+    Store.listen('ko_schedule', function(v) {
+      var ks = Array.isArray(v) ? v : (v ? Object.values(v) : []);
+      setKoSchedule(ks);
     });
+;
     // Chat: handled by RoomChat component directly
 
     function runSync(key) {
@@ -5924,7 +6202,7 @@ function App() {
     loadMemberPreds(f.members||[], setPreds);
     notify('Joined "' + f.name + '"! 🎉');
   }
-  function doPredict(mId, h, a) {
+  function doPredict(mId, h, a, winner) {
     var m = MS.find(function(x){return x.id===mId;}) || KO_MS.find(function(x){return x.id===mId;});
     if (!canStillPredict(m, predCutoffMin)) {
       notify('Predictions for this match are locked ⏱️', 'err');
@@ -5933,7 +6211,7 @@ function App() {
     }
     var key      = user.id + '_' + mId;
     var userKey  = 'wc26_preds_' + user.id;
-    var newPred  = {h: Number(h), a: Number(a), ts: new Date().toISOString()};
+    var newPred  = {h: Number(h), a: Number(a), ts: new Date().toISOString()}; if(winner) newPred.winner=winner;
 
     // Build this user's prediction set
     var myPreds = Object.assign({}, _cache[userKey] || {});
@@ -6106,11 +6384,22 @@ function App() {
   function sendChatMessage(msg, cb) { if (cb) cb(); }
 
 
+  // Merge hardcoded KO_MS with any GAS schedule overrides
+  function getEffKO() {
+    if (!koSchedule || koSchedule.length === 0) return KO_MS;
+    var overrides = {};
+    koSchedule.forEach(function(m){ if(m.id) overrides[m.id] = m; });
+    return KO_MS.map(function(m){ return overrides[m.id] ? Object.assign({},m,overrides[m.id]) : m; })
+               .concat(koSchedule.filter(function(m){
+                 return m.id && !KO_MS.find(function(k){return k.id===m.id;});
+               }));
+  }
+
   function uPts(uid) {
     var grpPts = MS.reduce(function(total,m){
       return total + (calcPts(preds[uid+'_'+m.id], results[m.id])||0);
     }, 0);
-    var koPts = KO_MS.reduce(function(total,m){
+    var koPts = getEffKO().reduce(function(total,m){
       return total + (calcPts(preds[uid+'_'+m.id], koResults[m.id])||0);
     }, 0);
     return grpPts + koPts;
@@ -6264,7 +6553,7 @@ function getAchievements(uid, predsMap, resultsMap) {
   if (!Store._ready()) return html`<${SetupScreen} />`;
 
   // Route to super admin
-  if (isSuperAdmin) return html`<${SuperAdminApp} preds=${preds} users=${users} rooms=${rooms} results=${results} koResults=${koResults} bonusPts=${bonusPts} />`;
+  if (isSuperAdmin) return html`<${SuperAdminApp} preds=${preds} users=${users} rooms=${rooms} koSchedule=${koSchedule} setKoSchedule=${setKoSchedule} results=${results} koResults=${koResults} bonusPts=${bonusPts} />`;
 
   if (scr === 'loading') return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,background:'var(--bg)'}}>
     <svg viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg" width="56" height="64">
@@ -6347,7 +6636,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       loadMemberPreds(useRoom.members||[], setPreds); 
     }} onCreate=${function(){setModal({t:'create'});}} onJoin=${function(){setModal({t:'join'});}} myChampion=${user&&user.champTeam||null} canPick=${canPick} onPickChampion=${function(){setModal({t:'winner'});}} news=${news} newsLoading=${newsLoading} onFetchNews=${fetchNews} />`}
       ${scr==='room'&&room&&user&&html`<${RoomErrorBoundary}><${RoomPage} user=${user} users=${users} room=${room} tab=${tab} setTab=${setTab} grp=${grp} setGrp=${setGrp} lboard=${lboard} liveScores=${liveScores} canPick=${canPick} myPick=${myPick} preds=${preds} results=${results} predCutoffMin=${predCutoffMin} onBack=${function(){setScr('dash');}} onPredict=${function(m){setModal({t:'pred',m:m});}} onPickW=${function(){setModal({t:'winner'});}} onResult=${function(m){setModal({t:'result',m:m});}} onShowMatch=${function(m){var lv=liveScores[m.id];if(lv){setLiveMatchDetail({m:m});}else{setMatchDetail(m);}}} onAdminUnlock=${verifyAdmin}
-          isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults} showBadges=${showBadges}
+          isAdmin=${isAdmin} qualifiers=${qualifiers} koResults=${koResults} koSchedule=${koSchedule} showBadges=${showBadges}
           apiKey=${apiKey} onSaveAPIKey=${saveAPIKey} announcements=${(room&&annsByRoom[room.id]||[]).concat(globalAnns.filter(function(a){return a.scope==="rooms"||a.scope==="all";}))}
           onLeaveRoom=${leaveRoom} onLockRoom=${doLockRoom} onSync=${function(){runSync(_ls.get('wc26_apikey','')||'0f39102e379e411b88bb07838e749fb2');}} syncStatus=${syncStatus} lastSync=${lastSync} onH2H=${function(u){setH2hUser(u);}} onViewPreds=${function(u){setH2hUser(u);}} onRemoveFromRoom=${removeFromRoom} onAddToRoom=${addToRoomByPhone} onAddAnn=${function(){setAnnModal({mode:'add'});}} onDeleteAnn=${deleteAnnouncement} bonusPts=${bonusPts} onSetBonus=${setUserBonus} onEditPred=${function(uid,mId,h,a){doPredict.forUser(uid,mId,h,a);}}
           onEditAnn=${function(a){setAnnModal({mode:'edit',ann:a});}}
@@ -6379,3 +6668,4 @@ try {
 </script>
 </body>
 </html>
+ 
