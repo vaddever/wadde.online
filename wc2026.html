@@ -1201,28 +1201,31 @@ var Sess = {
 // Helpers
 function calcPts(p, r, matchId) {
   if (!p || !r) return null;
-  if (p.h===undefined||p.a===undefined||r.h===undefined||r.a===undefined) return null;
-  var ph=Number(p.h), pa=Number(p.a), rh=Number(r.h), ra=Number(r.a);
-  // Determine actual result direction (handle penalty winners in KO)
-  var rw = rh>ra?1:rh<ra?-1:0;
-  if (rw===0 && r.winner) {
-    // Draw with penalty winner — find match to know home/away
-    var m = matchId ? KO_MS.find(function(x){return x.id===matchId;}) : null;
-    rw = (m && r.winner===m.h) ? 1 : -1;
+  var ph = Number(p.h), pa = Number(p.a), rh = Number(r.h), ra = Number(r.a);
+  if (isNaN(ph)||isNaN(pa)||isNaN(rh)||isNaN(ra)) return null;
+
+  // Result direction — only adjust for KO penalty draws when matchId is known
+  var rw = rh>ra ? 1 : rh<ra ? -1 : 0;
+  if (rw===0 && r.winner && matchId) {
+    var rm = KO_MS.find(function(x){ return x.id===matchId; });
+    if (rm) rw = r.winner===rm.h ? 1 : -1;
   }
+
+  // Exact score
   if (ph===rh && pa===ra) {
-    // Exact score match
-    if (rw!==0 && ph===pa) {
-      // KO draw exact — also check winner pick
-      var pw2 = p.winner ? ((p.winner && r.winner && p.winner===r.winner)?rw:rw*-1) : 0;
-      return pw2===rw ? 4 : 2; // right winner = 4pts, wrong winner = 2pts
+    // KO draw exact: check winner pick if matchId known AND prediction has winner
+    if (rw!==0 && ph===pa && p.winner && matchId) {
+      var rm2 = KO_MS.find(function(x){ return x.id===matchId; });
+      var pw_d = rm2 ? (p.winner===rm2.h ? 1 : -1) : 0;
+      return pw_d===rw ? 4 : 2;
     }
-    return 4;
+    return 4; // all other exact scores = 4 pts (backward compatible)
   }
-  var pw = ph>pa?1:ph<pa?-1:0;
-  // For KO draw prediction, use winner field to determine direction
+
+  // Correct direction (winner/draw)
+  var pw = ph>pa ? 1 : ph<pa ? -1 : 0;
   if (pw===0 && p.winner && matchId) {
-    var km = KO_MS.find(function(x){return x.id===matchId;});
+    var km = KO_MS.find(function(x){ return x.id===matchId; });
     if (km) pw = p.winner===km.h ? 1 : -1;
   }
   return pw===rw ? 2 : 0;
@@ -2192,8 +2195,8 @@ function SuperAdminApp(props) {
                             var allBonus   = props.bonusPts || saBonusPts || {};
                             var rows = members.map(function(uid){
                               var u = (props.users&&props.users[uid]) || saUsers[uid] || {name:uid.slice(-6), id:uid};
-                              var pts = MS.reduce(function(s,m){ return s+(calcPts(allPreds[uid+'_'+m.id], allResults[m.id])||0); }, 0)
-                                      + KO_MS.reduce(function(s,m){ return s+(calcPts(allPreds[uid+'_'+m.id], allKoRes[m.id])||0); }, 0)
+                              var pts = MS.reduce(function(s,m){ return s+(calcPts(allPreds[uid+'_'+m.id], allResults[m.id], m.id)||0); }, 0)
+                                      + KO_MS.reduce(function(s,m){ return s+(calcPts(allPreds[uid+'_'+m.id], allKoRes[m.id], m.id)||0); }, 0)
                                       + ((allBonus[r.id]||{})[uid]||0);
                               var np = MS.filter(function(m){return allPreds[uid+'_'+m.id];}).length;
                               return {u:u, pts:pts, np:np};
@@ -5281,7 +5284,7 @@ function UserPredictionsModal(props) {
     var p = predsMap[u.id+'_'+m.id];
     if (!p) return null;
     var r = resultsMap[m.id] || (koResMap2&&koResMap2[m.id]);
-    var pts = r?(calcPts(p,r)||0):null;
+    var pts = r?(calcPts(p,r,m.id)||0):null;
     var isExact  = pts===4;
     var isWinner = pts===2;
     var isWrong  = pts===0 && r;
@@ -6500,10 +6503,10 @@ function App() {
 
   function uPts(uid) {
     var grpPts = MS.reduce(function(total,m){
-      return total + (calcPts(preds[uid+'_'+m.id], results[m.id])||0);
+      return total + (calcPts(preds[uid+'_'+m.id], results[m.id], m.id)||0);
     }, 0);
     var koPts = getEffKO().reduce(function(total,m){
-      return total + (calcPts(preds[uid+'_'+m.id], koResults[m.id])||0);
+      return total + (calcPts(preds[uid+'_'+m.id], koResults[m.id], m.id)||0);
     }, 0);
     return grpPts + koPts;
   }
