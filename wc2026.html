@@ -2353,6 +2353,58 @@ function SuperAdminApp(props) {
           </div>
         </div>
 
+        <!-- ── Recover Missing Predictions ──────────────────────────── -->
+        <div class="card" style=${{border:'1px solid rgba(251,191,36,.3)',background:'rgba(251,191,36,.04)'}}>
+          <div style=${{fontWeight:700,fontSize:14,marginBottom:4,color:'var(--gold)'}}>🔍 Recover Missing Predictions</div>
+          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:12}}>If a user has missing group stage or R32 predictions, recover them from the legacy global predictions store. Merges without overwriting existing ones.</div>
+          <div style=${{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
+            <div style=${{flex:'1 1 150px'}}>
+              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>USER</div>
+              <select id="rec_uid" style=${{width:'100%',padding:'8px 10px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                <option value="">Select user…</option>
+                ${uList.map(function(u){return html`<option key=${u.id} value=${u.id}>${u.name}</option>`;})}
+              </select>
+            </div>
+            <button class="btn-p" style=${{padding:'8px 16px',fontSize:13,alignSelf:'flex-end'}}
+              onClick=${function(){
+                var uid=document.getElementById('rec_uid').value;
+                if(!uid){alert('Select a user');return;}
+                var uName=(saUsers[uid]||{name:uid}).name;
+                // Read global preds key (legacy format: uid_matchId)
+                fetch(GS_URL+'?action=get&key=wc26_preds&_='+Date.now(),{redirect:'follow'})
+                .then(function(r){return r.json();})
+                .then(function(gd){
+                  var gp=gd.ok&&gd.value&&typeof gd.value==='object'?gd.value:{};
+                  var fromGlobal={};
+                  Object.keys(gp).forEach(function(k){
+                    if(k.indexOf(uid+'_')===0) fromGlobal[k.slice(uid.length+1)]=gp[k];
+                  });
+                  var gc=Object.keys(fromGlobal).length;
+                  // Read per-user preds
+                  return fetch(GS_URL+'?action=get&key=wc26_preds_'+uid+'&_='+Date.now(),{redirect:'follow'})
+                  .then(function(r){return r.json();})
+                  .then(function(ud){
+                    var cp=ud.ok&&ud.value&&typeof ud.value==='object'?ud.value:{};
+                    var cc=Object.keys(cp).length;
+                    if(!gc&&!cc){alert('No predictions found for '+uName+' anywhere.');return;}
+                    var merged=Object.assign({},fromGlobal,cp); // current wins on conflict
+                    var mc=Object.keys(merged).length;
+                    var newC=mc-cc;
+                    if(newC<=0){alert('No additional predictions found for '+uName+'. Current: '+cc+', Global: '+gc+'. All already in record.');return;}
+                    if(!confirm('Found '+newC+' missing predictions for '+uName+'. Current: '+cc+', after recovery: '+mc+'. Restore?'))return;
+                    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                      body:JSON.stringify({action:'set',key:'wc26_preds_'+uid,value:merged})})
+                    .then(function(r){return r.json();})
+                    .then(function(d){
+                      if(d&&d.ok) alert('Recovered '+newC+' predictions for '+uName+'. Total: '+mc+'. User must refresh.');
+                      else alert('Error: '+(d&&d.error||'failed'));
+                    }).catch(function(e){alert('Error: '+e.message);});
+                  });
+                }).catch(function(e){alert('Error: '+e.message);});
+              }}>🔍 Recover Predictions</button>
+          </div>
+        </div>
+
         <!-- ── All predictions table ─────────────────────────────── -->
         <div>
 
@@ -6425,43 +6477,58 @@ function App() {
     var userKey  = 'wc26_preds_' + user.id;
     var newPred  = {h: Number(h), a: Number(a), ts: new Date().toISOString()}; if(winner) newPred.winner=winner;
 
-    // Build this user's prediction set
-    var myPreds = Object.assign({}, _cache[userKey] || {});
-    if (!Object.keys(myPreds).length) {
-      Object.keys(preds).forEach(function(k) {
-        if (k.indexOf(user.id+'_') === 0)
-          myPreds[k.slice(user.id.length+1)] = preds[k];
-      });
-    }
-    myPreds[mId] = newPred;
-
-    // Update global preds state immediately
+    // Update preds state immediately (optimistic UI)
     var upd = Object.assign({}, preds);
     upd[key] = newPred;
     setPreds(upd);
+    setModal(null);
+    notify('Saving prediction… ⚽');
 
-    // Update caches so the merge listener keeps the new prediction
-    _cache[userKey]       = myPreds;
-    _cache['wc26_preds']  = upd;           // global cache holds merged state
-    _lastWrite['wc26_preds'] = Date.now() + 300000; // 5-min guard on global poll
+    // ALWAYS fetch user's full predictions from GAS first, then merge + write
+    // This prevents page-refresh cache emptiness from overwriting existing predictions
+    fetch(GS_URL+'?action=get&key='+encodeURIComponent(userKey)+'&_='+Date.now(),{redirect:'follow'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      // Start with GAS data (most authoritative), fallback to cache/preds state
+      var gasPreds = (d.ok && d.value && typeof d.value==='object') ? d.value : null;
+      var myPreds;
+      if (gasPreds && Object.keys(gasPreds).length > 0) {
+        // GAS has data — merge with it (GAS is authoritative)
+        myPreds = Object.assign({}, gasPreds);
+      } else if (_cache[userKey] && Object.keys(_cache[userKey]).length > 0) {
+        // Cache has data — use it
+        myPreds = Object.assign({}, _cache[userKey]);
+      } else {
+        // Last resort: reconstruct from preds React state
+        myPreds = {};
+        Object.keys(preds).forEach(function(k){
+          if (k.indexOf(user.id+'_')===0) myPreds[k.slice(user.id.length+1)]=preds[k];
+        });
+      }
+      myPreds[mId] = newPred; // Add/overwrite this prediction
 
-    // Write ONLY this user's preds — max ~6KB, never hits 50K limit
-    fetch(GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({action:'set', key:userKey, value:myPreds})
+      // Update cache
+      _cache[userKey] = myPreds;
+      _lastWrite[userKey] = Date.now() + 300000;
+
+      // Write merged set back to GAS
+      return fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'set',key:userKey,value:myPreds})});
     })
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d && d.ok) {
-        _lastWrite[userKey] = Date.now();
+        notify('Prediction saved! ⚽');
         console.log('[Pred] Saved ✓', mId, Number(h)+'-'+Number(a));
       } else {
+        notify('Save error — try again', 'err');
         console.error('[Pred] GAS error:', JSON.stringify(d));
       }
     })
-    .catch(function(e){ console.error('[Pred] Network error:', e.message); });
-
-    setModal(null);
-    notify('Prediction saved! ⚽');
+    .catch(function(e){
+      notify('Network error — try again', 'err');
+      console.error('[Pred] Network error:', e.message);
+    });
   }
   function doPickW(team) {
     if (Date.now() >= KOS.getTime()) {
@@ -6881,3 +6948,93 @@ try {
 </body>
 </html>
       <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
+
+        <!-- ── Recover Missing Predictions ──────────────────────────── -->
+        <div class="card" style=${{border:'1px solid rgba(251,191,36,.3)',background:'rgba(251,191,36,.04)'}}>
+          <div style=${{fontWeight:700,fontSize:14,marginBottom:4,color:'var(--gold)'}}>🔍 Recover Missing Predictions</div>
+          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:12}}>
+            If a user is missing predictions (especially group stage or R32), use this to recover them from the legacy global predictions key in GAS.
+            This merges any found predictions into the user's personal prediction record without overwriting existing ones.
+          </div>
+          <div style=${{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
+            <div style=${{flex:'1 1 150px'}}>
+              <div style=${{fontSize:11,fontWeight:600,color:'var(--dm)',marginBottom:4}}>SELECT USER</div>
+              <select id="rec_uid" style=${{width:'100%',padding:'8px 10px',fontSize:12,background:'var(--bg3)',color:'var(--tx)',border:'1px solid var(--bdr)',borderRadius:'var(--rs)'}}>
+                <option value="">Select user…</option>
+                ${uList.map(function(u){return html`<option key=${u.id} value=${u.id}>${u.name}</option>`;})}
+              </select>
+            </div>
+            <button class="btn-p" style=${{padding:'8px 16px',fontSize:13,alignSelf:'flex-end'}}
+              onClick=${function(){
+                var uid=document.getElementById('rec_uid').value;
+                if(!uid){alert('Select a user first');return;}
+                var uName=(saUsers[uid]||{name:uid}).name;
+                // Step 1: Read the old global wc26_preds key
+                fetch(GS_URL+'?action=get&key=wc26_preds&_='+Date.now(),{redirect:'follow'})
+                .then(function(r){return r.json();})
+                .then(function(gd){
+                  var globalPreds=gd.ok&&gd.value&&typeof gd.value==='object'?gd.value:{};
+                  // Extract this user's preds from global key (format: uid_matchId → matchId)
+                  var foundInGlobal={};
+                  Object.keys(globalPreds).forEach(function(k){
+                    if(k.indexOf(uid+'_')===0){
+                      var mId=k.slice(uid.length+1);
+                      foundInGlobal[mId]=globalPreds[k];
+                    }
+                  });
+                  var gCount=Object.keys(foundInGlobal).length;
+
+                  // Step 2: Read this user's current per-user preds
+                  return fetch(GS_URL+'?action=get&key=wc26_preds_'+uid+'&_='+Date.now(),{redirect:'follow'})
+                  .then(function(r){return r.json();})
+                  .then(function(ud){
+                    var currentPreds=ud.ok&&ud.value&&typeof ud.value==='object'?ud.value:{};
+                    var cCount=Object.keys(currentPreds).length;
+
+                    if(gCount===0&&cCount===0){
+                      alert('No predictions found for '+uName+' in either global or per-user key. Predictions may need to be re-entered manually.');
+                      return;
+                    }
+
+                    // Merge: current per-user preds take priority (newer), global fills gaps
+                    var merged=Object.assign({},foundInGlobal,currentPreds); // current wins on conflict
+                    var mCount=Object.keys(merged).length;
+                    var newCount=mCount-cCount;
+
+                    if(newCount<=0){
+                      alert('No additional predictions found in global key for '+uName+'.
+
+Current: '+cCount+' predictions
+Global key: '+gCount+' predictions
+All global predictions are already in their record.');
+                      return;
+                    }
+
+                    if(!confirm('Found '+newCount+' missing predictions for '+uName+' in global key.
+
+Current: '+cCount+' → After recovery: '+mCount+' predictions
+
+Restore them now?'))return;
+
+                    // Write merged predictions back to GAS
+                    fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                      body:JSON.stringify({action:'set',key:'wc26_preds_'+uid,value:merged})})
+                    .then(function(r){return r.json();})
+                    .then(function(d){
+                      if(d&&d.ok){
+                        alert('Recovered '+newCount+' predictions for '+uName+'.
+Total now: '+mCount+' predictions.
+
+User must refresh the app to see updated points.');
+                      } else {
+                        alert('Write failed: '+(d&&d.error||'unknown error'));
+                      }
+                    }).catch(function(e){alert('Error: '+e.message);});
+                  });
+                })
+                .catch(function(e){alert('Network error: '+e.message);});
+              }}>🔍 Recover Predictions</button>
+          </div>
+        </div>
+
+
