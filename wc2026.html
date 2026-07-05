@@ -2642,6 +2642,30 @@ function SuperAdminApp(props) {
       </div>`}
 
       ${saTab==='results'&&html`<div>
+        <!-- Emergency Results Restore -->
+        <div style=${{marginBottom:12,padding:'10px 14px',borderRadius:'var(--rs)',background:'rgba(239,68,68,.07)',border:'1px solid rgba(239,68,68,.25)'}}>
+          <div style=${{fontWeight:700,color:'#f87171',marginBottom:6,fontSize:13}}>🚨 Emergency: Results were wiped?</div>
+          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:8}}>If results show 0 or very few entries, they may have been overwritten by the live scores sync. Click below to restore from browser cache.</div>
+          <button class="btn" style=${{fontSize:12,padding:'6px 14px',color:'#f87171',borderColor:'rgba(239,68,68,.3)'}}
+            onClick=${function(){
+              try {
+                var bk = JSON.parse(localStorage.getItem('wc26_results_bk')||'{}');
+                var count = Object.keys(bk).length;
+                if (count < 1) { alert('No backup found in browser cache. You need to re-enter results manually.'); return; }
+                if (!confirm('Restore '+count+' group stage results from browser backup to GAS?')) return;
+                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+                  body:JSON.stringify({action:'set',key:'wc26_results',value:bk})})
+                .then(function(r){return r.json();})
+                .then(function(d){
+                  if(d&&d.ok){
+                    setSaResults(bk);
+                    alert('✅ Restored '+count+' results to GAS! Please reload the app for all users.');
+                  } else alert('Error: '+(d&&d.error||'failed'));
+                }).catch(function(e){alert('Error: '+e.message);});
+              } catch(e){ alert('Error reading backup: '+e.message); }
+            }}>Restore from Browser Cache</button>
+        </div>
+
         <!-- Info banner -->
         <div style=${{marginBottom:14,padding:'10px 14px',background:'rgba(34,197,94,.07)',border:'1px solid rgba(34,197,94,.2)',borderRadius:'var(--rs)',fontSize:12,color:'var(--mu)'}}>
           <strong style=${{color:'#22c55e'}}>⚽ Results entered here update all rooms instantly.</strong>
@@ -5908,6 +5932,8 @@ function enterRoom(roomId) {
 }
 
 
+var _currentResults = {}; // tracks latest results, avoids race condition in runSync
+
 function App() {
   var s0=useState('loading'); var scr=s0[0]; var setScr=s0[1];
   var s1=useState(null); var user=s1[0]; var setUser=s1[1];
@@ -6096,7 +6122,26 @@ function App() {
       });
     });
     // tpicks listener removed — champion team now stored in user.champTeam
-    Store.listen('results', function(v) { setResults(v||{}); });
+    Store.listen('results', function(v) {
+      var rv = v||{};
+      // Safeguard: if GAS returns suspiciously few results (< 5), 
+      // check if we have a better cached version in localStorage
+      var lsResults = {};
+      try { lsResults = JSON.parse(localStorage.getItem('wc26_results_bk')||'{}'); } catch(e){}
+      var lsCount = Object.keys(lsResults).length;
+      var gasCount = Object.keys(rv).length;
+      if (lsCount > gasCount + 5) {
+        // localStorage backup has substantially more results — use it and restore GAS
+        console.warn('[WC26] GAS results appear incomplete ('+gasCount+' vs '+lsCount+' cached). Using backup.');
+        rv = Object.assign({}, lsResults, rv); // merge: GAS wins on conflicts
+        Store._write('wc26_results', rv); // restore GAS
+      } else if (gasCount > lsCount) {
+        // Update localStorage backup with better data
+        try { localStorage.setItem('wc26_results_bk', JSON.stringify(rv)); } catch(e){}
+      }
+      _currentResults = rv;
+      setResults(rv);
+    });
     Store.listen('koresults', function(v) {
       var kr = v||{};
       setKoResults(kr);
@@ -6118,8 +6163,35 @@ function App() {
         Object.keys(updates).forEach(function(id){
           if(koIds.indexOf(id)>=0) koU[id]=updates[id]; else grpU[id]=updates[id];
         });
-        if(Object.keys(grpU).length) setResults(function(p){var n=Object.assign({},p,grpU);Store.set('results',n);return n;});
-        if(Object.keys(koU).length) setKoResults(function(p){var n=Object.assign({},p,koU);_ls.set('wc26_kores',JSON.stringify(n));Store.set('koresults',n);return n;});
+        if(Object.keys(grpU).length) {
+          // Update React state — safe functional updater
+          setResults(function(p){
+            _currentResults = Object.assign({},p,grpU);
+            // Update localStorage backup
+            try { localStorage.setItem('wc26_results_bk', JSON.stringify(_currentResults)); } catch(e){}
+            return _currentResults;
+          });
+          // Write to GAS ONLY if we have a full results set loaded (> 10 entries)
+          // This prevents overwriting all results during initial page load race condition
+          setTimeout(function(){
+            var hasFullResults = Object.keys(_currentResults).length > 10;
+            if (hasFullResults) {
+              Store._write('wc26_results', _currentResults);
+            }
+          }, 500);
+        }
+        if(Object.keys(koU).length) {
+          setKoResults(function(p){
+            var n=Object.assign({},p,koU);
+            _ls.set('wc26_kores',JSON.stringify(n));
+            return n;
+          });
+          // Write KO results to GAS safely (outside updater)
+          setTimeout(function(){
+            var cached = _cache['wc26_koresults'] || {};
+            Store._write('wc26_koresults', Object.assign({},cached,koU));
+          }, 500);
+        }
       }, function(live) {
         setLiveScores(live);
         setLastSync(Date.now());
