@@ -2643,27 +2643,61 @@ function SuperAdminApp(props) {
 
       ${saTab==='results'&&html`<div>
         <!-- Emergency Results Restore -->
-        <div style=${{marginBottom:12,padding:'10px 14px',borderRadius:'var(--rs)',background:'rgba(239,68,68,.07)',border:'1px solid rgba(239,68,68,.25)'}}>
-          <div style=${{fontWeight:700,color:'#f87171',marginBottom:6,fontSize:13}}>🚨 Emergency: Results were wiped?</div>
-          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:8}}>If results show 0 or very few entries, they may have been overwritten by the live scores sync. Click below to restore from browser cache.</div>
-          <button class="btn" style=${{fontSize:12,padding:'6px 14px',color:'#f87171',borderColor:'rgba(239,68,68,.3)'}}
-            onClick=${function(){
-              try {
-                var bk = JSON.parse(localStorage.getItem('wc26_results_bk')||'{}');
-                var count = Object.keys(bk).length;
-                if (count < 1) { alert('No backup found in browser cache. You need to re-enter results manually.'); return; }
-                if (!confirm('Restore '+count+' group stage results from browser backup to GAS?')) return;
-                fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-                  body:JSON.stringify({action:'set',key:'wc26_results',value:bk})})
+        <div style=${{marginBottom:12,padding:'12px 14px',borderRadius:'var(--rs)',background:'rgba(239,68,68,.07)',border:'1px solid rgba(239,68,68,.25)'}}>
+          <div style=${{fontWeight:700,color:'#f87171',marginBottom:6,fontSize:14}}>Emergency: Force Restore Results</div>
+          <div style=${{fontSize:12,color:'var(--dm)',marginBottom:10}}>Use if group stage points dropped to 0 — the results may have been overwritten by the live-scores sync.</div>
+          <div style=${{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <button class="btn" style=${{fontSize:12,padding:'7px 14px',color:'#f0b429',borderColor:'rgba(240,180,41,.3)',flex:'1 1 180px'}}
+              onClick=${function(){
+                var apiKey=(_ls&&_ls.get('wc26_apikey',''))||'0f39102e379e411b88bb07838e749fb2';
+                fetch(GS_URL+'?action=livescores&key='+encodeURIComponent(apiKey)+'&_='+Date.now(),{redirect:'follow'})
                 .then(function(r){return r.json();})
                 .then(function(d){
-                  if(d&&d.ok){
-                    setSaResults(bk);
-                    alert('✅ Restored '+count+' results to GAS! Please reload the app for all users.');
-                  } else alert('Error: '+(d&&d.error||'failed'));
-                }).catch(function(e){alert('Error: '+e.message);});
-              } catch(e){ alert('Error reading backup: '+e.message); }
-            }}>Restore from Browser Cache</button>
+                  if(!d.ok||!d.matches||!d.matches.length){alert('No data from API. Try browser cache option.');return;}
+                  var ALL=MS.concat(KO_MS);
+                  var koIds=KO_MS.map(function(m){return m.id;});
+                  var grpR={},koR={};
+                  d.matches.forEach(function(am){
+                    if(am.status!=='FINISHED')return;
+                    var sc=am.score&&am.score.fullTime;
+                    if(!sc||sc.home===null||sc.away===null)return;
+                    var hn=fdTeam&&fdTeam(am.homeTeam&&am.homeTeam.name||'')||'';
+                    var an=fdTeam&&fdTeam(am.awayTeam&&am.awayTeam.name||'')||'';
+                    var found=ALL.find(function(m){return(m.h===hn&&m.a===an)||(m.h===an&&m.a===hn);});
+                    if(!found)return;
+                    var sw=(found.h===an);
+                    var h=sw?sc.away:sc.home,a=sw?sc.home:sc.away;
+                    if(koIds.indexOf(found.id)>=0)koR[found.id]={h:h,a:a,auto:true};
+                    else grpR[found.id]={h:h,a:a,auto:true};
+                  });
+                  var gc=Object.keys(grpR).length,kc=Object.keys(koR).length;
+                  if(!gc&&!kc){alert('No results found in API. Try browser cache option.');return;}
+                  if(!confirm('Found '+gc+' group stage + '+kc+' KO results. Restore to GAS?'))return;
+                  var ps=[fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'set',key:'wc26_results',value:grpR})}).then(function(r){return r.json();})];
+                  if(kc)ps.push(fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'set',key:'wc26_koresults',value:koR})}).then(function(r){return r.json();}));
+                  Promise.all(ps).then(function(rs){
+                    if(rs.every(function(d){return d&&d.ok;})){setSaResults(grpR);alert('Done! '+gc+' group + '+kc+' KO results restored. Users must refresh.');}
+                    else alert('Some writes failed.');
+                  }).catch(function(e){alert('Error: '+e.message);});
+                })
+                .catch(function(e){alert('API error: '+e.message);});
+              }}>Fetch from Football API</button>
+            <button class="btn" style=${{fontSize:12,padding:'7px 14px',color:'#60a5fa',borderColor:'rgba(96,165,250,.3)',flex:'1 1 180px'}}
+              onClick=${function(){
+                try{
+                  var bk=JSON.parse(localStorage.getItem('wc26_results_bk')||'{}');
+                  var c=Object.keys(bk).length;
+                  if(c<5){alert('Browser backup has only '+c+' results — too few. Try the Football API option.');return;}
+                  if(!confirm('Restore '+c+' results from this browser cache to GAS?'))return;
+                  fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'set',key:'wc26_results',value:bk})})
+                  .then(function(r){return r.json();})
+                  .then(function(d){
+                    if(d&&d.ok){setSaResults(bk);alert('Restored '+c+' results. Users must refresh.');}
+                    else alert('Write failed: '+(d&&d.error||'unknown'));
+                  }).catch(function(e){alert('Error: '+e.message);});
+                }catch(e){alert('Error: '+e.message);}
+              }}>Browser Cache Backup</button>
+          </div>
         </div>
 
         <!-- Info banner -->
@@ -6846,3 +6880,4 @@ try {
 </script>
 </body>
 </html>
+      <${GlobalAnnBanner} anns=${props.globalAnns||[]} />
