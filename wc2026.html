@@ -621,7 +621,7 @@ var FACTS=['The 2026 World Cup is the first with 48 teams!','104 matches across 
 var PLY=[{n:'Cristiano Ronaldo',t:'Portugal',p:'Forward',i:'All-time top scorer',sid:874},{n:'Lionel Messi',t:'Argentina',p:'Forward',i:'2022 WC winner',sid:41959},{n:'Kylian Mbappé',t:'France',p:'Forward',i:'Top scorer contender',sid:342658},{n:'Erling Haaland',t:'Norway',p:'Forward',i:'Premier League top scorer',sid:839956},{n:'Vinicius Jr.',t:'Brazil',p:'Forward',i:'Champions League star',sid:700026},{n:'Pedri',t:'Spain',p:'Midfielder',i:'Barcelona midfield maestro',sid:888013},{n:'Jude Bellingham',t:'England',p:'Midfielder',i:'Real Madrid star',sid:816250},{n:'Kevin De Bruyne',t:'Belgium',p:'Midfielder',i:'World-class playmaker',sid:70996}];
 // ── WC 2026 Knockout Stage Matches ────────────────────────────────────────
 var KO_MS = [
-  // ── Round of 32 — All results confirmed ──────────────────────────────
+  // ── Round of 32 ─ confirmed ──────────────────────────────────────────
   {id:'r32_01',rd:'R32',h:'South Africa',a:'Canada',         utc:'2026-06-28T19:00:00Z',v:'Los Angeles'},
   {id:'r32_02',rd:'R32',h:'Brazil',      a:'Japan',          utc:'2026-06-29T17:00:00Z',v:'Houston'},
   {id:'r32_03',rd:'R32',h:'Germany',     a:'Paraguay',       utc:'2026-06-29T20:30:00Z',v:'Boston'},
@@ -638,31 +638,29 @@ var KO_MS = [
   {id:'r32_14',rd:'R32',h:'Australia',   a:'Egypt',          utc:'2026-07-03T18:00:00Z',v:'Dallas'},
   {id:'r32_15',rd:'R32',h:'Argentina',   a:'Cape Verde',     utc:'2026-07-03T22:00:00Z',v:'Miami'},
   {id:'r32_16',rd:'R32',h:'Colombia',    a:'Ghana',          utc:'2026-07-04T01:30:00Z',v:'Kansas City'},
-  // ── Round of 16 — Correct bracket pairings with actual teams ─────────
-  // W r32_01(Canada) vs W r32_04(Morocco) | W r32_03(Paraguay) vs W r32_06(France)
-  {id:'r16_01',rd:'R16',h:'Canada',    a:'Morocco',  utc:'2026-07-04T17:00:00Z',v:'Houston',    pair:'r32_01 r32_04'},
-  {id:'r16_02',rd:'R16',h:'Paraguay',  a:'France',   utc:'2026-07-04T21:00:00Z',v:'Philadelphia',pair:'r32_03 r32_06'},
-  // W r32_02(Brazil) vs W r32_05(Norway) | W r32_07(Mexico) vs W r32_08(England)
-  {id:'r16_03',rd:'R16',h:'Brazil',    a:'Norway',   utc:'2026-07-05T20:00:00Z',v:'New Jersey',  pair:'r32_02 r32_05'},
-  {id:'r16_04',rd:'R16',h:'Mexico',    a:'England',  utc:'2026-07-06T00:00:00Z',v:'Mexico City', pair:'r32_07 r32_08'},
-  // W r32_12(Portugal) vs W r32_11(Spain) | W r32_10(USA) vs W r32_09(Belgium)
-  {id:'r16_05',rd:'R16',h:'Portugal',  a:'Spain',    utc:'2026-07-06T19:00:00Z',v:'Dallas',      pair:'r32_12 r32_11'},
-  {id:'r16_06',rd:'R16',h:'USA',       a:'Belgium',  utc:'2026-07-07T00:00:00Z',v:'Seattle',     pair:'r32_10 r32_09'},
-  // W r32_15(Argentina) vs W r32_14(Egypt) | W r32_13(Switzerland) vs W r32_16(TBD)
-  {id:'r16_07',rd:'R16',h:'Argentina', a:'Egypt',    utc:'2026-07-07T16:00:00Z',v:'Atlanta',     pair:'r32_15 r32_14'},
-  {id:'r16_08',rd:'R16',h:'Switzerland',a:'Colombia',     utc:'2026-07-07T20:00:00Z',v:'Vancouver',   pair:'r32_13 r32_16'},
-  // ── Quarter-finals — July 9-12 ────────────────────────────────────────
-  {id:'qf_01',rd:'QF',h:'W r16_01',a:'W r16_02',utc:'2026-07-09T20:00:00Z',v:'Seattle',     pair:'r16_01 r16_02'},
-  {id:'qf_02',rd:'QF',h:'W r16_05',a:'W r16_06',utc:'2026-07-10T00:00:00Z',v:'Los Angeles', pair:'r16_05 r16_06'},
-  {id:'qf_03',rd:'QF',h:'W r16_03',a:'W r16_04',utc:'2026-07-11T20:00:00Z',v:'Houston',     pair:'r16_03 r16_04'},
-  {id:'qf_04',rd:'QF',h:'W r16_07',a:'W r16_08',utc:'2026-07-12T00:00:00Z',v:'Kansas City', pair:'r16_07 r16_08'},
-  // ── Semi-finals — July 14-15 ──────────────────────────────────────────
-  {id:'sf_01',rd:'SF',h:'W qf_01',a:'W qf_02',utc:'2026-07-14T19:00:00Z',v:'Dallas',        pair:'qf_01 qf_02'},
-  {id:'sf_02',rd:'SF',h:'W qf_03',a:'W qf_04',utc:'2026-07-15T19:00:00Z',v:'Atlanta',       pair:'qf_03 qf_04'},
-  // ── 3rd Place — July 18 ───────────────────────────────────────────────
-  {id:'3pl',rd:'3PL',h:'Los sf_01',a:'Los sf_02',utc:'2026-07-18T21:00:00Z',v:'Miami',       pair:'sf_01 sf_02'},
-  // ── Final — July 19 ───────────────────────────────────────────────────
-  {id:'fin',rd:'FIN',h:'W sf_01',a:'W sf_02',utc:'2026-07-19T19:00:00Z',v:'New York / New Jersey',pair:'sf_01 sf_02'}
+  // ── Round of 16 ─ confirmed teams & results ───────────────────────────
+  {id:'r16_01',rd:'R16',h:'Canada',      a:'Morocco',        utc:'2026-07-04T17:00:00Z',v:'Houston'},
+  {id:'r16_02',rd:'R16',h:'Paraguay',    a:'France',         utc:'2026-07-04T21:00:00Z',v:'Philadelphia'},
+  {id:'r16_03',rd:'R16',h:'Brazil',      a:'Norway',         utc:'2026-07-05T20:00:00Z',v:'New Jersey'},
+  {id:'r16_04',rd:'R16',h:'Mexico',      a:'England',        utc:'2026-07-06T00:00:00Z',v:'Mexico City'},
+  {id:'r16_05',rd:'R16',h:'Portugal',    a:'Spain',          utc:'2026-07-06T19:00:00Z',v:'Dallas'},
+  {id:'r16_06',rd:'R16',h:'USA',         a:'Belgium',        utc:'2026-07-07T00:00:00Z',v:'Seattle'},
+  {id:'r16_07',rd:'R16',h:'Argentina',   a:'Egypt',          utc:'2026-07-07T16:00:00Z',v:'Atlanta'},
+  {id:'r16_08',rd:'R16',h:'Switzerland', a:'Colombia',       utc:'2026-07-07T20:00:00Z',v:'Vancouver'},
+  // ── Quarter-finals ─ CONFIRMED teams, Jul 9-11 ───────────────────────
+  // Morocco 3-0 Canada | France 1-0 Paraguay | Norway 2-1 Brazil | England 3-2 Mexico
+  // Spain 1-0 Portugal | Belgium 4-1 USA | Argentina 3-2 Egypt | Switzerland 4-3 pens Colombia
+  {id:'qf_01',rd:'QF',h:'Morocco',     a:'France',       utc:'2026-07-09T20:00:00Z',v:'Boston'},
+  {id:'qf_02',rd:'QF',h:'Spain',       a:'Belgium',      utc:'2026-07-10T19:00:00Z',v:'Los Angeles'},
+  {id:'qf_03',rd:'QF',h:'Norway',      a:'England',      utc:'2026-07-11T21:00:00Z',v:'Miami'},
+  {id:'qf_04',rd:'QF',h:'Argentina',   a:'Switzerland',  utc:'2026-07-12T01:00:00Z',v:'Kansas City'},
+  // ── Semi-finals ─ Jul 14-15 ──────────────────────────────────────────
+  {id:'sf_01',rd:'SF',h:'W qf_01',a:'W qf_02',utc:'2026-07-14T19:00:00Z',v:'Dallas'},
+  {id:'sf_02',rd:'SF',h:'W qf_03',a:'W qf_04',utc:'2026-07-15T19:00:00Z',v:'Atlanta'},
+  // ── Third Place ─ Jul 18 ─────────────────────────────────────────────
+  {id:'3pl',rd:'3PL',h:'Los sf_01',a:'Los sf_02',utc:'2026-07-18T21:00:00Z',v:'Miami'},
+  // ── Final ─ Jul 19 ───────────────────────────────────────────────────
+  {id:'fin',rd:'FIN',h:'W sf_01',a:'W sf_02',utc:'2026-07-19T19:00:00Z',v:'New York / New Jersey'}
 ];
 
 var KO_ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-finals',SF:'Semi-finals','3PL':'3rd Place',FIN:'Final'};
@@ -2900,7 +2898,25 @@ function SuperAdminApp(props) {
                       var isKnown = m.h&&!m.h.startsWith('W ')&&!m.h.startsWith('L ');
                       return html`<div key=${m.id} style=${{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderRadius:'var(--rs)',background:'var(--bg3)',border:'1px solid var(--bdr)'}}>
                         <span style=${{fontSize:10,color:'var(--dm)',width:60,flexShrink:0}}>${mTime}</span>
-                        <span style=${{flex:1,fontSize:12,fontWeight:600,textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.h}</span>
+                        <span style=${{flex:1,fontSize:12,fontWeight:600,textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${(function(){
+                        // Resolve slot names like 'W r16_01' to actual team names
+                        function rt(s,kr){
+                          if(!s)return s;
+                          if(!s.startsWith('W ')&&!s.startsWith('Los '))return s;
+                          var pts=s.match(/^(W|Los)\s+(.+)$/);if(!pts)return s;
+                          var isL=pts[1]==='Los',mid=pts[2];
+                          var res=(kr||{})[mid];
+                          var pm=KO_MS.find(function(x){return x.id===mid;});
+                          if(!pm)return s;
+                          var h=rt(pm.h,kr),a=rt(pm.a,kr);
+                          if(!res)return '('+h+' / '+a+')';
+                          if(res.h>res.a)return isL?a:h;
+                          if(res.a>res.h)return isL?h:a;
+                          if(res.winner)return isL?(res.winner===pm.h?a:h):(res.winner===pm.h?h:a);
+                          return s;
+                        }
+                        return rt(m.h,saKoResults||{});
+                      })()}</span>
                         ${res?html`<span style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'var(--gold)',flexShrink:0,width:60,textAlign:'center'}}>${res.h}–${res.a}</span>`:
                           html`<div style=${{display:'flex',flexDirection:'column',gap:5,flexShrink:0}}>
                             <div style=${{display:'flex',gap:4,alignItems:'center'}}>
@@ -2937,12 +2953,35 @@ function SuperAdminApp(props) {
                             </div>
                             <select id=${'sa_kor_'+m.id+'_w'}
                               style=${{fontSize:11,padding:'3px 6px',background:'var(--bg)',color:'var(--tx)',border:'1px solid rgba(240,180,41,.3)',borderRadius:4,width:'100%'}}>
-                              <option value="">Draw? Select pens winner</option>
-                              <option value=${m.h}>${m.h} wins on pens</option>
-                              <option value=${m.a}>${m.a} wins on pens</option>
+                              ${(function(){
+                                function rt(s,kr){if(!s)return s;if(!s.startsWith('W ')&&!s.startsWith('Los '))return s;var pts=s.match(/^(W|Los)\s+(.+)$/);if(!pts)return s;var isL=pts[1]==='Los',mid=pts[2];var res=(kr||{})[mid];var pm=KO_MS.find(function(x){return x.id===mid;});if(!pm)return s;var h=rt(pm.h,kr),a=rt(pm.a,kr);if(!res)return s;if(res.h>res.a)return isL?a:h;if(res.a>res.h)return isL?h:a;if(res.winner)return isL?(res.winner===pm.h?a:h):(res.winner===pm.h?h:a);return s;}
+                                var th=rt(m.h,saKoResults||{});var ta=rt(m.a,saKoResults||{});
+                                return html`
+                                  <option value="">Draw? Select pens winner</option>
+                                  <option value=${m.h}>${th} wins on pens</option>
+                                  <option value=${m.a}>${ta} wins on pens</option>
+                                `;
+                              })()}
                             </select>
                           </div>`}
-                        <span style=${{flex:1,fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.a}</span>
+                        <span style=${{flex:1,fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${(function(){
+                        function rt(s,kr){
+                          if(!s)return s;
+                          if(!s.startsWith('W ')&&!s.startsWith('Los '))return s;
+                          var pts=s.match(/^(W|Los)\s+(.+)$/);if(!pts)return s;
+                          var isL=pts[1]==='Los',mid=pts[2];
+                          var res=(kr||{})[mid];
+                          var pm=KO_MS.find(function(x){return x.id===mid;});
+                          if(!pm)return s;
+                          var h=rt(pm.h,kr),a=rt(pm.a,kr);
+                          if(!res)return '('+h+' / '+a+')';
+                          if(res.h>res.a)return isL?a:h;
+                          if(res.a>res.h)return isL?h:a;
+                          if(res.winner)return isL?(res.winner===pm.h?a:h):(res.winner===pm.h?h:a);
+                          return s;
+                        }
+                        return rt(m.a,saKoResults||{});
+                      })()}</span>
                         ${res?html`<button class="btn" style=${{fontSize:9,padding:'2px 6px',color:'var(--rd)',borderColor:'rgba(239,68,68,.2)',flexShrink:0}}
                           onClick=${function(){
                             if(!confirm('Clear result for '+m.id+'?')) return;
@@ -4179,26 +4218,36 @@ function KOBracketView(props) {
   // Group KO_MS by round
   var byRound = {};
   
-  // Resolve team name: if placeholder like 'W r32_01', look up koResults
+  // Resolve team name from slot notation (e.g. 'W qf_01' → 'Morocco')
+  // Works recursively for chained slots (SF depends on QF which depends on R16)
   function getTeam(slot, koRes) {
-    if (!slot || (!slot.startsWith('W ') && !slot.startsWith('Los ') && !slot.startsWith('Win '))) return slot;
-    var m = slot.match(/^(W|Win|Los)\s+(r32|r16|qf|sf|3pl|fin)_?(\S+)$/);
-    if (!m) return slot;
-    var isLoss = m[1]==='Los';
-    var matchId = m[2]+'_'+m[3];
-    if (matchId.includes('__')) matchId = matchId.replace('__','_'); // normalize
+    if (!slot) return slot;
+    // Already a real team name (not a placeholder)
+    var isSlot = slot.startsWith('W ') || slot.startsWith('Los ') || slot.startsWith('Win ');
+    if (!isSlot) return slot;
+    // Parse slot: "W r16_01", "Los sf_01", etc.
+    var parts = slot.match(/^(W|Win|Los)\s+(.+)$/);
+    if (!parts) return slot;
+    var isLoss = parts[1] === 'Los';
+    var matchId = parts[2].replace(/^Win\s+/,''); // normalize Win → id
     var res = koRes[matchId];
-    if (!res) return slot; // not played yet
     var parentMatch = KO_MS.find(function(x){return x.id===matchId;});
     if (!parentMatch) return slot;
+    // Recursively resolve parent teams (handles chained references)
     var hTeam = getTeam(parentMatch.h, koRes);
     var aTeam = getTeam(parentMatch.a, koRes);
+    if (!res) {
+      // No result yet — show the known teams if unambiguous
+      var hKnown = !hTeam.startsWith('W ') && !hTeam.startsWith('Los ');
+      var aKnown = !aTeam.startsWith('W ') && !aTeam.startsWith('Los ');
+      if (hKnown && aKnown) return slot; // can't determine winner yet
+      return slot;
+    }
     if (res.h > res.a) return isLoss ? aTeam : hTeam;
     if (res.a > res.h) return isLoss ? hTeam : aTeam;
-    // Draw — use winner field if available
     if (res.winner) {
-      var winnerTeam = res.winner === parentMatch.h ? hTeam : aTeam;
-      return isLoss ? (winnerTeam===hTeam?aTeam:hTeam) : winnerTeam;
+      var wt = (res.winner === parentMatch.h) ? hTeam : aTeam;
+      return isLoss ? (wt===hTeam?aTeam:hTeam) : wt;
     }
     return slot;
   }
