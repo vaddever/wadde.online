@@ -655,8 +655,8 @@ var KO_MS = [
   {id:'qf_03',rd:'QF',h:'Norway',      a:'England',      utc:'2026-07-11T21:00:00Z',v:'Miami'},
   {id:'qf_04',rd:'QF',h:'Argentina',   a:'Switzerland',  utc:'2026-07-12T01:00:00Z',v:'Kansas City'},
   // ── Semi-finals ─ Jul 14-15 ──────────────────────────────────────────
-  {id:'sf_01',rd:'SF',h:'France',a:'Spain',utc:'2026-07-14T19:00:00Z',v:'Dallas'},
-  {id:'sf_02',rd:'SF',h:'England',a:'Argentina',utc:'2026-07-15T19:00:00Z',v:'Atlanta'},
+  {id:'sf_01',rd:'SF',h:'W qf_01',a:'W qf_02',utc:'2026-07-14T19:00:00Z',v:'Dallas'},
+  {id:'sf_02',rd:'SF',h:'W qf_03',a:'W qf_04',utc:'2026-07-15T19:00:00Z',v:'Atlanta'},
   // ── Third Place ─ Jul 18 ─────────────────────────────────────────────
   {id:'3pl',rd:'3PL',h:'Los sf_01',a:'Los sf_02',utc:'2026-07-18T21:00:00Z',v:'Miami'},
   // ── Final ─ Jul 19 ───────────────────────────────────────────────────
@@ -3965,8 +3965,8 @@ function CountdownBanner() {
             })}
           </div>`
         : html`<div style=${{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}}>
-            <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'#fbbf24',letterSpacing:.5}}>⚽ SEMI FINAL</div>
-            <div style=${{fontSize:11,color:'rgba(255,255,255,.7)'}}>Just One Step Away</div>
+            <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:'#fbbf24',letterSpacing:.5}}>⚽ GROUP STAGE</div>
+            <div style=${{fontSize:11,color:'rgba(255,255,255,.7)'}}>In progress</div>
           </div>`
       }
     </div>
@@ -4677,8 +4677,7 @@ function RoomPage(props) {
       </div>
     </div>
 
-    <!-- 📖 How to Play — only visible on Standings tab -->
-    ${props.tab==='leaderboard'&&html`<${HowToPlay} />`}
+    <!-- How to Play guide removed from room view -->
 
     <!-- 📢 Announcements — always visible above tabs -->
     <${AnnouncementsPanel}
@@ -4910,7 +4909,99 @@ function RoomPage(props) {
           <div style=${{fontSize:12,color:'var(--mu)'}}>${props.lboard[0].pts} pts · ${props.lboard[0].np} predictions</div>
         </div>
       </div>`}
-<!-- Score status info banner when all pts = 0 -->
+<!-- 📊 Room Stats Dashboard -->
+      ${(function(){
+        var lb = props.lboard || [];
+        var preds = props.preds || {};
+        var results = props.results || {};
+        var koRes = props.koResults || {};
+        var uid = props.user && props.user.id;
+        if (!lb.length) return null;
+
+        var members = lb.map(function(e){ return e.user && e.user.id; }).filter(Boolean);
+
+        // Compute per-user stats
+        var userStats = members.map(function(muid){
+          var exact=0, correct=0, wrong=0, total=0;
+          // Group stage
+          MS.forEach(function(m){
+            var p=preds[muid+'_'+m.id];
+            var r=results[m.id];
+            if(!p||!r) return;
+            total++;
+            var pts=calcPts(p,r,m.id);
+            if(pts===4) exact++;
+            else if(pts===2) correct++;
+            else wrong++;
+          });
+          // KO
+          KO_MS.forEach(function(m){
+            var p=preds[muid+'_'+m.id];
+            var r=koRes[m.id];
+            if(!p||!r) return;
+            total++;
+            var pts=calcPts(p,r,m.id);
+            if(pts===4) exact++;
+            else if(pts===2) correct++;
+            else wrong++;
+          });
+          var name=(lb.find(function(e){return e.user&&e.user.id===muid;})||{user:{name:'?'}}).user.name;
+          return {uid:muid,name:name,exact:exact,correct:correct,wrong:wrong,total:total,
+                  accuracy:total>0?Math.round((exact+correct)/total*100):0};
+        }).filter(Boolean);
+
+        // Champions
+        var byExact   = userStats.slice().sort(function(a,b){return b.exact-a.exact;});
+        var byCorrect = userStats.slice().sort(function(a,b){return b.correct-a.correct;});
+        var byAccuracy= userStats.slice().sort(function(a,b){return b.accuracy-a.accuracy;});
+        var byPts     = lb.slice();
+
+        function StatCard(icon,title,value,sub,color){
+          return html`<div style=${{background:'var(--bg2)',borderRadius:'var(--rs)',padding:'12px 14px',border:'1px solid var(--bdr)',flex:'1 1 140px',minWidth:0}}>
+            <div style=${{fontSize:10,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:6,textTransform:'uppercase'}}>${icon} ${title}</div>
+            <div style=${{fontFamily:'Barlow Condensed,sans-serif',fontSize:18,fontWeight:800,color:color||'var(--tx)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${value}</div>
+            <div style=${{fontSize:11,color:'var(--dm)',marginTop:2}}>${sub}</div>
+          </div>`;
+        }
+
+        if(userStats.every(function(s){return s.total===0;})) return null;
+
+        return html`<div style=${{marginBottom:14}}>
+          <div style=${{fontSize:10,fontWeight:700,color:'var(--gold)',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>📊 ROOM STATS</div>
+          <div style=${{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
+            ${StatCard('🎯','Top Predictor',byPts[0]&&byPts[0].user&&byPts[0].user.name||'-',byPts[0]&&byPts[0].pts+' pts','#f0b429')}
+            ${StatCard('✨','Most Exact',byExact[0]&&byExact[0].name||'-',byExact[0]&&byExact[0].exact+' exact scores','#fbbf24')}
+            ${StatCard('✅','Most Correct',byCorrect[0]&&byCorrect[0].name||'-',byCorrect[0]&&byCorrect[0].correct+' winner/draw picks','#4ade80')}
+            ${StatCard('📈','Best Accuracy',byAccuracy[0]&&byAccuracy[0].name||'-',byAccuracy[0]&&byAccuracy[0].accuracy+'% hit rate','#60a5fa')}
+          </div>
+          <!-- Mini accuracy bar per user (top 5) -->
+          <div style=${{background:'var(--bg2)',borderRadius:'var(--rs)',padding:'10px 14px',border:'1px solid var(--bdr)'}}>
+            <div style=${{fontSize:10,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:8,textTransform:'uppercase'}}>🏅 Accuracy Breakdown</div>
+            ${userStats.sort(function(a,b){return (b.exact+b.correct)-(a.exact+a.correct);}).slice(0,6).map(function(s){
+              var hitPct = s.total>0 ? Math.round((s.exact+s.correct)/s.total*100) : 0;
+              var exactPct = s.total>0 ? Math.round(s.exact/s.total*100) : 0;
+              return html`<div key=${s.uid} style=${{marginBottom:8}}>
+                <div style=${{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                  <span style=${{fontSize:12,fontWeight:s.uid===uid?700:400,color:s.uid===uid?'var(--gold)':'var(--tx)'}}>${s.name}${s.uid===uid?' (you)':''}</span>
+                  <span style=${{fontSize:11,color:'var(--dm)'}}>${s.exact} exact · ${s.correct} correct · ${hitPct}%</span>
+                </div>
+                <div style=${{background:'var(--bg3)',borderRadius:4,height:5,overflow:'hidden'}}>
+                  <div style=${{display:'flex',height:'100%'}}>
+                    <div style=${{width:exactPct+'%',background:'#f0b429',transition:'width .4s'}}></div>
+                    <div style=${{width:(hitPct-exactPct)+'%',background:'#4ade80',transition:'width .4s'}}></div>
+                  </div>
+                </div>
+              </div>`;
+            })}
+            <div style=${{display:'flex',gap:14,marginTop:6}}>
+              <span style=${{fontSize:10,color:'var(--dm)',display:'flex',alignItems:'center',gap:3}}><span style=${{width:8,height:8,background:'#f0b429',borderRadius:2,flexShrink:0}}></span>Exact score</span>
+              <span style=${{fontSize:10,color:'var(--dm)',display:'flex',alignItems:'center',gap:3}}><span style=${{width:8,height:8,background:'#4ade80',borderRadius:2,flexShrink:0}}></span>Correct winner/draw</span>
+            </div>
+          </div>
+        </div>`;
+      })()}
+
+      <!-- Score status info banner when all pts = 0 -->
       ${props.lboard.length>0&&props.lboard.every(function(e){return (e.pts||0)===0&&(e.livePts||0)===0;})&&html`<div style=${{
         background:'rgba(245,158,11,.08)',border:'1px solid rgba(245,158,11,.2)',
         borderRadius:'var(--rs)',padding:'10px 14px',marginBottom:10,fontSize:12,
