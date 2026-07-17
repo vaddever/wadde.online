@@ -4901,14 +4901,7 @@ function RoomPage(props) {
     </div>`}
 
     ${props.tab==='leaderboard'&&html`<div>
-      ${props.lboard[0]&&props.lboard[0].pts>0&&html`<div class="card-dark" style=${{padding:'14px 18px',marginBottom:14,display:'flex',alignItems:'center',gap:12,borderColor:'rgba(240,180,41,.25)'}}>
-        <span style=${{fontSize:32}}>🏆</span>
-        <div>
-          <div style=${{fontSize:10,color:'var(--gold)',letterSpacing:1.5,fontFamily:'Barlow Condensed',fontWeight:700}}>CURRENT LEADER</div>
-          <div style=${{fontFamily:'Barlow Condensed',fontSize:20,fontWeight:600,marginTop:2}}>${props.lboard[0].user&&props.lboard[0].user.name}</div>
-          <div style=${{fontSize:12,color:'var(--mu)'}}>${props.lboard[0].pts} pts · ${props.lboard[0].np} predictions</div>
-        </div>
-      </div>`}
+
 <!-- 📊 Room Stats Dashboard -->
       ${(function(){
         var lb = props.lboard || [];
@@ -4974,30 +4967,7 @@ function RoomPage(props) {
             ${StatCard('✅','Most Correct',byCorrect[0]&&byCorrect[0].name||'-',byCorrect[0]&&byCorrect[0].correct+' winner/draw picks','#4ade80')}
             ${StatCard('📈','Best Accuracy',byAccuracy[0]&&byAccuracy[0].name||'-',byAccuracy[0]&&byAccuracy[0].accuracy+'% hit rate','#60a5fa')}
           </div>
-          <!-- Mini accuracy bar per user (top 5) -->
-          <div style=${{background:'var(--bg2)',borderRadius:'var(--rs)',padding:'10px 14px',border:'1px solid var(--bdr)'}}>
-            <div style=${{fontSize:10,fontWeight:700,color:'var(--dm)',letterSpacing:.5,marginBottom:8,textTransform:'uppercase'}}>🏅 Accuracy Breakdown</div>
-            ${userStats.sort(function(a,b){return (b.exact+b.correct)-(a.exact+a.correct);}).slice(0,6).map(function(s){
-              var hitPct = s.total>0 ? Math.round((s.exact+s.correct)/s.total*100) : 0;
-              var exactPct = s.total>0 ? Math.round(s.exact/s.total*100) : 0;
-              return html`<div key=${s.uid} style=${{marginBottom:8}}>
-                <div style=${{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-                  <span style=${{fontSize:12,fontWeight:s.uid===uid?700:400,color:s.uid===uid?'var(--gold)':'var(--tx)'}}>${s.name}${s.uid===uid?' (you)':''}</span>
-                  <span style=${{fontSize:11,color:'var(--dm)'}}>${s.exact} exact · ${s.correct} correct · ${hitPct}%</span>
-                </div>
-                <div style=${{background:'var(--bg3)',borderRadius:4,height:5,overflow:'hidden'}}>
-                  <div style=${{display:'flex',height:'100%'}}>
-                    <div style=${{width:exactPct+'%',background:'#f0b429',transition:'width .4s'}}></div>
-                    <div style=${{width:(hitPct-exactPct)+'%',background:'#4ade80',transition:'width .4s'}}></div>
-                  </div>
-                </div>
-              </div>`;
-            })}
-            <div style=${{display:'flex',gap:14,marginTop:6}}>
-              <span style=${{fontSize:10,color:'var(--dm)',display:'flex',alignItems:'center',gap:3}}><span style=${{width:8,height:8,background:'#f0b429',borderRadius:2,flexShrink:0}}></span>Exact score</span>
-              <span style=${{fontSize:10,color:'var(--dm)',display:'flex',alignItems:'center',gap:3}}><span style=${{width:8,height:8,background:'#4ade80',borderRadius:2,flexShrink:0}}></span>Correct winner/draw</span>
-            </div>
-          </div>
+
         </div>`;
       })()}
 
