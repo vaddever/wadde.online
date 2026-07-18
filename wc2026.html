@@ -817,7 +817,7 @@ var TEAM_CODES = {
   'Mexico':'mx','South Africa':'za','South Korea':'kr','Czechia':'cz',
   'Canada':'ca','Bosnia & Herzegovina':'ba','Qatar':'qa','Switzerland':'ch',
   'Brazil':'br','Morocco':'ma','Haiti':'ht','Scotland':'gb-sct',
-  'United States':'us','Paraguay':'py','Australia':'au','Türkiye':'tr',
+  'United States':'us','USA':'us','Paraguay':'py','Australia':'au','Türkiye':'tr',
   'Germany':'de','Curaçao':'cw','Ivory Coast':'ci','Ecuador':'ec',
   'Netherlands':'nl','Japan':'jp','Sweden':'se','Tunisia':'tn',
   'Belgium':'be','Egypt':'eg','Iran':'ir','New Zealand':'nz',
@@ -825,7 +825,7 @@ var TEAM_CODES = {
   'France':'fr','Senegal':'sn','Iraq':'iq','Norway':'no',
   'Argentina':'ar','Algeria':'dz','Austria':'at','Jordan':'jo',
   'Portugal':'pt','DR Congo':'cd','Uzbekistan':'uz','Colombia':'co',
-  'England':'gb-eng','Croatia':'hr','Ghana':'gh','Panama':'pa'
+  'England':'gb','Croatia':'hr','Ghana':'gh','Panama':'pa'
 };
 function teamFlagUrl(team) {
   var c = TEAM_CODES[team];
@@ -1482,16 +1482,39 @@ function PredModal(props) {
   var isKO = props.match && ['R16','QF','SF','3PL','FIN'].indexOf(props.match.rd) !== -1;
   var isDraw = Number(h) === Number(a);
   var needsWinner = isKO && isDraw;
-  var mH = props.match.h; var mA = props.match.a;
+  // Resolve slot names to actual team names using koResults
+  var _koRes = props.koResults || {};
+  function _rt(s) {
+    if (!s || (!s.startsWith('W ') && !s.startsWith('Los '))) return s;
+    var parts = s.match(/^(W|Los)\s+(.+)$/);
+    if (!parts) return s;
+    var isL = parts[1] === 'Los', mid = parts[2];
+    var res = _koRes[mid];
+    var pm = KO_MS.find(function(x) { return x.id === mid; });
+    if (!pm) return s;
+    var h = _rt(pm.h), a = _rt(pm.a);
+    if (!res) return h && a && !h.startsWith('W') ? h + ' / ' + a : s;
+    if (res.h > res.a) return isL ? a : h;
+    if (res.a > res.h) return isL ? h : a;
+    if (res.winner) { var w=res.winner===pm.h?h:a; return isL?( w===h?a:h):w; }
+    return s;
+  }
+  var mH = _rt(props.match.h); var mA = _rt(props.match.a);
   return html`<div class="modal">
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
       <h2 style=${{margin:0}}>Predict Score</h2>
       <button class="btn" style=${{padding:'4px 8px'}} onClick=${props.onClose}><i class="ti ti-x"></i></button>
     </div>
     <div style=${{display:'flex',alignItems:'center',justifyContent:'center',gap:16,marginBottom:12}}>
-      <div style=${{textAlign:'center'}}><div style=${{fontSize:28}}>${F[mH]||'🏳'}</div><div style=${{fontSize:13,fontWeight:500}}>${mH}</div></div>
-      <span style=${{color:'var(--mu)'}}>vs</span>
-      <div style=${{textAlign:'center'}}><div style=${{fontSize:28}}>${F[mA]||'🏳'}</div><div style=${{fontSize:13,fontWeight:500}}>${mA}</div></div>
+      <div style=${{textAlign:'center',minWidth:80}}>
+          <${FlagImg} team=${mH} w=${36} />
+          <div style=${{fontSize:13,fontWeight:600,marginTop:4}}>${mH.startsWith('W ')||mH.startsWith('Los ')?'TBD':mH}</div>
+        </div>
+        <span style=${{color:'var(--mu)',fontSize:13}}>vs</span>
+        <div style=${{textAlign:'center',minWidth:80}}>
+          <${FlagImg} team=${mA} w=${36} />
+          <div style=${{fontSize:13,fontWeight:600,marginTop:4}}>${mA.startsWith('W ')||mA.startsWith('Los ')?'TBD':mA}</div>
+        </div>
     </div>
     <div style=${{fontSize:12,color:'var(--mu)',textAlign:'center',marginBottom:16}}>${t.local}<br/><span style=${{fontSize:11,color:'var(--dm)'}}>${t.utcS}</span></div>
     <div style=${{display:'flex',alignItems:'center',gap:16,marginBottom:16,justifyContent:'center'}}>
@@ -6996,7 +7019,7 @@ function getAchievements(uid, predsMap, resultsMap) {
       onClose=${function(){setAnnModal(null);}} />`}
 
     ${modal&&html`<div class="ov" onClick=${function(e){if(e.target===e.currentTarget)setModal(null);}}>
-      ${modal.t==='pred'&&html`<${PredModal} match=${modal.m} existing=${preds[user&&user.id+'_'+modal.m.id]} onSave=${doPredict} onClose=${function(){setModal(null);}} />`}
+      ${modal.t==='pred'&&html`<${PredModal} match=${modal.m} existing=${preds[user&&user.id+'_'+modal.m.id]} koResults=${koResults} onSave=${doPredict} onClose=${function(){setModal(null);}} />`}
       ${modal.t==='create'&&html`<${CreateModal} onSave=${doCreate} onClose=${function(){setModal(null);}} />`}
       ${modal.t==='join'&&html`<${JoinModal} onJoin=${doJoin} onClose=${function(){setModal(null);}} />`}
       ${modal.t==='winner'&&html`<${WinnerModal} current=${myPick} onPick=${doPickW} onClose=${function(){setModal(null);}} />`}
