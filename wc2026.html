@@ -658,9 +658,9 @@ var KO_MS = [
   {id:'sf_01',rd:'SF',h:'W qf_01',a:'W qf_02',utc:'2026-07-14T19:00:00Z',v:'Dallas'},
   {id:'sf_02',rd:'SF',h:'W qf_03',a:'W qf_04',utc:'2026-07-15T19:00:00Z',v:'Atlanta'},
   // ── Third Place ─ Jul 18 ─────────────────────────────────────────────
-  {id:'3pl',rd:'3PL',h:'France',a:'England',utc:'2026-07-18T21:00:00Z',v:'Miami'},
+  {id:'3pl',rd:'3PL',h:'Los sf_01',a:'Los sf_02',utc:'2026-07-18T21:00:00Z',v:'Miami'},
   // ── Final ─ Jul 19 ───────────────────────────────────────────────────
-  {id:'fin',rd:'FIN',h:'Spain',a:'Argentina',utc:'2026-07-19T19:00:00Z',v:'New York / New Jersey'}
+  {id:'fin',rd:'FIN',h:'W sf_01',a:'W sf_02',utc:'2026-07-19T19:00:00Z',v:'New York / New Jersey'}
 ];
 
 var KO_ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-finals',SF:'Semi-finals','3PL':'3rd Place',FIN:'Final'};
@@ -6805,6 +6805,42 @@ function App() {
                }));
   }
 
+  // Resolve the actual tournament champion from final match result
+  function resolveChampion() {
+    var fin = KO_MS.find(function(m){ return m.id === 'fin'; });
+    if (!fin) return null;
+    var res = koResults['fin'];
+    if (!res) return null;
+    // Recursively resolve team names from koResults chain
+    function rt(slot) {
+      if (!slot) return slot;
+      if (!slot.startsWith('W ') && !slot.startsWith('Los ')) return slot;
+      var pts = slot.match(/^(W|Los)\s+(.+)$/);
+      if (!pts) return slot;
+      var isL = pts[1] === 'Los', mid = pts[2];
+      var r = koResults[mid];
+      var pm = KO_MS.find(function(x){ return x.id === mid; });
+      if (!pm) return slot;
+      var h = rt(pm.h), a = rt(pm.a);
+      if (!r) return null;
+      if (r.h > r.a) return isL ? a : h;
+      if (r.a > r.h) return isL ? h : a;
+      if (r.winner) { var w=r.winner===pm.h?h:a; return isL?(w===h?a:h):w; }
+      return null;
+    }
+    var hTeam = rt(fin.h), aTeam = rt(fin.a);
+    if (!hTeam || !aTeam) return null;
+    if (res.h > res.a) return hTeam;
+    if (res.a > res.h) return aTeam;
+    // Draw — check penalty winner field
+    if (res.winner) {
+      // res.winner might be stored as the team name (e.g. 'Spain') or as 'h'/'a'
+      if (res.winner === fin.h || res.winner === hTeam) return hTeam;
+      if (res.winner === fin.a || res.winner === aTeam) return aTeam;
+    }
+    return null;
+  }
+
   function uPts(uid) {
     var grpPts = MS.reduce(function(total,m){
       return total + (calcPts(preds[uid+'_'+m.id], results[m.id], m.id)||0);
@@ -6812,7 +6848,11 @@ function App() {
     var koPts = getEffKO().reduce(function(total,m){
       return total + (calcPts(preds[uid+'_'+m.id], koResults[m.id], m.id)||0);
     }, 0);
-    return grpPts + koPts;
+    // Champion bonus (+5 if user's champTeam === tournament winner)
+    var champion = resolveChampion();
+    var champTeam = (users[uid]||{}).champTeam || null;
+    var champBonus = (champion && champTeam && champion === champTeam) ? 5 : 0;
+    return grpPts + koPts + champBonus;
   }
 
 // ── Achievement Badges ────────────────────────────────────────────────────
@@ -6885,8 +6925,13 @@ function getAchievements(uid, predsMap, resultsMap) {
           var lp = calcPts(preds[uid+'_'+mid], lv);
           if (lp > 0) livePts += lp;
         });
-        var bonus = (bonusPts[room.id]||{})[uid] || 0;
-        return {user:u, pts:basePts + bonus, basePts:basePts, bonusPts:bonus, livePts:livePts,
+        var manualBonus = (bonusPts[room.id]||{})[uid] || 0;
+        // Auto champion +5: compare user's champTeam to actual tournament winner
+        var champion = resolveChampion();
+        var userPick = (users[uid]||{}).champTeam || null;
+        var champBonus = (champion && userPick && champion === userPick) ? 5 : 0;
+        var bonus = manualBonus + champBonus;
+        return {user:u, pts:basePts + bonus, basePts:basePts, bonusPts:bonus, champBonus:champBonus, livePts:livePts,
           np:MS.filter(function(m){return preds[uid+'_'+m.id];}).length,
           acc:uAcc(uid), pick:(users[uid]||{}).champTeam||null,
           badges:getAchievements(uid, preds, results)};
